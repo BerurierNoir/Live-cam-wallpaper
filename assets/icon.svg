@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#030508"/>
+  <!-- Grid 2x2 -->
+  <rect x="48"  y="48"  width="196" height="196" rx="12" fill="none" stroke="#00e87a" stroke-width="12"/>
+  <rect x="268" y="48"  width="196" height="196" rx="12" fill="none" stroke="#00e87a" stroke-width="12"/>
+  <rect x="48"  y="268" width="196" height="196" rx="12" fill="none" stroke="#00e87a" stroke-width="12"/>
+  <rect x="268" y="268" width="196" height="196" rx="12" fill="none" stroke="#00e87a" stroke-width="12"/>
+  <!-- Dot REC top-left cell -->
+  <circle cx="102" cy="102" r="18" fill="#ff3b55" opacity="0.9"/>
+  <!-- Camera lens symbol top-right cell -->
+  <circle cx="366" cy="146" r="36" fill="none" stroke="#00e87a" stroke-width="10" opacity="0.7"/>
+  <circle cx="366" cy="146" r="14" fill="#00e87a" opacity="0.5"/>
+</svg>
