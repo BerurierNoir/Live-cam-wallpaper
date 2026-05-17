@@ -1,0 +1,2 @@
+# go2rtc binary goes here (downloaded by scripts/download-go2rtc.sh)
+# This file is intentionally tracked; the binary is in .gitignore
