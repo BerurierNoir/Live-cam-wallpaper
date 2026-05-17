@@ -1,0 +1,26 @@
+{
+  "name": "camwall",
+  "productName": "CamWall",
+  "version": "1.0.0",
+  "description": "Live camera wallpaper for Linux — stream RTSP cameras directly on your desktop",
+  "main": "main.js",
+  "author": "Your Name",
+  "license": "MIT",
+  "keywords": ["camera", "rtsp", "wallpaper", "linux", "surveillance", "go2rtc"],
+  "scripts": {
+    "start": "electron .",
+    "dev": "NODE_ENV=development electron .",
+    "build": "npm run fetch-go2rtc && electron-builder",
+    "build:appimage": "npm run fetch-go2rtc && electron-builder --linux AppImage",
+    "build:deb": "npm run fetch-go2rtc && electron-builder --linux deb",
+    "fetch-go2rtc": "bash scripts/download-go2rtc.sh",
+    "lint": "echo 'No linter configured yet'"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.0"
+  }
+}
