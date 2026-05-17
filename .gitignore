@@ -1,0 +1,5 @@
+node_modules/
+dist/
+bin/go2rtc
+*.log
+.DS_Store
