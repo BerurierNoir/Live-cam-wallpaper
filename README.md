@@ -1,158 +1,150 @@
 # CamWall
 
-> **Live camera wallpaper for Linux** — stream RTSP cameras directly on any screen, with a minimal hover-triggered HUD.
+> **Live camera wallpaper for Linux** — Affiche tes caméras IP directement sur n'importe quel écran, avec un HUD minimaliste et zéro configuration réseau.
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Platform: Linux](https://img.shields.io/badge/platform-Linux-blue)
-![Built with Electron](https://img.shields.io/badge/built%20with-Electron-9FEAF9)
+![Version](https://img.shields.io/github/v/release/BerurierNoir/Live-cam-wallpaper)
 
 ---
 
-## ✨ Features
+## ✨ Fonctionnalités
 
-- **Multi-camera grid** — auto layout (1, 1×2, 2×2, 3×2, 3×3) or manual
-- **Hover HUD** — minimal control bar slides up from the bottom edge on hover
-- **Borderless fullscreen** — no window decorations, fills any chosen screen
-- **go2rtc bundled** — RTSP → WebRTC proxy embedded, managed automatically
-- **Click any camera** to expand fullscreen, ESC to return to grid
-- **Per-camera pause** and global pause
-- **Auto-reconnect** with configurable delay
-- **Idle pause** — stops streams after N minutes of inactivity
-- **Persistent config** — cameras, layout, display choice all saved
-- **Setup wizard** — guided first-run configuration
-- **Works on Wayland & X11** (KDE, GNOME, and more)
+| | |
+|---|---|
+| 📷 **Multi-caméras** | Grille auto (1, 1×2, 2×2, 3×2, 3×3) ou manuelle |
+| 🖥 **Plein écran dédié** | Fenêtre sans bord sur l'écran de ton choix |
+| 🎯 **HUD hover** | Barre de contrôle qui apparaît en passant la souris en bas |
+| 📡 **Multi-protocoles** | RTSP, Reolink natif, Tapo, ONVIF, MJPEG HTTP, HLS |
+| ⚡ **Sub-stream intelligent** | Grille = sub stream (SD), zoom = main stream (HD/4K) |
+| 🔄 **Reconnexion auto** | Exponential backoff (5s → 60s max) |
+| 📸 **Snapshot** | Capture JPEG par caméra en un clic |
+| 🔔 **System Tray** | Toujours accessible, jamais vraiment fermé |
+| 🚀 **Démarrage auto** | Option intégrée (fichier `.desktop` autostart) |
+| 🔄 **Mise à jour** | Vérification et notification automatique |
+| 📂 **Logs** | Accès direct aux logs depuis l'interface |
 
 ---
 
 ## 📦 Installation
 
-### Option A — AppImage (recommended)
+### Méthode recommandée — Script automatique
 
 ```bash
-# 1. Download the latest AppImage from Releases
-wget https://github.com/YOUR_USERNAME/camwall/releases/latest/download/CamWall-x86_64.AppImage
+curl -fsSL https://raw.githubusercontent.com/BerurierNoir/Live-cam-wallpaper/main/install.sh | bash
+```
 
-# 2. Make executable and run
+### Méthode manuelle — AppImage
+
+```bash
+# 1. Télécharger depuis la page Releases
+wget https://github.com/BerurierNoir/Live-cam-wallpaper/releases/latest/download/CamWall-x86_64.AppImage
+
+# 2. Rendre exécutable et lancer
 chmod +x CamWall-x86_64.AppImage
 ./CamWall-x86_64.AppImage
 ```
 
-The first run opens a **setup wizard** that guides you through go2rtc and camera configuration.
+> L'assistant de configuration s'ouvre automatiquement au premier lancement.
 
-### Option B — .deb package
-
-```bash
-wget https://github.com/YOUR_USERNAME/camwall/releases/latest/download/camwall_amd64.deb
-sudo dpkg -i camwall_amd64.deb
-camwall
-```
-
-### Option C — Build from source
+### Build depuis les sources
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/camwall.git
-cd camwall
+git clone https://github.com/BerurierNoir/Live-cam-wallpaper.git
+cd Live-cam-wallpaper
 npm install
-npm run fetch-go2rtc   # downloads go2rtc binary
-npm start              # development mode
-npm run build          # produces AppImage + deb in dist/
+npm run fetch-go2rtc   # télécharge go2rtc (~6 Mo)
+npm start              # mode dev
+npm run build          # produit AppImage + deb dans dist/
 ```
 
 ---
 
-## 🚀 Quick Start
-
-1. **Launch CamWall** — the setup wizard opens automatically on first run
-2. **go2rtc check** — the app detects or downloads go2rtc automatically
-3. **Add cameras** — enter the RTSP URL, an ID, and a display label for each camera
-4. **Choose a screen** — pick which monitor CamWall should use
-5. **Launch** — CamWall starts in fullscreen on the chosen screen
-
-After setup, hover near the **bottom edge** to reveal the HUD controls.
-
----
-
-## ⌨️ Keyboard Shortcuts
-
-| Key | Action |
-|-----|--------|
-| `Click` on camera | Expand to fullscreen |
-| `ESC` | Return to grid / close panel |
-| `P` | Pause / resume all streams |
-| `S` | Open settings panel |
-
----
-
-## ⚙️ Configuration
-
-Config is stored in `~/.config/CamWall/config.json`.
-
-### Adding a camera manually
-
-Edit `~/.config/CamWall/go2rtc.yaml`:
-
-```yaml
-streams:
-  entree:
-    - rtsp://admin:password@192.168.1.12:554/h264Preview_01_main
-  jardin:
-    - rtsp://admin:password@192.168.1.13:554/h264Preview_01_main
-```
-
-Then add the camera in CamWall settings (⚙ button in the HUD) using the same ID.
-
-### RTSP URL formats (Reolink example)
-
-```
-# Main stream (HD / 4K)
-rtsp://admin:password@IP:554/h264Preview_01_main
-
-# Sub stream (SD, lighter)
-rtsp://admin:password@IP:554/h264Preview_01_sub
-
-# H.265 cameras
-rtsp://admin:password@IP:554/h265Preview_01_main
-```
-
-> ⚠️ Avoid special characters (`@`, `:`, `/`) in passwords. Use `%40`, `%3A`, `%2F` if needed.
-
----
-
-## 🖥️ Multi-monitor Setup
-
-CamWall runs **fullscreen** on the selected screen. To change the target screen:
-
-1. Hover near the bottom edge → HUD appears
-2. Click **⚙ CONFIG**
-3. Under **Écran dédié**, click the desired screen
-
-KDE Plasma remembers the window position between sessions.
-
-### Auto-start on login (KDE)
-
-Add to **System Settings → Autostart**:
-```
-/path/to/CamWall-x86_64.AppImage
-```
-
-Or create a systemd user service:
-```ini
-# ~/.config/systemd/user/camwall.service
-[Unit]
-Description=CamWall — live camera wallpaper
-After=graphical-session.target
-
-[Service]
-Type=simple
-ExecStart=/path/to/CamWall-x86_64.AppImage
-Restart=on-failure
-
-[Install]
-WantedBy=graphical-session.target
-```
+## 🔄 Mise à jour
 
 ```bash
-systemctl --user enable --now camwall
+# Via le script (recommandé)
+bash install.sh --update
+
+# Ou depuis l'interface : ⚙ Config → ℹ Système → Vérifier
+```
+
+CamWall vérifie aussi les mises à jour automatiquement au démarrage.
+
+---
+
+## 🚀 Démarrage rapide
+
+1. **Lancer CamWall** → l'assistant s'ouvre
+2. **go2rtc** → l'app détecte ou télécharge automatiquement
+3. **Ajouter une caméra** → choisir le type, entrer l'URL
+4. **Choisir l'écran** → l'écran dédié à la surveillance
+5. **Lancer** → CamWall démarre en plein écran
+
+Passer la souris en **bas de l'écran** pour afficher le HUD.
+
+---
+
+## 📡 Types de caméras supportés
+
+| Type | URL exemple | Notes |
+|------|-------------|-------|
+| **RTSP** | `rtsp://admin:pass@192.168.1.x:554/stream` | Standard, universel |
+| **Reolink** | `reolink://admin:pass@192.168.1.x` | Natif, évite les problèmes HEVC |
+| **Tapo / TP-Link** | `tapo://admin:pass@192.168.1.x` | |
+| **ONVIF** | `onvif://admin:pass@192.168.1.x` | |
+| **HTTP MJPEG** | `http://192.168.1.x/mjpeg` | Caméras IP simples |
+| **HLS** | `http://192.168.1.x/stream.m3u8` | Streams HTTP |
+
+### URLs Reolink spécifiques (RTSP)
+
+```
+# H.264 — main stream (HD)
+rtsp://admin:pass@IP:554/h264Preview_01_main
+
+# H.264 — sub stream (SD, recommandé pour la grille)
+rtsp://admin:pass@IP:554/h264Preview_01_sub
+
+# H.265 / 4K
+rtsp://admin:pass@IP:554/h265Preview_01_main
+```
+
+> ⚠️ Caractères spéciaux dans les mots de passe : encoder en URL (`!` → `%21`, `@` → `%40`)
+
+---
+
+## ⌨️ Raccourcis clavier
+
+| Touche | Action |
+|--------|--------|
+| `Clic` sur une caméra | Zoom plein écran (main stream) |
+| `ESC` | Retour à la grille / fermer le panneau |
+| `P` | Pause / reprendre tous les streams |
+| `S` | Ouvrir les paramètres |
+| `F12` | DevTools (debug) |
+
+---
+
+## 🖥️ Multi-écrans
+
+CamWall tourne en **plein écran** sur l'écran sélectionné. Pour changer :
+
+⚙ CONFIG → 🖥 Écran → Sélectionner l'écran voulu
+
+### Autostart (démarrage au login)
+
+Dans ⚙ CONFIG → ⚙ Options → **Démarrage automatique** ✅
+
+Ou manuellement :
+```bash
+# Créer l'entrée autostart
+mkdir -p ~/.config/autostart
+cat > ~/.config/autostart/camwall.desktop << 'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=CamWall
+Exec=/home/USER/.local/bin/camwall
+DESKTOP
 ```
 
 ---
@@ -161,47 +153,38 @@ systemctl --user enable --now camwall
 
 ```
 CamWall (Electron)
-├── main.js          — main process: window management, go2rtc lifecycle, IPC
-├── preload.js       — secure IPC bridge (contextBridge)
+├── main.js         — fenêtre, go2rtc, tray, IPC, update, autostart
+├── preload.js      — bridge IPC sécurisé (contextBridge)
 ├── src/
-│   ├── app.html     — camera wall UI (WebRTC via go2rtc)
-│   └── setup.html   — first-run setup wizard
-└── bin/
-    └── go2rtc       — bundled RTSP→WebRTC proxy (AlexxIT/go2rtc)
+│   ├── app.html    — interface wallpaper (MJPEG + sub-stream)
+│   ├── setup.html  — assistant première utilisation
+│   └── loading.html
+└── bin/go2rtc      — proxy RTSP→MJPEG bundlé (AlexxIT/go2rtc)
 ```
 
-**Data flow:**
+**Flux de données :**
 ```
-RTSP Camera → go2rtc (localhost:1984) → WebRTC → Electron renderer
+Caméra IP (RTSP/...) → go2rtc (localhost:1984) → MJPEG → Electron
+                                                 ↗ sub stream (grille)
+                                                 ↗ main stream (focus)
 ```
 
 ---
 
-## 🔧 go2rtc
+## 🤝 Contribuer
 
-CamWall bundles [go2rtc](https://github.com/AlexxIT/go2rtc) by AlexxIT.  
-go2rtc config is auto-generated from CamWall's camera list and stored at:
-```
-~/.config/CamWall/go2rtc.yaml
-```
+Les PR sont les bienvenues ! Priorités :
 
-You can also edit this file manually and restart go2rtc from the settings panel.
-
----
-
-## 🤝 Contributing
-
-Pull requests welcome! Areas where help is appreciated:
-
-- **ARM64 support** — go2rtc ARM64 bundling
-- **Flatpak manifest** — proper Flatpak packaging
-- **wl-layer-shell** — native Wayland wallpaper protocol support
-- **ONVIF / PTZ** — camera pan/tilt control overlay
+- ARM64 build (Raspberry Pi)
+- Flatpak manifest
+- PTZ controls via ONVIF
+- Mode nuit / filtres couleur
+- Détection de mouvement (go2rtc webhooks)
 
 ---
 
-## 📄 License
+## 📄 Licence
 
-MIT — see [LICENSE](LICENSE)
+MIT — [LICENSE](LICENSE)
 
-go2rtc is distributed separately under its own license.
+go2rtc est distribué sous sa propre licence ([AlexxIT/go2rtc](https://github.com/AlexxIT/go2rtc)).
