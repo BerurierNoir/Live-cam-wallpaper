@@ -4,383 +4,521 @@
 <meta charset="UTF-8">
 <title>CamWall</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;700&display=swap');
-
+/* ── Fonts système — zéro dépendance réseau ──────────────────── */
 :root {
+  --mono: 'Courier New', 'Liberation Mono', 'DejaVu Sans Mono', monospace;
+  --sans: 'Cantarell', 'Ubuntu', system-ui, sans-serif;
+
   --bg:      #030508;
+  --s2:      #070b0f;
+  --panel:   #0a0e14;
   --green:   #00e87a;
-  --gdim:    #007a45;
-  --gglow:   rgba(0,232,122,0.2);
+  --gdim:    #006e3a;
+  --gglow:   rgba(0,232,122,0.18);
   --red:     #ff3b55;
   --amber:   #ffaa00;
-  --text:    #b8ccb8;
-  --tdim:    #3a5040;
-  --border:  rgba(0,200,100,0.12);
-  --mono:    'Share Tech Mono', monospace;
-  --sans:    'Rajdhani', system-ui, sans-serif;
-  --hud:     56px;
+  --text:    #a8bca8;
+  --tdim:    #2e4838;
+  --border:  rgba(0,200,100,0.1);
+  --borderH: rgba(0,200,100,0.35);
+  --hud-h:   54px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { width: 100vw; height: 100vh; background: var(--bg); color: var(--text); font-family: var(--mono); overflow: hidden; user-select: none; }
 
+html, body {
+  width: 100vw; height: 100vh;
+  background: var(--bg); color: var(--text);
+  font-family: var(--mono);
+  overflow: hidden; user-select: none; -webkit-user-select: none;
+}
+
+/* CRT subtle */
 body::after {
   content: ''; position: fixed; inset: 0;
-  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px);
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
   pointer-events: none; z-index: 9998;
 }
 
-/* ─── GRILLE ─────────────────────────────────────────────── */
+/* ── GRILLE ──────────────────────────────────────────────────── */
 #grid {
   position: fixed; inset: 0;
-  display: grid; gap: 3px; background: #000;
-  transition: grid-template-columns 0.35s, grid-template-rows 0.35s;
+  display: grid; gap: 2px; background: #000;
+  transition: grid-template-columns 0.3s ease, grid-template-rows 0.3s ease;
 }
 
-/* ─── CELLULE ────────────────────────────────────────────── */
+/* ── CELLULE ─────────────────────────────────────────────────── */
 .cam-cell {
   position: relative; background: #000; overflow: hidden;
-  cursor: pointer; outline: 1px solid rgba(0,200,100,0.05);
+  cursor: pointer;
+  /* Performance critique */
+  contain: layout style paint;
+  will-change: contents;
+  outline: 1px solid rgba(0,200,100,0.04);
   transition: outline-color 0.2s;
 }
-.cam-cell:hover { outline-color: rgba(0,200,100,0.3); }
+.cam-cell:hover { outline-color: rgba(0,200,100,0.25); }
 
-/* L'image MJPEG remplit toute la cellule */
 .cam-cell img {
   width: 100%; height: 100%;
   object-fit: cover; display: block;
+  /* GPU acceleration */
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
-/* coins hover */
+/* corners */
 .cam-cell::before, .cam-cell::after {
-  content: ''; position: absolute; width: 14px; height: 14px;
-  opacity: 0; transition: opacity 0.2s; z-index: 4; pointer-events: none;
+  content: ''; position: absolute;
+  width: 12px; height: 12px;
+  opacity: 0; transition: opacity 0.18s; z-index: 4; pointer-events: none;
 }
-.cam-cell::before { top: 7px; left: 7px; border-top: 1.5px solid var(--green); border-left: 1.5px solid var(--green); }
-.cam-cell::after  { bottom: 7px; right: 7px; border-bottom: 1.5px solid var(--green); border-right: 1.5px solid var(--green); }
+.cam-cell::before { top: 6px; left: 6px; border-top: 1px solid var(--green); border-left: 1px solid var(--green); }
+.cam-cell::after  { bottom: 6px; right: 6px; border-bottom: 1px solid var(--green); border-right: 1px solid var(--green); }
 .cam-cell:hover::before, .cam-cell:hover::after { opacity: 1; }
 
 /* vignette */
-.cam-vignette {
-  position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 22%), linear-gradient(0deg, rgba(0,0,0,0.6) 0%, transparent 22%);
-  opacity: 0; transition: opacity 0.2s; z-index: 2; pointer-events: none;
+.v {
+  position: absolute; inset: 0; pointer-events: none; z-index: 2;
+  background: linear-gradient(180deg,rgba(0,0,0,0.55) 0%,transparent 20%),
+              linear-gradient(0deg,rgba(0,0,0,0.55) 0%,transparent 20%);
+  opacity: 0; transition: opacity 0.18s;
 }
-.cam-cell:hover .cam-vignette { opacity: 1; }
+.cam-cell:hover .v { opacity: 1; }
 
-/* badge */
+/* badge cam */
 .cam-id {
-  position: absolute; top: 8px; left: 10px;
-  display: flex; align-items: center; gap: 6px;
-  font-size: 10px; letter-spacing: 1.5px;
-  color: var(--green); text-shadow: 0 0 8px var(--gglow); z-index: 5;
+  position: absolute; top: 7px; left: 9px;
+  display: flex; align-items: center; gap: 5px;
+  font-size: 9px; letter-spacing: 1.5px;
+  color: var(--green); text-shadow: 0 0 6px var(--gglow); z-index: 5;
 }
-
-.dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; transition: background 0.3s, box-shadow 0.3s; }
-.dot.online     { background: var(--green); box-shadow: 0 0 6px var(--green); }
-.dot.offline    { background: var(--red);   box-shadow: 0 0 6px var(--red);   animation: blink 1.2s infinite; }
-.dot.loading    { background: var(--amber); box-shadow: 0 0 6px var(--amber); animation: blink 0.5s infinite; }
-.dot.paused     { background: var(--tdim);  box-shadow: none; }
+.dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.dot.ok   { background: var(--green); box-shadow: 0 0 5px var(--green); }
+.dot.err  { background: var(--red);   box-shadow: 0 0 5px var(--red);   animation: blink 1.2s infinite; }
+.dot.conn { background: var(--amber); box-shadow: 0 0 5px var(--amber); animation: blink 0.5s infinite; }
+.dot.off  { background: var(--tdim);  box-shadow: none; }
 
 /* REC */
 .cam-rec {
-  position: absolute; top: 8px; right: 10px;
-  display: flex; align-items: center; gap: 4px;
-  font-size: 9px; letter-spacing: 2px; color: var(--red);
-  z-index: 5; opacity: 0; transition: opacity 0.2s;
+  position: absolute; top: 7px; right: 9px;
+  display: flex; align-items: center; gap: 3px;
+  font-size: 8px; letter-spacing: 2px; color: var(--red);
+  z-index: 5; opacity: 0; transition: opacity 0.18s;
 }
-.cam-rec::before { content: ''; width: 6px; height: 6px; background: var(--red); border-radius: 50%; animation: blink 1s infinite; }
+.cam-rec::before { content: ''; width: 5px; height: 5px; background: var(--red); border-radius: 50%; animation: blink 1s infinite; }
 .cam-cell:hover .cam-rec { opacity: 1; }
 
 /* label */
-.cam-label {
-  position: absolute; bottom: 9px; left: 11px;
-  font-family: var(--sans); font-weight: 700; font-size: 12px;
-  letter-spacing: 2px; text-transform: uppercase;
-  color: rgba(255,255,255,0.85); text-shadow: 0 1px 5px rgba(0,0,0,0.95);
-  z-index: 5; opacity: 0; transition: opacity 0.2s;
+.cam-lbl {
+  position: absolute; bottom: 8px; left: 10px;
+  font-family: var(--sans); font-weight: 700; font-size: 11px;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: rgba(255,255,255,0.82); text-shadow: 0 1px 4px rgba(0,0,0,0.95);
+  z-index: 5; opacity: 0; transition: opacity 0.18s;
 }
-.cam-cell:hover .cam-label { opacity: 1; }
+.cam-cell:hover .cam-lbl { opacity: 1; }
 
-/* bouton pause individuel */
-.cam-toggle {
+/* snapshot btn */
+.cam-snap {
+  position: absolute; bottom: 7px; right: 9px;
+  font-size: 14px; z-index: 5; cursor: pointer;
+  opacity: 0; transition: opacity 0.18s;
+  background: rgba(0,0,0,0.5); border-radius: 3px; padding: 2px 5px;
+  border: 1px solid var(--border);
+}
+.cam-cell:hover .cam-snap { opacity: 1; }
+.cam-snap:hover { background: rgba(0,200,100,0.12); border-color: var(--borderH); }
+
+/* pause overlay */
+.cam-tog {
   position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%,-50%) scale(0.85);
-  width: 42px; height: 42px; background: rgba(0,0,0,0.65);
-  border: 1px solid var(--border); border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 15px; cursor: pointer; z-index: 6;
-  opacity: 0; transition: opacity 0.2s, transform 0.2s;
+  transform: translate(-50%,-50%) scale(0.8);
+  width: 38px; height: 38px;
+  background: rgba(0,0,0,0.6); border: 1px solid var(--border);
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; cursor: pointer; z-index: 6;
+  opacity: 0; transition: opacity 0.18s, transform 0.18s;
 }
-.cam-cell:hover .cam-toggle { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+.cam-cell:hover .cam-tog { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+.cam-tog:hover { background: rgba(0,200,100,0.1); border-color: var(--borderH); }
 
-/* offline overlay */
+/* offline */
 .cam-err {
   position: absolute; inset: 0; display: none;
   flex-direction: column; align-items: center; justify-content: center;
-  gap: 10px; z-index: 7; background: rgba(3,5,8,0.8);
+  gap: 10px; z-index: 7; background: rgba(3,5,8,0.82);
 }
 .cam-err.show { display: flex; }
-.cam-err-icon { font-size: 28px; opacity: 0.3; }
-.cam-err-msg  { font-size: 10px; color: var(--tdim); letter-spacing: 1px; }
-.cam-err-retry {
-  font-size: 9px; color: var(--gdim); letter-spacing: 1px;
-  cursor: pointer; border: 1px solid var(--border); padding: 4px 10px;
-  border-radius: 2px; transition: color 0.15s;
+.cam-err-i    { font-size: 24px; opacity: 0.25; }
+.cam-err-m    { font-size: 9px; color: var(--tdim); letter-spacing: 1px; text-align: center; }
+.cam-err-r    { font-size: 9px; color: var(--gdim); letter-spacing: 1px; cursor: pointer; border: 1px solid var(--border); padding: 3px 10px; border-radius: 2px; transition: color 0.15s; }
+.cam-err-r:hover { color: var(--green); border-color: var(--borderH); }
+
+/* focus = plein écran */
+.cam-cell.focused { position: fixed; inset: 0; z-index: 50; outline: 1px solid var(--green); cursor: default; }
+.cam-cell.focused .cam-lbl { opacity: 1; }
+
+/* état vide */
+#empty {
+  position: fixed; inset: 0; display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; z-index: 10;
 }
-.cam-err-retry:hover { color: var(--green); }
+#empty.show { display: flex; }
+#empty-title { font-family: var(--sans); font-size: 18px; letter-spacing: 3px; color: var(--gdim); }
+#empty-btn {
+  padding: 10px 24px; background: rgba(0,200,100,0.08);
+  border: 1px solid rgba(0,200,100,0.3); border-radius: 3px;
+  color: var(--green); font-family: var(--mono); font-size: 10px;
+  letter-spacing: 2px; cursor: pointer; transition: all 0.15s;
+}
+#empty-btn:hover { background: rgba(0,200,100,0.16); border-color: var(--green); }
 
-/* cellule focus */
-.cam-cell.focused { position: fixed; inset: 0; z-index: 50; outline: 2px solid var(--green); cursor: default; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
 
-@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.15; } }
+/* ── NOTIF UPDATE ─────────────────────────────────────────────── */
+#update-notif {
+  position: fixed; top: 14px; right: 14px;
+  background: rgba(10,14,20,0.95); border: 1px solid rgba(59,142,255,0.4);
+  border-radius: 4px; padding: 10px 14px;
+  font-size: 10px; letter-spacing: 0.5px; color: #3b8eff;
+  z-index: 400; display: none; gap: 10px; align-items: center;
+  box-shadow: 0 0 20px rgba(59,142,255,0.1);
+}
+#update-notif.show { display: flex; }
+#update-notif a { color: #3b8eff; text-decoration: none; border-bottom: 1px solid rgba(59,142,255,0.4); }
+#update-notif .nu-close { cursor: pointer; color: var(--tdim); margin-left: 6px; }
+#update-notif .nu-close:hover { color: var(--text); }
 
-/* ─── HUD ────────────────────────────────────────────────── */
+/* ── HUD ─────────────────────────────────────────────────────── */
 #hud-zone {
   position: fixed; bottom: 0; left: 0; right: 0;
-  height: 72px; z-index: 100; pointer-events: all;
+  height: 70px; z-index: 100; pointer-events: all;
 }
-
 #hud {
   position: absolute; bottom: 0; left: 0; right: 0;
-  height: var(--hud);
+  height: var(--hud-h);
   background: rgba(3,5,8,0.97);
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(12px) saturate(1.2);
   border-top: 1px solid var(--border);
   display: flex; align-items: center;
   transform: translateY(100%);
-  transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
 }
+#hud-zone:hover #hud { transform: translateY(0); }
 
-#hud-zone:hover #hud,
-#hud:hover { transform: translateY(0); }
+.hs  { display: flex; align-items: center; gap: 8px; padding: 0 12px; height: 100%; }
+.hd  { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
+.hsp { flex: 1; }
 
-.hs { display: flex; align-items: center; gap: 8px; padding: 0 14px; height: 100%; }
-.hd { width: 1px; height: 22px; background: var(--border); flex-shrink: 0; }
-.sp { flex: 1; }
-
-#hud-logo { font-family: var(--sans); font-weight: 700; font-size: 14px; letter-spacing: 3px; color: var(--green); text-shadow: 0 0 10px var(--gglow); }
-#hud-clock { font-size: 18px; letter-spacing: 3px; font-variant-numeric: tabular-nums; min-width: 82px; }
-#hud-date  { font-family: var(--sans); font-size: 10px; color: var(--tdim); letter-spacing: 1px; text-transform: uppercase; }
-#cam-badge { font-size: 10px; letter-spacing: 1.5px; color: var(--gdim); border: 1px solid var(--border); padding: 3px 8px; border-radius: 2px; }
+#hud-logo { font-family: var(--sans); font-weight: 700; font-size: 13px; letter-spacing: 3px; color: var(--green); text-shadow: 0 0 8px var(--gglow); }
+#hud-ver  { font-size: 8px; color: var(--tdim); letter-spacing: 1px; }
+#hud-clk  { font-size: 17px; letter-spacing: 3px; font-variant-numeric: tabular-nums; min-width: 78px; }
+#hud-dt   { font-family: var(--sans); font-size: 10px; color: var(--tdim); letter-spacing: 1px; text-transform: uppercase; }
+#cam-bdg  { font-size: 9px; letter-spacing: 1.5px; color: var(--gdim); border: 1px solid var(--border); padding: 2px 7px; border-radius: 2px; }
+#go2rtc-st{ font-size: 8px; color: var(--tdim); letter-spacing: 1px; display: flex; align-items: center; gap: 4px; }
 
 /* layout picker */
-#lpicker { display: flex; gap: 3px; }
-.lpick {
-  width: 28px; height: 28px; display: grid; padding: 5px; gap: 2px;
-  background: transparent; border: 1px solid rgba(0,200,100,0.1);
-  border-radius: 3px; cursor: pointer; transition: all 0.15s;
+#lpick { display: flex; gap: 3px; }
+.lp {
+  width: 26px; height: 26px; display: grid; padding: 5px; gap: 2px;
+  background: transparent; border: 1px solid rgba(0,200,100,0.08);
+  border-radius: 2px; cursor: pointer; transition: all 0.12s;
 }
-.lpick span { background: rgba(0,200,100,0.35); border-radius: 1px; display: block; }
-.lpick:hover  { border-color: rgba(0,200,100,0.3); background: rgba(0,200,100,0.04); }
-.lpick.active { border-color: rgba(0,200,100,0.55); background: rgba(0,200,100,0.08); }
-.lpick.auto   { align-items: center; justify-content: center; font-size: 8px; letter-spacing: 1px; color: rgba(0,200,100,0.5); padding: 0; }
+.lp span { background: rgba(0,200,100,0.3); border-radius: 1px; display: block; }
+.lp:hover  { border-color: rgba(0,200,100,0.3); background: rgba(0,200,100,0.04); }
+.lp.active { border-color: rgba(0,200,100,0.5); background: rgba(0,200,100,0.07); }
+.lp.auto   { align-items: center; justify-content: center; font-size: 7px; letter-spacing: 1px; color: rgba(0,200,100,0.4); padding: 0; }
 
-/* boutons HUD */
+/* boutons */
 .hbtn {
-  height: 30px; padding: 0 12px;
-  background: transparent; border: 1px solid rgba(0,200,100,0.12);
-  border-radius: 3px; color: var(--text); font-family: var(--mono);
-  font-size: 10px; letter-spacing: 1px; cursor: pointer;
+  height: 28px; padding: 0 10px;
+  background: transparent; border: 1px solid rgba(0,200,100,0.1);
+  border-radius: 2px; color: var(--text); font-family: var(--mono);
+  font-size: 9px; letter-spacing: 1px; cursor: pointer;
   display: flex; align-items: center; gap: 5px;
-  transition: all 0.15s; white-space: nowrap;
+  transition: all 0.12s; white-space: nowrap;
 }
-.hbtn:hover  { background: rgba(0,200,100,0.06); border-color: rgba(0,200,100,0.35); color: var(--green); }
-.hbtn.on     { background: rgba(255,170,0,0.08); border-color: rgba(255,170,0,0.3); color: var(--amber); }
-.hbtn.quit   { border-color: rgba(255,59,85,0.15); }
-.hbtn.quit:hover { background: rgba(255,59,85,0.08); border-color: rgba(255,59,85,0.4); color: var(--red); }
+.hbtn:hover   { background: rgba(0,200,100,0.05); border-color: rgba(0,200,100,0.3); color: var(--green); }
+.hbtn.on      { background: rgba(255,170,0,0.07); border-color: rgba(255,170,0,0.25); color: var(--amber); }
+.hbtn.danger  { border-color: rgba(255,59,85,0.12); }
+.hbtn.danger:hover { background: rgba(255,59,85,0.07); border-color: rgba(255,59,85,0.35); color: var(--red); }
 
-/* ─── PANNEAU CONFIG ─────────────────────────────────────── */
+/* ── PANNEAU CONFIG ───────────────────────────────────────────── */
 #panel {
-  position: fixed; top: 0; right: 0; bottom: 0; width: 330px;
-  background: #0c1018; border-left: 1px solid var(--border);
+  position: fixed; top: 0; right: 0; bottom: 0; width: 340px;
+  background: var(--panel); border-left: 1px solid var(--border);
   z-index: 200; transform: translateX(100%);
-  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
   display: flex; flex-direction: column;
+  contain: layout style;
 }
 #panel.open { transform: translateX(0); }
 
 #ph {
-  height: 52px; border-bottom: 1px solid var(--border);
+  height: 50px; border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 16px; flex-shrink: 0;
-  font-size: 10px; letter-spacing: 2px; color: var(--green); text-transform: uppercase;
+  padding: 0 14px; flex-shrink: 0;
+  font-size: 9px; letter-spacing: 2px; color: var(--green); text-transform: uppercase;
 }
-#ph-close {
-  width: 26px; height: 26px; border: 1px solid var(--border);
-  border-radius: 2px; display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 12px; color: var(--tdim); transition: all 0.15s;
+#phc {
+  width: 24px; height: 24px; border: 1px solid var(--border); border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 11px; color: var(--tdim); transition: all 0.12s;
 }
-#ph-close:hover { border-color: var(--red); color: var(--red); }
+#phc:hover { border-color: var(--red); color: var(--red); }
 
-#pb { flex: 1; overflow-y: auto; padding: 16px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
-
-.pg { margin-bottom: 22px; }
-.pt {
-  font-size: 9px; letter-spacing: 2px; color: var(--gdim);
-  text-transform: uppercase; padding-bottom: 7px;
-  border-bottom: 1px solid var(--border); margin-bottom: 10px;
+/* tabs du panel */
+#p-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.p-tab {
+  flex: 1; padding: 10px 6px; text-align: center; font-size: 9px;
+  letter-spacing: 1px; color: var(--tdim); text-transform: uppercase;
+  cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s;
 }
+.p-tab.active { color: var(--green); border-bottom-color: var(--green); }
+.p-tab:hover  { color: var(--text); }
 
-#camlist { display: flex; flex-direction: column; gap: 7px; margin-bottom: 10px; }
+.p-pane { display: none; flex: 1; overflow-y: auto; padding: 14px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.p-pane.active { display: block; }
 
-.ce {
-  background: rgba(0,200,100,0.02); border: 1px solid var(--border);
-  border-radius: 3px; padding: 9px; display: flex; flex-direction: column; gap: 5px;
-}
+/* section */
+.ps { margin-bottom: 20px; }
+.ps-t { font-size: 8px; letter-spacing: 2px; color: var(--gdim); text-transform: uppercase; padding-bottom: 7px; border-bottom: 1px solid var(--border); margin-bottom: 9px; }
+
+/* cam entry */
+#camlist { display: flex; flex-direction: column; gap: 7px; margin-bottom: 9px; }
+.ce { background: rgba(0,200,100,0.02); border: 1px solid var(--border); border-radius: 3px; padding: 9px; display: flex; flex-direction: column; gap: 5px; }
 .cer { display: flex; gap: 5px; align-items: center; }
-.ce input {
-  flex: 1; background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.07); border-radius: 2px;
-  color: var(--text); font-family: var(--mono); font-size: 10px;
-  padding: 5px 7px; outline: none; transition: border-color 0.15s;
+.ce-label { font-size: 8px; color: var(--tdim); letter-spacing: 1px; margin-bottom: 2px; }
+.pi {
+  flex: 1; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 2px; color: var(--text); font-family: var(--mono); font-size: 10px;
+  padding: 5px 7px; outline: none; transition: border-color 0.12s;
 }
-.ce input:focus { border-color: var(--gdim); }
-.ce input::placeholder { color: #1a3020; }
-.ce-del {
-  width: 24px; height: 24px; flex-shrink: 0;
-  background: rgba(255,59,85,0.05); border: 1px solid rgba(255,59,85,0.15);
-  border-radius: 2px; display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 11px; color: var(--red); transition: background 0.15s;
+.pi:focus { border-color: var(--gdim); }
+.pi::placeholder { color: #1a3020; }
+.pi-sel {
+  background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 2px; color: var(--text); font-family: var(--mono); font-size: 10px;
+  padding: 5px 7px; outline: none; transition: border-color 0.12s; width: 100%;
 }
-.ce-del:hover { background: rgba(255,59,85,0.18); }
+.pi-sel:focus { border-color: var(--gdim); }
+.pi-sel option { background: var(--panel); }
+.ce-del { width: 24px; height: 24px; flex-shrink: 0; background: rgba(255,59,85,0.04); border: 1px solid rgba(255,59,85,0.12); border-radius: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 10px; color: var(--red); transition: background 0.12s; }
+.ce-del:hover { background: rgba(255,59,85,0.16); }
 
-#btn-addcam {
-  width: 100%; padding: 8px; background: transparent;
-  border: 1px dashed rgba(0,200,100,0.18); border-radius: 3px;
-  color: var(--gdim); font-family: var(--mono); font-size: 10px;
-  letter-spacing: 1.5px; cursor: pointer; text-align: center;
-  transition: all 0.15s;
+#btn-add-cam {
+  width: 100%; padding: 7px; background: transparent;
+  border: 1px dashed rgba(0,200,100,0.15); border-radius: 2px;
+  color: var(--gdim); font-family: var(--mono); font-size: 9px;
+  letter-spacing: 1.5px; cursor: pointer; text-align: center; transition: all 0.12s;
 }
-#btn-addcam:hover { border-color: var(--green); color: var(--green); }
+#btn-add-cam:hover { border-color: var(--green); color: var(--green); }
 
-.pr {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 0; border-bottom: 1px solid var(--border);
-  font-size: 10px; gap: 10px;
-}
+/* rows settings */
+.pr { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 9px; gap: 10px; }
 .pr span { color: var(--tdim); }
 .pr input[type=text], .pr input[type=number], .pr select {
-  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 2px; color: var(--text); font-family: var(--mono);
-  font-size: 10px; padding: 4px 7px; outline: none; max-width: 130px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 2px; color: var(--text); font-family: var(--mono); font-size: 10px;
+  padding: 4px 6px; outline: none; max-width: 120px;
 }
-
-.tgl { position: relative; width: 36px; height: 18px; cursor: pointer; }
+.tgl { position: relative; width: 34px; height: 17px; cursor: pointer; }
 .tgl input { opacity: 0; width: 0; height: 0; }
-.tgl-t {
-  position: absolute; inset: 0; background: #0f1f14;
-  border: 1px solid rgba(0,200,100,0.15); border-radius: 9px; transition: all 0.2s;
-}
-.tgl-t::before {
-  content: ''; position: absolute;
-  width: 12px; height: 12px; border-radius: 50%;
-  background: #1a3020; top: 2px; left: 2px; transition: transform 0.2s, background 0.2s;
-}
-.tgl input:checked + .tgl-t { border-color: rgba(0,200,100,0.4); }
-.tgl input:checked + .tgl-t::before { transform: translateX(18px); background: var(--green); }
+.tgl-t { position: absolute; inset: 0; background: #0a1a0f; border: 1px solid rgba(0,200,100,0.12); border-radius: 9px; transition: all 0.18s; }
+.tgl-t::before { content: ''; position: absolute; width: 11px; height: 11px; border-radius: 50%; background: #1a3020; top: 2px; left: 2px; transition: transform 0.18s, background 0.18s; }
+.tgl input:checked + .tgl-t { border-color: rgba(0,200,100,0.35); }
+.tgl input:checked + .tgl-t::before { transform: translateX(17px); background: var(--green); }
 
-/* sélecteur écrans */
-#displayer { display: flex; flex-direction: column; gap: 6px; }
-.dopt {
-  padding: 9px 11px; background: rgba(0,200,100,0.02);
-  border: 1px solid var(--border); border-radius: 3px;
-  cursor: pointer; display: flex; align-items: center; justify-content: space-between;
-  font-size: 11px; transition: all 0.15s;
-}
-.dopt:hover  { border-color: rgba(0,200,100,0.3); }
+/* écrans */
+#displayer { display: flex; flex-direction: column; gap: 5px; }
+.dopt { padding: 8px 10px; background: rgba(0,200,100,0.02); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; font-size: 10px; transition: all 0.12s; }
+.dopt:hover  { border-color: rgba(0,200,100,0.25); }
 .dopt.active { border-color: var(--green); color: var(--green); }
-.dopt .dbadge { font-size: 9px; color: var(--tdim); }
+.dopt .db    { font-size: 9px; color: var(--tdim); }
 
+/* infos système */
+.sys-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 9px; }
+.sys-row span { color: var(--tdim); }
+.sys-row strong { color: var(--text); letter-spacing: 0.5px; }
+
+/* boutons */
 #btn-save {
-  width: 100%; padding: 10px; margin-top: 14px;
-  background: rgba(0,200,100,0.08); border: 1px solid rgba(0,200,100,0.3);
-  border-radius: 3px; color: var(--green); font-family: var(--mono);
-  font-size: 11px; letter-spacing: 2px; cursor: pointer; text-transform: uppercase;
-  transition: all 0.15s;
+  width: 100%; padding: 9px; margin-top: 14px;
+  background: rgba(0,200,100,0.07); border: 1px solid rgba(0,200,100,0.28);
+  border-radius: 2px; color: var(--green); font-family: var(--mono);
+  font-size: 10px; letter-spacing: 2px; cursor: pointer; text-transform: uppercase; transition: all 0.12s;
 }
-#btn-save:hover { background: rgba(0,200,100,0.15); border-color: var(--green); }
-#save-ok { text-align: center; font-size: 9px; color: var(--gdim); letter-spacing: 1px; height: 16px; margin-top: 8px; }
+#btn-save:hover { background: rgba(0,200,100,0.14); border-color: var(--green); }
+#save-ok { text-align: center; font-size: 8px; color: var(--gdim); letter-spacing: 1px; height: 14px; margin-top: 7px; }
+
+.action-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 7px; }
+
+/* update badge */
+.upd-badge {
+  display: none; background: rgba(59,142,255,0.08);
+  border: 1px solid rgba(59,142,255,0.3); border-radius: 2px;
+  padding: 8px 10px; margin-top: 10px;
+  font-size: 9px; letter-spacing: 0.5px; color: #3b8eff; align-items: center; gap: 8px;
+}
+.upd-badge.show { display: flex; }
+.upd-link { color: #3b8eff; text-decoration: none; border-bottom: 1px solid rgba(59,142,255,0.3); cursor: pointer; }
 
 /* hint */
 #hint {
-  position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
-  display: flex; gap: 14px; background: rgba(3,5,8,0.75);
-  border: 1px solid var(--border); border-radius: 3px;
-  padding: 6px 16px; font-size: 9px; color: var(--tdim); letter-spacing: 1px;
+  position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 12px;
+  background: rgba(3,5,8,0.82); border: 1px solid var(--border);
+  border-radius: 3px; padding: 5px 14px;
+  font-size: 8px; color: var(--tdim); letter-spacing: 1px;
   z-index: 300; opacity: 0; transition: opacity 0.4s; pointer-events: none;
 }
 #hint.show { opacity: 1; }
-#hint kbd { color: var(--gdim); margin-right: 3px; }
+#hint kbd { color: var(--gdim); margin-right: 2px; }
 </style>
 </head>
 <body>
+
+<!-- grille + état vide -->
 <div id="grid"></div>
+<div id="empty">
+  <div id="empty-title">AUCUNE CAMÉRA</div>
+  <div style="font-size:9px;color:var(--tdim);letter-spacing:1px;">Configure tes caméras dans les paramètres</div>
+  <div id="empty-btn">⚙ OUVRIR LES PARAMÈTRES</div>
+</div>
+
+<!-- notification mise à jour -->
+<div id="update-notif">
+  <span>🔄 Mise à jour disponible : </span>
+  <a id="upd-link" href="#">télécharger</a>
+  <span class="nu-close" id="upd-close">✕</span>
+</div>
+
+<!-- HUD bottom -->
 <div id="hud-zone">
   <div id="hud">
     <div class="hs">
       <span id="hud-logo">CamWall</span>
-      <div class="hd"></div>
-      <span id="hud-clock">00:00:00</span>
-      <span id="hud-date"></span>
+      <span id="hud-ver"></span>
     </div>
     <div class="hd"></div>
     <div class="hs">
-      <span id="cam-badge">— CAM</span>
-      <div id="lpicker"></div>
+      <span id="hud-clk">00:00:00</span>
+      <span id="hud-dt"></span>
     </div>
-    <div class="sp"></div>
+    <div class="hd"></div>
+    <div class="hs">
+      <span id="cam-bdg">— CAM</span>
+      <span id="go2rtc-st"><span class="dot conn" style="width:5px;height:5px;"></span>go2rtc</span>
+    </div>
+    <div class="hd"></div>
+    <div class="hs">
+      <div id="lpick"></div>
+    </div>
+    <div class="hsp"></div>
     <div class="hs">
       <button class="hbtn" id="btn-pause">⏸ PAUSE</button>
       <button class="hbtn" id="btn-cfg">⚙ CONFIG</button>
       <div class="hd"></div>
-      <button class="hbtn quit" id="btn-quit">✕</button>
+      <button class="hbtn danger" id="btn-quit" title="Minimiser dans le tray">✕</button>
     </div>
   </div>
 </div>
 
+<!-- Panneau config -->
 <div id="panel">
   <div id="ph">
     <span>// Paramètres</span>
-    <div id="ph-close">✕</div>
+    <div id="phc">✕</div>
   </div>
-  <div id="pb">
-    <div class="pg">
-      <div class="pt">Caméras</div>
-      <div id="camlist"></div>
-      <div id="btn-addcam">+ AJOUTER UNE CAMÉRA</div>
-    </div>
-    <div class="pg">
-      <div class="pt">Écran dédié</div>
-      <div id="displayer"></div>
-    </div>
-    <div class="pg">
-      <div class="pt">Connexion</div>
-      <div class="pr"><span>go2rtc URL</span><input id="s-server" type="text" value="http://localhost:1984" style="width:145px"></div>
-      <div class="pr"><span>Reconnexion auto</span><label class="tgl"><input type="checkbox" id="s-reconnect" checked><span class="tgl-t"></span></label></div>
-      <div class="pr"><span>Délai (s)</span><input id="s-delay" type="number" value="5" min="2" max="60" style="width:55px"></div>
-    </div>
-    <div class="pg">
-      <div class="pt">Affichage</div>
-      <div class="pr"><span>Horloge</span><label class="tgl"><input type="checkbox" id="s-clock" checked><span class="tgl-t"></span></label></div>
-      <div class="pr"><span>Labels caméras</span><label class="tgl"><input type="checkbox" id="s-labels" checked><span class="tgl-t"></span></label></div>
-      <div class="pr"><span>Pause si inactif (min, 0=off)</span><input id="s-idle" type="number" value="0" min="0" max="120" style="width:55px"></div>
-    </div>
+  <div id="p-tabs">
+    <div class="p-tab active" data-tab="cams">📷 Caméras</div>
+    <div class="p-tab" data-tab="display">🖥 Écran</div>
+    <div class="p-tab" data-tab="opts">⚙ Options</div>
+    <div class="p-tab" data-tab="sys">ℹ Système</div>
+  </div>
+
+  <!-- Tab Caméras -->
+  <div class="p-pane active" id="tab-cams">
+    <div id="camlist"></div>
+    <div id="btn-add-cam">+ AJOUTER UNE CAMÉRA</div>
     <button id="btn-save">SAUVEGARDER &amp; APPLIQUER</button>
     <div id="save-ok"></div>
-    <div class="pg" style="margin-top:18px">
-      <div class="pt">Utilitaires</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+  </div>
+
+  <!-- Tab Écran -->
+  <div class="p-pane" id="tab-display">
+    <div class="ps">
+      <div class="ps-t">Écran dédié</div>
+      <div id="displayer"></div>
+    </div>
+    <div class="ps">
+      <div class="ps-t">Layout</div>
+      <div class="pr"><span>Sub-stream en grille</span><label class="tgl"><input type="checkbox" id="s-sub" checked><span class="tgl-t"></span></label></div>
+      <div class="pr"><span>Gap entre cellules (px)</span><input id="s-gap" type="number" value="2" min="0" max="20" style="width:50px"></div>
+    </div>
+  </div>
+
+  <!-- Tab Options -->
+  <div class="p-pane" id="tab-opts">
+    <div class="ps">
+      <div class="ps-t">Connexion</div>
+      <div class="pr"><span>go2rtc URL</span><input id="s-server" type="text" value="http://localhost:1984" style="width:140px"></div>
+      <div class="pr"><span>Reconnexion auto</span><label class="tgl"><input type="checkbox" id="s-reconnect" checked><span class="tgl-t"></span></label></div>
+      <div class="pr"><span>Délai initial (s)</span><input id="s-delay" type="number" value="5" min="1" max="30" style="width:50px"></div>
+      <div class="pr"><span>Délai max (s)</span><input id="s-maxdelay" type="number" value="60" min="10" max="300" style="width:50px"></div>
+    </div>
+    <div class="ps">
+      <div class="ps-t">Comportement</div>
+      <div class="pr"><span>Pause si inactif (min, 0=off)</span><input id="s-idle" type="number" value="0" min="0" max="120" style="width:50px"></div>
+      <div class="pr"><span>Click-through (expérimental)</span><label class="tgl"><input type="checkbox" id="s-ct"><span class="tgl-t"></span></label></div>
+      <div class="pr"><span>Démarrage automatique</span><label class="tgl"><input type="checkbox" id="s-autostart"><span class="tgl-t"></span></label></div>
+    </div>
+    <div class="ps">
+      <div class="ps-t">Affichage</div>
+      <div class="pr"><span>Horloge</span><label class="tgl"><input type="checkbox" id="s-clock" checked><span class="tgl-t"></span></label></div>
+      <div class="pr"><span>Labels caméras</span><label class="tgl"><input type="checkbox" id="s-labels" checked><span class="tgl-t"></span></label></div>
+    </div>
+    <button id="btn-save2" style="width:100%;padding:9px;margin-top:14px;background:rgba(0,200,100,0.07);border:1px solid rgba(0,200,100,0.28);border-radius:2px;color:var(--green);font-family:var(--mono);font-size:10px;letter-spacing:2px;cursor:pointer;text-transform:uppercase;transition:all 0.12s">SAUVEGARDER</button>
+    <div id="save-ok2" style="text-align:center;font-size:8px;color:var(--gdim);letter-spacing:1px;height:14px;margin-top:7px"></div>
+  </div>
+
+  <!-- Tab Système -->
+  <div class="p-pane" id="tab-sys">
+    <div class="ps">
+      <div class="ps-t">Informations</div>
+      <div id="sys-info"></div>
+    </div>
+    <div class="ps">
+      <div class="ps-t">Mise à jour</div>
+      <div id="upd-badge" class="upd-badge">
+        <span>Nouvelle version disponible !</span>
+        <span class="upd-link" id="upd-dl">Télécharger</span>
+      </div>
+      <div class="action-row" style="margin-top:10px">
+        <button class="hbtn" id="btn-checkupd">🔄 Vérifier</button>
+        <span id="upd-status" style="font-size:9px;color:var(--tdim);align-self:center;letter-spacing:0.5px"></span>
+      </div>
+    </div>
+    <div class="ps">
+      <div class="ps-t">Utilitaires</div>
+      <div class="action-row">
         <button class="hbtn" id="btn-opendir">📂 Config</button>
+        <button class="hbtn" id="btn-openlog">📋 Logs</button>
         <button class="hbtn" id="btn-setup">🔧 Assistant</button>
       </div>
     </div>
   </div>
 </div>
 
+<!-- hint clavier -->
 <div id="hint">
   <span><kbd>Clic</kbd>zoom</span>
-  <span><kbd>ESC</kbd>retour</span>
+  <span><kbd>ESC</kbd>retour/fermer</span>
   <span><kbd>P</kbd>pause</span>
   <span><kbd>S</kbd>settings</span>
   <span><kbd>F12</kbd>debug</span>
@@ -388,350 +526,511 @@ body::after {
 
 <script>
 const API = window.CamWall;
-let cfg = {}, camPaused = {}, globalPaused = false, focusedCam = null, layoutOvr = null;
+let cfg = {}, camPaused = {}, camRetries = {}, retryTimers = {};
+let globalPaused = false, focusedCam = null, layoutOvr = null;
+let updateInfo = null;
 
-// ── MJPEG URL ───────────────────────────────────────────────
-function mjpegUrl(id) {
-  const port = cfg.go2rtcPort || 1984;
-  return `http://localhost:${port}/api/stream.mjpeg?src=${encodeURIComponent(id)}`;
+// ── URL helpers ──────────────────────────────────────────────
+const go2rtcBase = () => `http://localhost:${cfg.go2rtcPort || 1984}`;
+const mjpegUrl = (id) => `${go2rtcBase()}/api/stream.mjpeg?src=${encodeURIComponent(id)}`;
+// En mode grille: sub stream si dispo et activé
+const streamId = (cam, focused) => {
+  if (!focused && cfg.useSubStream !== false && cam.subUrl && cam.id+'_sub') return cam.id+'_sub';
+  return cam.id;
+};
+
+// ── Exponential backoff ──────────────────────────────────────
+function nextRetryDelay(id) {
+  const base = cfg.reconnectDelay || 5;
+  const max  = cfg.maxReconnectDelay || 60;
+  camRetries[id] = (camRetries[id] || 0) + 1;
+  return Math.min(base * Math.pow(1.5, camRetries[id] - 1), max);
 }
+function resetRetry(id) { camRetries[id] = 0; }
 
-// ── LAYOUTS ─────────────────────────────────────────────────
+// ── Layouts ──────────────────────────────────────────────────
 const LAYOUTS = [
-  { id:'auto' },
-  { id:'1',  cols:1, rows:1 },
-  { id:'2',  cols:2, rows:1 },
-  { id:'4',  cols:2, rows:2 },
-  { id:'6',  cols:3, rows:2 },
-  { id:'9',  cols:3, rows:3 },
+  {id:'auto'}, {id:'1',cols:1,rows:1}, {id:'2',cols:2,rows:1},
+  {id:'4',cols:2,rows:2}, {id:'6',cols:3,rows:2}, {id:'9',cols:3,rows:3},
 ];
 function autoGrid(n) {
-  if (n<=1) return [1,1]; if (n===2) return [2,1];
-  if (n<=4) return [2,2]; if (n<=6) return [3,2]; return [3,3];
+  if(n<=1)return[1,1]; if(n===2)return[2,1];
+  if(n<=4)return[2,2]; if(n<=6)return[3,2]; return[3,3];
 }
 function applyLayout() {
   const grid = document.getElementById('grid');
+  const gap  = cfg.gridGap !== undefined ? cfg.gridGap : 2;
+  grid.style.gap = `${gap}px`;
   if (focusedCam) { grid.style.gridTemplateColumns='1fr'; grid.style.gridTemplateRows='1fr'; return; }
   const lid = layoutOvr || 'auto';
-  const l   = LAYOUTS.find(x => x.id === lid);
-  const [cols, rows] = (l && l.cols) ? [l.cols, l.rows] : autoGrid(cfg.cameras.length);
-  grid.style.gridTemplateColumns = `repeat(${cols},1fr)`;
-  grid.style.gridTemplateRows    = `repeat(${rows},1fr)`;
-  document.querySelectorAll('.lpick').forEach(b => b.classList.toggle('active', b.dataset.id === lid));
+  const l   = LAYOUTS.find(x=>x.id===lid);
+  const [c,r] = l&&l.cols ? [l.cols,l.rows] : autoGrid(cfg.cameras.length);
+  grid.style.gridTemplateColumns = `repeat(${c},1fr)`;
+  grid.style.gridTemplateRows    = `repeat(${r},1fr)`;
+  document.querySelectorAll('.lp').forEach(b => b.classList.toggle('active', b.dataset.id===lid));
 }
 function buildLP() {
-  const p = document.getElementById('lpicker'); p.innerHTML = '';
+  const p = document.getElementById('lpick'); p.innerHTML='';
   LAYOUTS.forEach(l => {
     const btn = document.createElement('div');
-    btn.className = 'lpick' + (l.id==='auto' ? ' auto' : '');
+    btn.className = 'lp'+(l.id==='auto'?' auto':'');
     btn.dataset.id = l.id;
-    if (l.id === 'auto') { btn.textContent = 'AUTO'; }
+    if(l.id==='auto') btn.textContent='AUTO';
     else {
-      const c=Math.min(l.cols,3), r=Math.min(l.rows,3);
+      const c=Math.min(l.cols,3),r=Math.min(l.rows,3);
       btn.style.gridTemplateColumns=`repeat(${c},1fr)`;
       btn.style.gridTemplateRows=`repeat(${r},1fr)`;
       for(let i=0;i<c*r;i++) btn.appendChild(document.createElement('span'));
     }
-    btn.addEventListener('click', () => { layoutOvr = l.id==='auto' ? null : l.id; applyLayout(); });
+    btn.addEventListener('click',()=>{ layoutOvr=l.id==='auto'?null:l.id; applyLayout(); });
     p.appendChild(btn);
   });
 }
 
-// ── CLOCK ───────────────────────────────────────────────────
+// ── Clock ────────────────────────────────────────────────────
 function startClock() {
-  const pad = n => String(n).padStart(2,'0');
-  setInterval(() => {
-    const now = new Date();
-    const cl = document.getElementById('hud-clock');
-    const dt = document.getElementById('hud-date');
-    if (cl) cl.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-    if (dt) dt.textContent = now.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'}).toUpperCase();
-  }, 1000);
+  const p=n=>String(n).padStart(2,'0');
+  const tick=()=>{
+    const now=new Date();
+    const c=document.getElementById('hud-clk');
+    const d=document.getElementById('hud-dt');
+    if(c) c.textContent=`${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`;
+    if(d) d.textContent=now.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'}).toUpperCase();
+  };
+  tick(); setInterval(tick,1000);
 }
 
-// ── GRILLE MJPEG ────────────────────────────────────────────
+// ── go2rtc status ────────────────────────────────────────────
+async function checkGo2rtcStatus() {
+  const el = document.getElementById('go2rtc-st');
+  if (!el) return;
+  try {
+    const ok = await API.go2rtcStatus();
+    const dot = el.querySelector('.dot');
+    if (dot) dot.className = `dot ${ok?'ok':'err'}`;
+  } catch(_) {}
+}
+setInterval(checkGo2rtcStatus, 10000);
+
+// ── GRILLE CAMERAS ───────────────────────────────────────────
+function setDot(cell, state) {
+  const d = cell.querySelector('.dot'); if(d) d.className=`dot ${state}`;
+}
+
+function loadCam(cam, cell, focused=false) {
+  const img = cell.querySelector('img');
+  const err = cell.querySelector('.cam-err');
+  if (!img || !cam.mainUrl) return;
+  if (camPaused[cam.id] || globalPaused) return;
+
+  clearTimeout(retryTimers[cam.id]);
+  setDot(cell, 'conn');
+  if(err) err.classList.remove('show');
+
+  const sid = streamId(cam, focused);
+  // Timestamp pour forcer refresh et éviter cache
+  img.src = `${go2rtcBase()}/api/stream.mjpeg?src=${encodeURIComponent(sid)}&_=${Date.now()}`;
+}
+
 function renderGrid() {
   const grid  = document.getElementById('grid');
-  const names = cfg.cameras.map(c => c.id);
+  const empty = document.getElementById('empty');
+  const names = cfg.cameras.map(c=>c.id);
 
-  // Supprimer les cellules disparues
-  [...grid.querySelectorAll('.cam-cell')].forEach(cell => {
-    if (!names.includes(cell.dataset.id)) cell.remove();
+  // Supprimer les cellules obsolètes
+  [...grid.querySelectorAll('.cam-cell')].forEach(cell=>{
+    if(!names.includes(cell.dataset.id)) {
+      clearTimeout(retryTimers[cell.dataset.id]);
+      cell.remove();
+    }
   });
 
-  cfg.cameras.forEach((cam, idx) => {
+  if(cfg.cameras.length===0) { empty.classList.add('show'); applyLayout(); return; }
+  empty.classList.remove('show');
+
+  cfg.cameras.forEach((cam,idx) => {
     let cell = document.getElementById(`cell-${cam.id}`);
-    if (!cell) {
+    if(!cell) {
       cell = document.createElement('div');
-      cell.className  = 'cam-cell';
-      cell.id         = `cell-${cam.id}`;
-      cell.dataset.id = cam.id;
+      cell.className='cam-cell'; cell.id=`cell-${cam.id}`; cell.dataset.id=cam.id;
 
       const img = document.createElement('img');
-      img.alt = cam.label || cam.id;
+      img.alt = cam.label||cam.id;
+      img.loading = 'lazy';
 
-      // Gestion erreur / reconnexion
-      let retryTimer = null;
-      function loadImg() {
-        setDot(cell, 'loading');
-        const errDiv = cell.querySelector('.cam-err');
-        if (errDiv) errDiv.classList.remove('show');
-        // Timestamp pour forcer le rechargement
-        img.src = mjpegUrl(cam.id) + `&_t=${Date.now()}`;
-      }
-      img.onload = () => setDot(cell, 'online');
+      img.onload = () => { setDot(cell,'ok'); resetRetry(cam.id); };
       img.onerror = () => {
-        if (camPaused[cam.id] || globalPaused) return;
-        setDot(cell, 'offline');
-        const errDiv = cell.querySelector('.cam-err');
-        if (errDiv) errDiv.classList.add('show');
-        if (cfg.reconnect !== false) {
-          retryTimer = setTimeout(loadImg, (cfg.reconnectDelay || 5) * 1000);
+        if(camPaused[cam.id]||globalPaused) return;
+        setDot(cell,'err');
+        const e = cell.querySelector('.cam-err');
+        if(e) { e.classList.add('show'); const m=e.querySelector('.cam-err-m'); if(m) m.textContent='SIGNAL PERDU'; }
+        if(cfg.reconnect!==false) {
+          const delay = nextRetryDelay(cam.id);
+          const m = cell.querySelector('.cam-err-m');
+          if(m) m.textContent = `SIGNAL PERDU — retry dans ${Math.round(delay)}s`;
+          retryTimers[cam.id] = setTimeout(()=>loadCam(cam,cell,!!focusedCam&&focusedCam===cam.id), delay*1000);
         }
       };
 
       cell.innerHTML = `
-        <div class="cam-vignette"></div>
-        <div class="cam-id"><div class="dot loading"></div><span>CAM_${String(idx+1).padStart(2,'0')}</span></div>
+        <div class="v"></div>
+        <div class="cam-id"><div class="dot conn"></div><span>CAM_${String(idx+1).padStart(2,'0')}</span></div>
         <div class="cam-rec">REC</div>
-        <div class="cam-label">${cam.label || cam.id}</div>
-        <div class="cam-toggle" title="Pause / Reprendre">⏸</div>
+        <div class="cam-lbl">${cam.label||cam.id}</div>
+        <div class="cam-snap" title="Snapshot">📸</div>
+        <div class="cam-tog" title="Pause/Reprendre">⏸</div>
         <div class="cam-err">
-          <div class="cam-err-icon">⬛</div>
-          <div class="cam-err-msg">SIGNAL PERDU</div>
-          <div class="cam-err-retry">↺ RECONNECTER</div>
+          <div class="cam-err-i">⬛</div>
+          <div class="cam-err-m">SIGNAL PERDU</div>
+          <div class="cam-err-r">↺ RECONNECTER</div>
         </div>
       `;
       cell.insertBefore(img, cell.firstChild);
 
-      // Retry manuel
-      cell.querySelector('.cam-err-retry').addEventListener('click', e => {
+      // Reconnecter manuel
+      cell.querySelector('.cam-err-r').addEventListener('click', e=>{
         e.stopPropagation();
-        clearTimeout(retryTimer);
-        loadImg();
+        clearTimeout(retryTimers[cam.id]);
+        resetRetry(cam.id);
+        loadCam(cam,cell);
       });
 
-      // Clic = focus
-      cell.addEventListener('click', e => {
-        if (e.target.closest('.cam-toggle') || e.target.closest('.cam-err-retry')) return;
+      // Focus
+      cell.addEventListener('click', e=>{
+        if(e.target.closest('.cam-tog,.cam-snap,.cam-err-r')) return;
         toggleFocus(cam.id);
       });
 
       // Pause individuelle
-      const toggleBtn = cell.querySelector('.cam-toggle');
-      toggleBtn.addEventListener('click', e => {
+      cell.querySelector('.cam-tog').addEventListener('click', e=>{
         e.stopPropagation();
-        camPaused[cam.id] = !camPaused[cam.id];
-        if (camPaused[cam.id]) {
-          clearTimeout(retryTimer);
-          img.src = '';
-          setDot(cell, 'paused');
-          toggleBtn.textContent = '▶';
-        } else {
-          toggleBtn.textContent = '⏸';
-          loadImg();
-        }
+        camPaused[cam.id]=!camPaused[cam.id];
+        const btn=cell.querySelector('.cam-tog');
+        if(camPaused[cam.id]) {
+          clearTimeout(retryTimers[cam.id]);
+          cell.querySelector('img').src=''; setDot(cell,'off'); btn.textContent='▶';
+        } else { btn.textContent='⏸'; loadCam(cam,cell); }
+      });
+
+      // Snapshot
+      cell.querySelector('.cam-snap').addEventListener('click', async e=>{
+        e.stopPropagation();
+        try {
+          const snapUrl=`${go2rtcBase()}/api/frame.jpeg?src=${encodeURIComponent(cam.id)}&_=${Date.now()}`;
+          const res=await fetch(snapUrl);
+          const blob=await res.blob();
+          const a=document.createElement('a');
+          a.href=URL.createObjectURL(blob);
+          a.download=`${cam.id}_${new Date().toISOString().replace(/[:.]/g,'-')}.jpg`;
+          a.click(); URL.revokeObjectURL(a.href);
+        } catch(err) { alert('Snapshot échoué: '+err.message); }
       });
 
       grid.appendChild(cell);
-      loadImg();
+      // Lazy start: décaler de 200ms par caméra pour éviter burst réseau
+      setTimeout(()=>loadCam(cam,cell), idx*200);
 
     } else {
-      // Mise à jour label
-      const lbl = cell.querySelector('.cam-label');
-      const idSpan = cell.querySelector('.cam-id span');
-      if (lbl) lbl.textContent = cam.label || cam.id;
-      if (idSpan) idSpan.textContent = `CAM_${String(idx+1).padStart(2,'0')}`;
+      const lbl=cell.querySelector('.cam-lbl');
+      const ids=cell.querySelector('.cam-id span');
+      if(lbl) lbl.textContent=cam.label||cam.id;
+      if(ids) ids.textContent=`CAM_${String(idx+1).padStart(2,'0')}`;
     }
 
-    const lbl = cell.querySelector('.cam-label');
-    if (lbl) lbl.style.display = cfg.showLabels !== false ? '' : 'none';
+    const lbl=cell.querySelector('.cam-lbl');
+    if(lbl) lbl.style.display=cfg.showLabels!==false?'':'none';
   });
 
-  document.getElementById('cam-badge').textContent = `${cfg.cameras.length} CAM`;
+  document.getElementById('cam-bdg').textContent=`${cfg.cameras.length} CAM`;
   applyLayout();
 }
 
-function setDot(cell, state) {
-  const dot = cell.querySelector('.dot');
-  if (dot) dot.className = `dot ${state}`;
-}
-
-// ── FOCUS ───────────────────────────────────────────────────
+// ── Focus ─────────────────────────────────────────────────────
 function toggleFocus(id) {
-  const cells = [...document.querySelectorAll('.cam-cell')];
-  if (focusedCam === id) {
-    focusedCam = null;
-    cells.forEach(c => { c.style.display=''; c.classList.remove('focused'); });
+  const cells=[...document.querySelectorAll('.cam-cell')];
+  const cam=cfg.cameras.find(c=>c.id===id);
+  if(focusedCam===id) {
+    focusedCam=null;
+    cells.forEach(c=>{ c.style.display=''; c.classList.remove('focused'); });
+    // Repasser en sub-stream si applicable
+    if(cam) {
+      const cell=document.getElementById(`cell-${id}`);
+      if(cell) loadCam(cam,cell,false);
+    }
   } else {
-    focusedCam = id;
-    cells.forEach(c => {
-      if (c.dataset.id === id) { c.classList.add('focused'); c.style.display=''; }
-      else c.style.display = 'none';
+    focusedCam=id;
+    cells.forEach(c=>{
+      if(c.dataset.id===id){ c.classList.add('focused'); c.style.display=''; }
+      else c.style.display='none';
     });
+    // Passer en main stream sur focus
+    if(cam){ const cell=document.getElementById(`cell-${id}`); if(cell) loadCam(cam,cell,true); }
   }
   applyLayout();
 }
 
-// ── PAUSE GLOBAL ────────────────────────────────────────────
-document.getElementById('btn-pause').addEventListener('click', () => {
-  globalPaused = !globalPaused;
-  const btn = document.getElementById('btn-pause');
-  btn.textContent = globalPaused ? '▶ REPRENDRE' : '⏸ PAUSE';
-  btn.classList.toggle('on', globalPaused);
-  cfg.cameras.forEach(cam => {
-    const img = document.querySelector(`#cell-${cam.id} img`);
-    if (!img) return;
-    if (globalPaused) {
-      img.src = '';
-      setDot(document.getElementById(`cell-${cam.id}`), 'paused');
-    } else if (!camPaused[cam.id]) {
-      img.src = mjpegUrl(cam.id) + `&_t=${Date.now()}`;
-      setDot(document.getElementById(`cell-${cam.id}`), 'loading');
-    }
+// ── Pause global ───────────────────────────────────────────────
+document.getElementById('btn-pause').addEventListener('click',()=>{
+  globalPaused=!globalPaused;
+  const btn=document.getElementById('btn-pause');
+  btn.textContent=globalPaused?'▶ REPRENDRE':'⏸ PAUSE';
+  btn.classList.toggle('on',globalPaused);
+  cfg.cameras.forEach(cam=>{
+    const cell=document.getElementById(`cell-${cam.id}`);
+    const img=cell&&cell.querySelector('img');
+    if(!img) return;
+    if(globalPaused){ clearTimeout(retryTimers[cam.id]); img.src=''; setDot(cell,'off'); }
+    else if(!camPaused[cam.id]){ resetRetry(cam.id); loadCam(cam,cell); }
   });
 });
 
-// ── IDLE ────────────────────────────────────────────────────
-let idleTimer = null;
-function resetIdle() {
-  if (idleTimer) clearTimeout(idleTimer);
-  if (cfg.idleMinutes > 0) {
-    idleTimer = setTimeout(() => {
-      cfg.cameras.forEach(c => {
-        const img = document.querySelector(`#cell-${c.id} img`);
-        if (img && !camPaused[c.id]) img.src = '';
-      });
-    }, cfg.idleMinutes * 60000);
-  }
+// ── Idle ──────────────────────────────────────────────────────
+let idleTimer=null;
+function resetIdle(){
+  if(idleTimer) clearTimeout(idleTimer);
+  if(cfg.idleMinutes>0) idleTimer=setTimeout(()=>{ if(!globalPaused) document.getElementById('btn-pause').click(); }, cfg.idleMinutes*60000);
 }
-['mousemove','keydown','click'].forEach(e => document.addEventListener(e, resetIdle));
+['mousemove','keydown','click'].forEach(e=>document.addEventListener(e,resetIdle));
 
-// ── VISIBILITÉ ──────────────────────────────────────────────
-document.addEventListener('visibilitychange', () => {
-  cfg.cameras.forEach(c => {
-    const img = document.querySelector(`#cell-${c.id} img`);
-    if (!img) return;
-    if (document.hidden) img.src = '';
-    else if (!camPaused[c.id] && !globalPaused) img.src = mjpegUrl(c.id) + `&_t=${Date.now()}`;
+// ── Visibility ────────────────────────────────────────────────
+document.addEventListener('visibilitychange',()=>{
+  cfg.cameras.forEach(cam=>{
+    const cell=document.getElementById(`cell-${cam.id}`);
+    const img=cell&&cell.querySelector('img');
+    if(!img) return;
+    if(document.hidden){ clearTimeout(retryTimers[cam.id]); img.src=''; }
+    else if(!camPaused[cam.id]&&!globalPaused) loadCam(cam,cell,focusedCam===cam.id);
   });
 });
 
-// ── PANNEAU CONFIG ──────────────────────────────────────────
-const panelEl = document.getElementById('panel');
-const btnCfg  = document.getElementById('btn-cfg');
+// ── Panel / Tabs ───────────────────────────────────────────────
+const panelEl=document.getElementById('panel');
+const btnCfg=document.getElementById('btn-cfg');
 
-btnCfg.addEventListener('click', () => {
-  const open = panelEl.classList.toggle('open');
-  btnCfg.classList.toggle('on', open);
-  if (open) renderPanel();
+document.querySelectorAll('.p-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.p-tab,.p-pane').forEach(el=>el.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
+    if(tab.dataset.tab==='display') loadDisplays();
+    if(tab.dataset.tab==='sys') loadSysInfo();
+  });
 });
-document.getElementById('ph-close').addEventListener('click', () => { panelEl.classList.remove('open'); btnCfg.classList.remove('on'); });
+
+btnCfg.addEventListener('click',()=>{
+  const open=panelEl.classList.toggle('open');
+  btnCfg.classList.toggle('on',open);
+  if(open) renderPanel();
+});
+document.getElementById('phc').addEventListener('click',()=>{
+  panelEl.classList.remove('open'); btnCfg.classList.remove('on');
+});
+document.getElementById('empty-btn').addEventListener('click',()=>{ panelEl.classList.add('open'); btnCfg.classList.add('on'); renderPanel(); });
+
+// ── Render camera entries ─────────────────────────────────────
+const CAM_TYPES = [
+  { value:'rtsp',    label:'RTSP (générique)' },
+  { value:'reolink', label:'Reolink (natif)' },
+  { value:'tapo',    label:'Tapo / TP-Link' },
+  { value:'onvif',   label:'ONVIF' },
+  { value:'mjpeg',   label:'HTTP MJPEG' },
+  { value:'hls',     label:'HLS (HTTP)' },
+];
+
+const URL_HINTS = {
+  rtsp:    { main:'rtsp://user:pass@IP:554/stream', sub:'rtsp://user:pass@IP:554/stream_sub' },
+  reolink: { main:'reolink://user:pass@IP', sub:'' },
+  tapo:    { main:'tapo://user:pass@IP', sub:'' },
+  onvif:   { main:'onvif://user:pass@IP', sub:'' },
+  mjpeg:   { main:'http://IP/mjpeg', sub:'' },
+  hls:     { main:'http://IP/stream.m3u8', sub:'' },
+};
 
 function renderPanel() {
-  const list = document.getElementById('camlist');
-  list.innerHTML = '';
-  cfg.cameras.forEach((cam, i) => {
-    const e = document.createElement('div'); e.className = 'ce';
-    e.innerHTML = `
+  const list=document.getElementById('camlist'); list.innerHTML='';
+  cfg.cameras.forEach((cam,i)=>{
+    const hints=URL_HINTS[cam.type||'rtsp']||URL_HINTS.rtsp;
+    const e=document.createElement('div'); e.className='ce';
+    const typeOpts=CAM_TYPES.map(t=>`<option value="${t.value}"${(cam.type||'rtsp')===t.value?' selected':''}>${t.label}</option>`).join('');
+    e.innerHTML=`
       <div class="cer">
-        <input placeholder="ID stream go2rtc" value="${cam.id||''}" data-f="id" data-i="${i}">
-        <input placeholder="Label" value="${cam.label||''}" data-f="label" data-i="${i}">
+        <input class="pi" placeholder="ID (ex: exterieur)" value="${cam.id||''}" data-f="id" data-i="${i}" style="flex:0.6">
+        <input class="pi" placeholder="Label" value="${cam.label||''}" data-f="label" data-i="${i}">
         <div class="ce-del" data-i="${i}">✕</div>
       </div>
-      <div class="cer">
-        <input placeholder="rtsp://user:pass@ip:554/stream" value="${cam.rtspUrl||''}" data-f="rtspUrl" data-i="${i}">
-      </div>
+      <div class="ce-label">Type de caméra</div>
+      <select class="pi-sel" data-f="type" data-i="${i}">${typeOpts}</select>
+      <div class="ce-label">URL principale (main / HD)</div>
+      <input class="pi" placeholder="${hints.main}" value="${cam.mainUrl||''}" data-f="mainUrl" data-i="${i}">
+      <div class="ce-label">URL sub-stream (SD, optionnel — meilleure perf en grille)</div>
+      <input class="pi" placeholder="${hints.sub||'Identique à main si vide'}" value="${cam.subUrl||''}" data-f="subUrl" data-i="${i}">
     `;
     list.appendChild(e);
-  });
-  list.querySelectorAll('input').forEach(inp => inp.addEventListener('input', () => { cfg.cameras[+inp.dataset.i][inp.dataset.f] = inp.value; }));
-  list.querySelectorAll('.ce-del').forEach(btn => btn.addEventListener('click', () => { cfg.cameras.splice(+btn.dataset.i, 1); renderPanel(); renderGrid(); }));
 
-  document.getElementById('s-server').value    = `http://localhost:${cfg.go2rtcPort||1984}`;
-  document.getElementById('s-reconnect').checked = cfg.reconnect !== false;
-  document.getElementById('s-delay').value      = cfg.reconnectDelay || 5;
-  document.getElementById('s-clock').checked    = cfg.showClock !== false;
-  document.getElementById('s-labels').checked   = cfg.showLabels !== false;
-  document.getElementById('s-idle').value       = cfg.idleMinutes || 0;
-  loadDisplays();
+    // Type change → update placeholders
+    const sel=e.querySelector('select');
+    sel.addEventListener('change',()=>{
+      const h=URL_HINTS[sel.value]||URL_HINTS.rtsp;
+      const inputs=e.querySelectorAll('input.pi');
+      inputs[2].placeholder=h.main; inputs[3].placeholder=h.sub||'';
+    });
+  });
+
+  list.querySelectorAll('.pi,.pi-sel').forEach(inp=>inp.addEventListener('input',()=>{ cfg.cameras[+inp.dataset.i][inp.dataset.f]=inp.value; }));
+  list.querySelectorAll('select').forEach(sel=>sel.addEventListener('change',()=>{ cfg.cameras[+sel.dataset.i][sel.dataset.f]=sel.value; }));
+  list.querySelectorAll('.ce-del').forEach(btn=>btn.addEventListener('click',()=>{
+    const i=+btn.dataset.i;
+    clearTimeout(retryTimers[cfg.cameras[i].id]);
+    const cell=document.getElementById(`cell-${cfg.cameras[i].id}`);
+    if(cell) cell.remove();
+    cfg.cameras.splice(i,1); renderPanel(); renderGrid();
+  }));
+
+  // Opts
+  document.getElementById('s-server').value      = `http://localhost:${cfg.go2rtcPort||1984}`;
+  document.getElementById('s-reconnect').checked = cfg.reconnect!==false;
+  document.getElementById('s-delay').value       = cfg.reconnectDelay||5;
+  document.getElementById('s-maxdelay').value    = cfg.maxReconnectDelay||60;
+  document.getElementById('s-idle').value        = cfg.idleMinutes||0;
+  document.getElementById('s-ct').checked        = !!cfg.clickThrough;
+  document.getElementById('s-clock').checked     = cfg.showClock!==false;
+  document.getElementById('s-labels').checked    = cfg.showLabels!==false;
+  document.getElementById('s-sub').checked       = cfg.useSubStream!==false;
+  document.getElementById('s-gap').value         = cfg.gridGap!==undefined?cfg.gridGap:2;
+
+  // Autostart
+  API.getAutostart().then(on=>{ const el=document.getElementById('s-autostart'); if(el) el.checked=on; });
 }
 
-document.getElementById('btn-addcam').addEventListener('click', () => {
-  cfg.cameras.push({ id:`cam${cfg.cameras.length+1}`, label:'', rtspUrl:'' });
+document.getElementById('btn-add-cam').addEventListener('click',()=>{
+  cfg.cameras.push({id:`cam${cfg.cameras.length+1}`,label:'',type:'rtsp',mainUrl:'',subUrl:''});
   renderPanel();
 });
 
-async function loadDisplays() {
-  const displays = await API.getDisplays();
-  const el = document.getElementById('displayer'); el.innerHTML = '';
-  displays.forEach(d => {
-    const opt = document.createElement('div');
-    opt.className = 'dopt' + (d.index === cfg.selectedDisplay ? ' active' : '');
-    opt.innerHTML = `<span>${d.label}${d.primary?' ⭐':''}</span><span class="dbadge">${d.width}×${d.height}</span>`;
-    opt.addEventListener('click', async () => {
-      await API.setDisplay(d.index); cfg.selectedDisplay = d.index;
-      [...el.children].forEach(c => c.classList.remove('active')); opt.classList.add('active');
+async function saveCfg(showOkId) {
+  const sv=document.getElementById('s-server').value.replace(/\/+$/,'');
+  cfg.go2rtcPort      = parseInt(sv.split(':').pop())||1984;
+  cfg.reconnect       = document.getElementById('s-reconnect').checked;
+  cfg.reconnectDelay  = +document.getElementById('s-delay').value;
+  cfg.maxReconnectDelay= +document.getElementById('s-maxdelay').value;
+  cfg.idleMinutes     = +document.getElementById('s-idle').value;
+  cfg.clickThrough    = document.getElementById('s-ct').checked;
+  cfg.showClock       = document.getElementById('s-clock').checked;
+  cfg.showLabels      = document.getElementById('s-labels').checked;
+  cfg.useSubStream    = document.getElementById('s-sub').checked;
+  cfg.gridGap         = +document.getElementById('s-gap').value;
+
+  await API.saveConfig(cfg);
+  await API.setAutostart(document.getElementById('s-autostart').checked);
+  await API.setClickThrough(cfg.clickThrough);
+  await API.go2rtcRestart(cfg);
+
+  // Re-charger les streams après délai go2rtc restart
+  setTimeout(()=>{
+    Object.keys(retryTimers).forEach(id=>clearTimeout(retryTimers[id]));
+    cfg.cameras.forEach(cam=>{
+      const cell=document.getElementById(`cell-${cam.id}`); if(cell) loadCam(cam,cell);
     });
+    renderGrid();
+  }, 1800);
+
+  document.getElementById('hud-clk').style.display=cfg.showClock?'':'none';
+  document.getElementById('hud-dt').style.display =cfg.showClock?'':'none';
+  applyLayout();
+  resetIdle();
+
+  const ok=document.getElementById(showOkId||'save-ok');
+  if(ok){ ok.textContent='✓ SAUVEGARDÉ'; setTimeout(()=>ok.textContent='',2500); }
+  panelEl.classList.remove('open'); btnCfg.classList.remove('on');
+}
+
+document.getElementById('btn-save').addEventListener('click',()=>saveCfg('save-ok'));
+document.getElementById('btn-save2').addEventListener('click',()=>saveCfg('save-ok2'));
+
+async function loadDisplays() {
+  const displays=await API.getDisplays();
+  const el=document.getElementById('displayer'); el.innerHTML='';
+  displays.forEach(d=>{
+    const opt=document.createElement('div');
+    opt.className='dopt'+(d.index===cfg.selectedDisplay?' active':'');
+    opt.innerHTML=`<span>${d.label}${d.primary?' ⭐':''}</span><span class="db">${d.width}×${d.height}</span>`;
+    opt.addEventListener('click',async()=>{ await API.setDisplay(d.index); cfg.selectedDisplay=d.index; [...el.children].forEach(c=>c.classList.remove('active')); opt.classList.add('active'); });
     el.appendChild(opt);
   });
 }
 
-document.getElementById('btn-save').addEventListener('click', async () => {
-  const sv = document.getElementById('s-server').value.replace(/\/+$/,'');
-  cfg.go2rtcPort    = parseInt(sv.split(':').pop()) || 1984;
-  cfg.reconnect     = document.getElementById('s-reconnect').checked;
-  cfg.reconnectDelay= +document.getElementById('s-delay').value;
-  cfg.showClock     = document.getElementById('s-clock').checked;
-  cfg.showLabels    = document.getElementById('s-labels').checked;
-  cfg.idleMinutes   = +document.getElementById('s-idle').value;
-
-  await API.saveConfig(cfg);
-  await API.go2rtcRestart(cfg);
-
-  // Recharger tous les streams
-  setTimeout(() => renderGrid(), 1500);
-  resetIdle();
-
-  document.getElementById('hud-clock').style.display = cfg.showClock ? '' : 'none';
-  document.getElementById('hud-date').style.display  = cfg.showClock ? '' : 'none';
-
-  const ok = document.getElementById('save-ok');
-  ok.textContent = '✓ SAUVEGARDÉ';
-  setTimeout(() => { ok.textContent = ''; }, 2500);
-  panelEl.classList.remove('open'); btnCfg.classList.remove('on');
-});
-
-document.getElementById('btn-opendir').addEventListener('click', () => API.openConfigDir());
-document.getElementById('btn-setup').addEventListener('click',   () => API.goToSetup());
-document.getElementById('btn-quit').addEventListener('click',    () => { if(confirm('Quitter CamWall ?')) API.quit(); });
-
-// ── CLAVIER ─────────────────────────────────────────────────
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    if (focusedCam) toggleFocus(focusedCam);
-    else { panelEl.classList.remove('open'); btnCfg.classList.remove('on'); }
+async function loadSysInfo() {
+  const [ver,autostart,go2rtcOk]=await Promise.all([API.getVersion(),API.getAutostart(),API.go2rtcStatus()]);
+  const el=document.getElementById('sys-info');
+  el.innerHTML=`
+    <div class="sys-row"><span>Version</span><strong>${ver}</strong></div>
+    <div class="sys-row"><span>go2rtc</span><strong>${go2rtcOk?'✅ Actif':'❌ Inactif'}</strong></div>
+    <div class="sys-row"><span>Démarrage auto</span><strong>${autostart?'✅ Activé':'❌ Désactivé'}</strong></div>
+    <div class="sys-row"><span>Caméras</span><strong>${cfg.cameras.length}</strong></div>
+    <div class="sys-row"><span>Sub-stream</span><strong>${cfg.useSubStream!==false?'✅ Activé':'❌ Désactivé'}</strong></div>
+  `;
+  if(updateInfo&&updateInfo.available){
+    document.getElementById('upd-badge').classList.add('show');
+    const dl=document.getElementById('upd-dl');
+    if(dl) dl.onclick=()=>API.openUpdate(updateInfo.url);
   }
-  if ((e.key==='p'||e.key==='P') && !e.target.matches('input,select')) document.getElementById('btn-pause').click();
-  if ((e.key==='s'||e.key==='S') && !e.target.matches('input,select')) btnCfg.click();
+}
+
+document.getElementById('btn-checkupd').addEventListener('click',async()=>{
+  const st=document.getElementById('upd-status'); st.textContent='Vérification...';
+  const upd=await API.checkUpdate();
+  updateInfo=upd;
+  if(upd.available){ st.textContent=`v${upd.version} disponible !`; document.getElementById('upd-badge').classList.add('show'); document.getElementById('upd-dl').onclick=()=>API.openUpdate(upd.url); }
+  else st.textContent=`À jour (v${upd.current})`;
 });
 
-// ── INIT ────────────────────────────────────────────────────
+document.getElementById('btn-opendir').addEventListener('click',()=>API.openConfigDir());
+document.getElementById('btn-openlog').addEventListener('click', ()=>API.openLog());
+document.getElementById('btn-setup').addEventListener('click',  ()=>API.goToSetup());
+document.getElementById('btn-quit').addEventListener('click',   ()=>API.quit());
+
+// ── Commandes depuis tray ──────────────────────────────────────
+API.onCmd && API.onCmd((cmd)=>{
+  if(cmd==='pause-all'&&!globalPaused) document.getElementById('btn-pause').click();
+  if(cmd==='resume-all'&&globalPaused) document.getElementById('btn-pause').click();
+  if(cmd==='open-settings'){ panelEl.classList.add('open'); btnCfg.classList.add('on'); renderPanel(); }
+});
+
+// ── Update notification ───────────────────────────────────────
+API.onUpdate&&API.onUpdate(upd=>{
+  updateInfo=upd;
+  const n=document.getElementById('update-notif');
+  const l=document.getElementById('upd-link');
+  if(n&&l){ n.classList.add('show'); l.textContent=`v${upd.version}`; l.onclick=e=>{e.preventDefault();API.openUpdate(upd.url);}; }
+});
+document.getElementById('upd-close').addEventListener('click',()=>document.getElementById('update-notif').classList.remove('show'));
+
+// ── Clavier ───────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,select')) return;
+  if(e.key==='Escape'){ if(focusedCam) toggleFocus(focusedCam); else{ panelEl.classList.remove('open'); btnCfg.classList.remove('on'); } }
+  if(e.key==='p'||e.key==='P') document.getElementById('btn-pause').click();
+  if(e.key==='s'||e.key==='S') btnCfg.click();
+});
+
+// ── Init ──────────────────────────────────────────────────────
 async function init() {
   cfg = await API.getConfig();
+  const ver = await API.getVersion();
+  const hudVer = document.getElementById('hud-ver');
+  if(hudVer) hudVer.textContent=`v${ver}`;
+
   buildLP();
   startClock();
   renderGrid();
   resetIdle();
+  await checkGo2rtcStatus();
 
-  const h = document.getElementById('hint');
-  setTimeout(() => h.classList.add('show'),  800);
-  setTimeout(() => h.classList.remove('show'), 7000);
+  if(!cfg.showClock){ ['hud-clk','hud-dt'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; }); }
 
-  if (!cfg.showClock) {
-    document.getElementById('hud-clock').style.display = 'none';
-    document.getElementById('hud-date').style.display  = 'none';
-  }
+  const h=document.getElementById('hint');
+  setTimeout(()=>h.classList.add('show'),1000);
+  setTimeout(()=>h.classList.remove('show'),8000);
 }
 
 init().catch(console.error);
