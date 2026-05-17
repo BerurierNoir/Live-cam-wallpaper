@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>CamWall — Setup</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;500;600;700&display=swap');
+
+:root {
+  --bg:        #030508;
+  --surface:   #080c10;
+  --panel:     #0c1018;
+  --border:    rgba(0,200,100,0.15);
+  --border-hi: rgba(0,200,100,0.4);
+  --green:     #00e87a;
+  --green-dim: #007a45;
+  --green-glow:rgba(0,232,122,0.18);
+  --red:       #ff3b55;
+  --amber:     #ffaa00;
+  --blue:      #3b8eff;
+  --text:      #b8ccb8;
+  --text-dim:  #3a5040;
+  --mono:      'Share Tech Mono', monospace;
+  --sans:      'Rajdhani', system-ui, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100vw; height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  display: flex; align-items: center; justify-content: center;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 60% at 50% 50%, rgba(0,100,50,0.06) 0%, transparent 70%),
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── CARD PRINCIPALE ─────────────────────────────────── */
+.card {
+  position: relative;
+  z-index: 1;
+  width: 520px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: flex; flex-direction: column;
+  box-shadow: 0 0 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(0,200,100,0.04);
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── HEADER ──────────────────────────────────────────── */
+.card-header {
+  padding: 28px 32px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+.logo {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 5px;
+  color: var(--green);
+  text-shadow: 0 0 20px var(--green-glow);
+  text-transform: uppercase;
+  display: flex; align-items: center; gap: 10px;
+}
+
+.logo-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 10px var(--green);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 6px var(--green); }
+  50%      { box-shadow: 0 0 16px var(--green), 0 0 24px rgba(0,232,122,0.3); }
+}
+
+.subtitle {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+/* ─── STEPS INDICATOR ─────────────────────────────────── */
+.steps-indicator {
+  display: flex; gap: 0;
+  padding: 0 32px;
+  border-bottom: 1px solid var(--border);
+}
+
+.step-tab {
+  flex: 1;
+  padding: 14px 8px;
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.step-tab.done   { color: var(--green-dim); border-bottom-color: var(--green-dim); }
+.step-tab.active { color: var(--green);     border-bottom-color: var(--green);     }
+
+/* ─── BODY ────────────────────────────────────────────── */
+.card-body { padding: 28px 32px; min-height: 280px; }
+
+/* écrans de step */
+.step-screen { display: none; }
+.step-screen.active { display: block; animation: fadeIn 0.3s ease; }
+
+/* ─── TYPOGRAPHIE ─────────────────────────────────────── */
+.step-title {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.step-desc {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+/* ─── STATUS CARD ─────────────────────────────────────── */
+.status-card {
+  background: rgba(0,200,100,0.03);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 14px 16px;
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 16px;
+}
+
+.status-card.error   { border-color: rgba(255,59,85,0.2); background: rgba(255,59,85,0.03); }
+.status-card.success { border-color: rgba(0,200,100,0.3); background: rgba(0,200,100,0.05); }
+.status-card.warning { border-color: rgba(255,170,0,0.2); background: rgba(255,170,0,0.03); }
+
+.status-icon { font-size: 20px; flex-shrink: 0; }
+.status-text { flex: 1; }
+.status-text strong { display: block; font-family: var(--sans); font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+.status-text span   { font-size: 10px; color: var(--text-dim); letter-spacing: 0.5px; }
+
+/* ─── LISTE CAMERAS ───────────────────────────────────── */
+#cam-list-setup { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+
+.cam-setup-item {
+  background: rgba(0,200,100,0.02);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 10px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+
+.cam-setup-row { display: flex; gap: 6px; align-items: center; }
+
+.setup-input {
+  flex: 1;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 2px;
+  color: var(--text); font-family: var(--mono); font-size: 11px;
+  padding: 7px 10px; outline: none;
+  transition: border-color 0.15s;
+}
+.setup-input:focus { border-color: var(--green-dim); }
+.setup-input::placeholder { color: #1a3020; }
+
+.btn-del-cam {
+  width: 28px; height: 28px; flex-shrink: 0;
+  background: rgba(255,59,85,0.05);
+  border: 1px solid rgba(255,59,85,0.15);
+  border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 12px; color: var(--red);
+  transition: background 0.15s;
+}
+.btn-del-cam:hover { background: rgba(255,59,85,0.18); }
+
+#btn-add-cam-setup {
+  width: 100%; padding: 9px;
+  background: transparent;
+  border: 1px dashed rgba(0,200,100,0.2);
+  border-radius: 3px;
+  color: var(--green-dim); font-family: var(--mono);
+  font-size: 10px; letter-spacing: 1.5px;
+  cursor: pointer; text-align: center;
+  transition: all 0.15s;
+}
+#btn-add-cam-setup:hover { border-color: var(--green); color: var(--green); }
+
+/* ─── SÉLECTEUR ÉCRAN ─────────────────────────────────── */
+#display-list { display: flex; flex-direction: column; gap: 8px; }
+
+.display-card {
+  padding: 12px 14px;
+  background: rgba(0,200,100,0.02);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between;
+  transition: all 0.15s;
+}
+.display-card:hover  { border-color: rgba(0,200,100,0.3); background: rgba(0,200,100,0.05); }
+.display-card.active { border-color: var(--green); background: rgba(0,200,100,0.07); }
+
+.display-card-name {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+.display-card-info {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+
+.display-check { color: var(--green); font-size: 16px; opacity: 0; transition: opacity 0.15s; }
+.display-card.active .display-check { opacity: 1; }
+
+/* ─── PROGRESS BAR ────────────────────────────────────── */
+#download-progress {
+  margin-top: 12px;
+  display: none;
+}
+#progress-bar-wrap {
+  width: 100%; height: 4px;
+  background: rgba(0,200,100,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+#progress-bar {
+  height: 100%;
+  background: var(--green);
+  width: 0%;
+  transition: width 0.3s;
+  box-shadow: 0 0 8px var(--green);
+  animation: progressAnim 1.5s infinite;
+}
+@keyframes progressAnim {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+#progress-text {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 6px;
+  letter-spacing: 0.5px;
+}
+
+/* ─── FOOTER / BOUTONS NAV ────────────────────────────── */
+.card-footer {
+  padding: 16px 32px 24px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px;
+}
+
+.btn {
+  height: 36px; padding: 0 20px;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 11px; letter-spacing: 1.5px;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 8px;
+  transition: all 0.15s;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(0,200,100,0.12);
+  color: var(--text-dim);
+}
+.btn-ghost:hover { border-color: rgba(0,200,100,0.3); color: var(--text); }
+
+.btn-primary {
+  background: rgba(0,200,100,0.1);
+  border: 1px solid rgba(0,200,100,0.35);
+  color: var(--green);
+}
+.btn-primary:hover { background: rgba(0,200,100,0.18); border-color: var(--green); }
+.btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-action {
+  background: rgba(59,142,255,0.1);
+  border: 1px solid rgba(59,142,255,0.3);
+  color: var(--blue);
+}
+.btn-action:hover { background: rgba(59,142,255,0.18); }
+
+.step-counter {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <!-- Header -->
+  <div class="card-header">
+    <div class="logo">
+      <div class="logo-dot"></div>
+      CamWall
+    </div>
+    <div class="subtitle">Assistant de configuration · Live Camera Wallpaper</div>
+  </div>
+
+  <!-- Steps -->
+  <div class="steps-indicator">
+    <div class="step-tab active" data-step="1">01 go2rtc</div>
+    <div class="step-tab" data-step="2">02 Caméras</div>
+    <div class="step-tab" data-step="3">03 Écran</div>
+    <div class="step-tab" data-step="4">04 Lancer</div>
+  </div>
+
+  <!-- Body -->
+  <div class="card-body">
+
+    <!-- ÉTAPE 1 : go2rtc -->
+    <div class="step-screen active" id="step-1">
+      <div class="step-title">Backend go2rtc</div>
+      <div class="step-desc">go2rtc est un proxy léger qui gère tes flux RTSP et les convertit en WebRTC pour l'affichage. Il tourne en arrière-plan.</div>
+      <div id="go2rtc-status">
+        <div class="status-card warning">
+          <div class="status-icon">🔍</div>
+          <div class="status-text">
+            <strong>Vérification en cours...</strong>
+            <span>Recherche de go2rtc sur le système</span>
+          </div>
+        </div>
+      </div>
+      <div id="download-progress">
+        <div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+        <div id="progress-text">Téléchargement en cours...</div>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 2 : Caméras -->
+    <div class="step-screen" id="step-2">
+      <div class="step-title">Ajouter des caméras</div>
+      <div class="step-desc">Indique les flux RTSP de tes caméras. L'ID sera utilisé comme identifiant interne ; le label comme nom affiché à l'écran.</div>
+      <div id="cam-list-setup"></div>
+      <div id="btn-add-cam-setup">+ AJOUTER UNE CAMÉRA</div>
+    </div>
+
+    <!-- ÉTAPE 3 : Écran -->
+    <div class="step-screen" id="step-3">
+      <div class="step-title">Choisir l'écran</div>
+      <div class="step-desc">Sélectionne l'écran sur lequel CamWall sera affiché. Idéalement un écran dédié à la surveillance.</div>
+      <div id="display-list">
+        <div class="status-card warning">
+          <div class="status-icon">🖥</div>
+          <div class="status-text"><strong>Chargement des écrans...</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 4 : Lancer -->
+    <div class="step-screen" id="step-4">
+      <div class="step-title">Prêt à démarrer !</div>
+      <div class="step-desc">Tout est configuré. CamWall va démarrer en mode plein écran sur l'écran sélectionné et lancer go2rtc en arrière-plan.</div>
+      <div id="summary-cards"></div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="card-footer">
+    <button class="btn btn-ghost" id="btn-prev" style="visibility:hidden">← RETOUR</button>
+    <span class="step-counter" id="step-counter">ÉTAPE 1 / 4</span>
+    <button class="btn btn-primary" id="btn-next">SUIVANT →</button>
+  </div>
+</div>
+
+<script>
+const API = window.CamWall;
+
+// ─── STATE ────────────────────────────────────────────────
+let currentStep = 1;
+const TOTAL_STEPS = 4;
+let cfg = { cameras: [], selectedDisplay: 0, firstRun: true };
+let go2rtcFound = false;
+let selectedDisplayIdx = 0;
+
+// ─── NAVIGATION ──────────────────────────────────────────
+function goStep(n) {
+  if (n < 1 || n > TOTAL_STEPS) return;
+  document.querySelectorAll('.step-screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(`step-${n}`).classList.add('active');
+  document.querySelectorAll('.step-tab').forEach((t, i) => {
+    t.classList.remove('active','done');
+    if (i + 1 < n)       t.classList.add('done');
+    else if (i + 1 === n) t.classList.add('active');
+  });
+  document.getElementById('step-counter').textContent = `ÉTAPE ${n} / ${TOTAL_STEPS}`;
+  document.getElementById('btn-prev').style.visibility = n > 1 ? 'visible' : 'hidden';
+  const nextBtn = document.getElementById('btn-next');
+  nextBtn.textContent = n === TOTAL_STEPS ? '🚀 LANCER CAMWALL' : 'SUIVANT →';
+  currentStep = n;
+
+  if (n === 1) checkGo2rtc();
+  if (n === 3) loadDisplays();
+  if (n === 4) renderSummary();
+}
+
+document.getElementById('btn-prev').addEventListener('click', () => goStep(currentStep - 1));
+document.getElementById('btn-next').addEventListener('click', async () => {
+  if (currentStep < TOTAL_STEPS) {
+    if (currentStep === 2) saveCamerasFromUI();
+    goStep(currentStep + 1);
+  } else {
+    await launch();
+  }
+});
+
+// ─── ÉTAPE 1 : go2rtc ────────────────────────────────────
+async function checkGo2rtc() {
+  const box = document.getElementById('go2rtc-status');
+  box.innerHTML = `<div class="status-card warning"><div class="status-icon">🔍</div><div class="status-text"><strong>Vérification...</strong><span>Recherche de go2rtc</span></div></div>`;
+  
+  try {
+    const result = await API.go2rtcCheck();
+    if (result.found) {
+      go2rtcFound = true;
+      box.innerHTML = `
+        <div class="status-card success">
+          <div class="status-icon">✅</div>
+          <div class="status-text">
+            <strong>go2rtc trouvé</strong>
+            <span>${result.path}</span>
+          </div>
+        </div>`;
+    } else {
+      go2rtcFound = false;
+      box.innerHTML = `
+        <div class="status-card error">
+          <div class="status-icon">⚠️</div>
+          <div class="status-text">
+            <strong>go2rtc non trouvé</strong>
+            <span>go2rtc sera téléchargé automatiquement (~6 Mo)</span>
+          </div>
+        </div>
+        <button class="btn btn-action" id="btn-download" style="margin-top:12px; width:100%; justify-content:center;">
+          ⬇ TÉLÉCHARGER GO2RTC
+        </button>`;
+      document.getElementById('btn-download').addEventListener('click', downloadGo2rtc);
+    }
+  } catch (e) {
+    box.innerHTML = `<div class="status-card error"><div class="status-icon">❌</div><div class="status-text"><strong>Erreur</strong><span>${e.message}</span></div></div>`;
+  }
+}
+
+async function downloadGo2rtc() {
+  const btn = document.getElementById('btn-download');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ TÉLÉCHARGEMENT...'; }
+  
+  const prog = document.getElementById('download-progress');
+  prog.style.display = 'block';
+
+  API.onDownloadProgress(data => {
+    document.getElementById('progress-text').textContent = String(data).trim();
+  });
+
+  try {
+    await API.go2rtcDownload();
+    go2rtcFound = true;
+    prog.style.display = 'none';
+    document.getElementById('go2rtc-status').innerHTML = `
+      <div class="status-card success">
+        <div class="status-icon">✅</div>
+        <div class="status-text"><strong>go2rtc téléchargé avec succès</strong><span>Prêt à être utilisé</span></div>
+      </div>`;
+  } catch (e) {
+    prog.style.display = 'none';
+    document.getElementById('go2rtc-status').innerHTML += `
+      <div class="status-card error" style="margin-top:10px">
+        <div class="status-icon">❌</div>
+        <div class="status-text"><strong>Échec du téléchargement</strong><span>${e.message}</span></div>
+      </div>`;
+  }
+}
+
+// ─── ÉTAPE 2 : CAMÉRAS ───────────────────────────────────
+function renderCamList() {
+  const list = document.getElementById('cam-list-setup');
+  list.innerHTML = '';
+  cfg.cameras.forEach((cam, i) => {
+    const item = document.createElement('div');
+    item.className = 'cam-setup-item';
+    item.innerHTML = `
+      <div class="cam-setup-row">
+        <input class="setup-input" placeholder="ID (ex: entree, jardin)" value="${cam.id||''}" data-f="id" data-i="${i}">
+        <input class="setup-input" placeholder="Label affiché" value="${cam.label||''}" data-f="label" data-i="${i}">
+        <div class="btn-del-cam" data-i="${i}">✕</div>
+      </div>
+      <div class="cam-setup-row">
+        <input class="setup-input" placeholder="rtsp://user:pass@192.168.1.x:554/stream" value="${cam.rtspUrl||''}" data-f="rtspUrl" data-i="${i}">
+      </div>
+    `;
+    list.appendChild(item);
+  });
+  list.querySelectorAll('.setup-input').forEach(inp => {
+    inp.addEventListener('input', () => { cfg.cameras[+inp.dataset.i][inp.dataset.f] = inp.value; });
+  });
+  list.querySelectorAll('.btn-del-cam').forEach(btn => {
+    btn.addEventListener('click', () => {
+      cfg.cameras.splice(+btn.dataset.i, 1);
+      renderCamList();
+    });
+  });
+}
+
+document.getElementById('btn-add-cam-setup').addEventListener('click', () => {
+  cfg.cameras.push({ id: `cam${cfg.cameras.length + 1}`, label: '', rtspUrl: '' });
+  renderCamList();
+});
+
+// Ajouter une cam par défaut si vide
+function saveCamerasFromUI() {
+  // already updated via input event listeners
+}
+
+// ─── ÉTAPE 3 : ÉCRANS ────────────────────────────────────
+async function loadDisplays() {
+  const list = document.getElementById('display-list');
+  try {
+    const displays = await API.getDisplays();
+    list.innerHTML = '';
+    displays.forEach(d => {
+      const card = document.createElement('div');
+      card.className = 'display-card' + (d.index === selectedDisplayIdx ? ' active' : '');
+      card.innerHTML = `
+        <div>
+          <div class="display-card-name">${d.label}${d.primary ? ' <span style="font-size:11px;color:var(--green-dim)">● Principal</span>' : ''}</div>
+          <div class="display-card-info">${d.width} × ${d.height} px · (${d.x}, ${d.y})</div>
+        </div>
+        <div class="display-check">✓</div>
+      `;
+      card.addEventListener('click', () => {
+        selectedDisplayIdx = d.index;
+        cfg.selectedDisplay = d.index;
+        [...list.children].forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+      });
+      list.appendChild(card);
+    });
+  } catch (e) {
+    list.innerHTML = `<div class="status-card error"><div class="status-icon">❌</div><div class="status-text"><strong>Impossible de lister les écrans</strong><span>${e.message}</span></div></div>`;
+  }
+}
+
+// ─── ÉTAPE 4 : RÉSUMÉ ────────────────────────────────────
+function renderSummary() {
+  const box = document.getElementById('summary-cards');
+  const camCount = cfg.cameras.filter(c => c.id && c.rtspUrl).length;
+  box.innerHTML = `
+    <div class="status-card ${go2rtcFound ? 'success' : 'warning'}">
+      <div class="status-icon">${go2rtcFound ? '✅' : '⚠️'}</div>
+      <div class="status-text">
+        <strong>go2rtc</strong>
+        <span>${go2rtcFound ? 'Prêt' : 'Non trouvé — les streams ne fonctionneront pas'}</span>
+      </div>
+    </div>
+    <div class="status-card ${camCount > 0 ? 'success' : 'warning'}" style="margin-top:8px">
+      <div class="status-icon">${camCount > 0 ? '📷' : '⚠️'}</div>
+      <div class="status-text">
+        <strong>${camCount} caméra${camCount !== 1 ? 's' : ''} configurée${camCount !== 1 ? 's' : ''}</strong>
+        <span>${camCount === 0 ? 'Tu pourras en ajouter depuis les paramètres' : cfg.cameras.filter(c => c.id && c.rtspUrl).map(c => c.label || c.id).join(', ')}</span>
+      </div>
+    </div>
+    <div class="status-card success" style="margin-top:8px">
+      <div class="status-icon">🖥</div>
+      <div class="status-text">
+        <strong>Écran ${selectedDisplayIdx + 1}</strong>
+        <span>CamWall sera affiché en plein écran sur cet écran</span>
+      </div>
+    </div>
+  `;
+}
+
+// ─── LANCER ──────────────────────────────────────────────
+async function launch() {
+  const nextBtn = document.getElementById('btn-next');
+  nextBtn.disabled = true;
+  nextBtn.textContent = '⏳ DÉMARRAGE...';
+
+  // Nettoyer les cameras vides
+  cfg.cameras = cfg.cameras.filter(c => c.id && c.id.trim());
+
+  const finalCfg = {
+    ...cfg,
+    firstRun: false,
+    reconnect: true,
+    reconnectDelay: 5,
+    idleMinutes: 0,
+    showClock: true,
+    showLabels: true,
+    go2rtcPort: 1984,
+    layout: 'auto',
+    clickThrough: false,
+  };
+
+  await API.saveConfig(finalCfg);
+  await API.setDisplay(selectedDisplayIdx);
+  await API.go2rtcStart(finalCfg);
+
+  // Petit délai pour que go2rtc démarre
+  await new Promise(r => setTimeout(r, 1200));
+  await API.goToApp();
+}
+
+// ─── INIT ─────────────────────────────────────────────────
+async function init() {
+  // Charger config existante si dispo
+  try {
+    const saved = await API.getConfig();
+    if (saved && saved.cameras) cfg.cameras = saved.cameras;
+    if (saved && saved.selectedDisplay !== undefined) {
+      selectedDisplayIdx = saved.selectedDisplay;
+      cfg.selectedDisplay = saved.selectedDisplay;
+    }
+  } catch (_) {}
+
+  renderCamList();
+  goStep(1);
+}
+
+init().catch(console.error);
+</script>
+</body>
+</html>
