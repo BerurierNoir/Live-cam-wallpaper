@@ -26,6 +26,12 @@ jobs:
       - name: Download go2rtc
         run: bash scripts/download-go2rtc.sh amd64
 
+      - name: Install ImageMagick (pour génération icône)
+        run: sudo apt-get install -y imagemagick
+
+      - name: Generate PNG icon from SVG
+        run: node scripts/generate-icon.js
+
       - name: Build AppImage & deb
         run: npm run build
         env:
@@ -45,7 +51,7 @@ jobs:
 
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v2.1.0
         with:
           files: |
             dist/*.AppImage
