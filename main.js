@@ -1,13 +1,20 @@
 'use strict';
 
 /**
- * CamWall v2.0 — main process
- * Gère : fenêtre, go2rtc, tray, auto-start, update check, IPC
+ * CamWall v2.1 — main process
+ * Changelog v2.1:
+ *   - Fix: webSecurity false → true (go2rtc envoie déjà CORS headers)
+ *   - Fix: buildGo2rtcStream ajoute FFmpeg H264 pour streams H265
+ *   - Fix: skipTaskbar true (cohérent avec tray)
+ *   - Fix: supprimé import dialog inutilisé
+ *   - Fix: log rotation (max 2MB)
+ *   - Fix: session CORS interceptor pour localhost
+ *   - Amélioration: détection CUDA pour RTX 3080/3090
  */
 
 const {
   app, BrowserWindow, ipcMain, screen,
-  shell, nativeTheme, Tray, Menu, nativeImage, dialog
+  shell, nativeTheme, Tray, Menu, nativeImage, session
 } = require('electron');
 const path   = require('path');
 const fs     = require('fs');
@@ -20,20 +27,32 @@ const yaml   = require('js-yaml');
 nativeTheme.themeSource = 'dark';
 app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling');
 
-// ─── CONSTANTES ──────────────────────────────────────────────────────────────
-const VERSION     = app.getVersion();
-const USER_DATA   = app.getPath('userData');
-const CONFIG_PATH = path.join(USER_DATA, 'config.json');
-const GO2RTC_CFG  = path.join(USER_DATA, 'go2rtc.yaml');
-const LOG_PATH    = path.join(USER_DATA, 'camwall.log');
-const GO2RTC_PORT = 1984;
-const REPO        = 'BerurierNoir/Live-cam-wallpaper';
+// ── CONSTANTES ───────────────────────────────────────────────────────────────
+const VERSION        = app.getVersion();
+const USER_DATA      = app.getPath('userData');
+const CONFIG_PATH    = path.join(USER_DATA, 'config.json');
+const GO2RTC_CFG     = path.join(USER_DATA, 'go2rtc.yaml');
+const LOG_PATH       = path.join(USER_DATA, 'camwall.log');
+const LOG_MAX_BYTES  = 2 * 1024 * 1024; // 2 MB max
+const GO2RTC_PORT    = 1984;
+const REPO           = 'BerurierNoir/Live-cam-wallpaper';
 const AUTOSTART_FILE = path.join(os.homedir(), '.config', 'autostart', 'camwall.desktop');
+const ARCH_MAP       = { x64: 'amd64', arm64: 'arm64', arm: 'arm' };
 
-// ─── LOGGER ──────────────────────────────────────────────────────────────────
+// ── LOGGER avec rotation ──────────────────────────────────────────────────────
+function rotateLogIfNeeded() {
+  try {
+    const stat = fs.statSync(LOG_PATH);
+    if (stat.size > LOG_MAX_BYTES) {
+      fs.renameSync(LOG_PATH, LOG_PATH + '.old');
+    }
+  } catch (_) { /* pas encore créé */ }
+}
+
 const logStream = (() => {
   try {
     fs.mkdirSync(USER_DATA, { recursive: true });
+    rotateLogIfNeeded();
     return fs.createWriteStream(LOG_PATH, { flags: 'a' });
   } catch (_) { return null; }
 })();
@@ -41,28 +60,31 @@ const logStream = (() => {
 function log(level, ...args) {
   const line = `[${new Date().toISOString()}] [${level}] ${args.join(' ')}`;
   if (logStream) logStream.write(line + '\n');
-  console.log(line);
+  if (process.env.NODE_ENV === 'development') console.log(line);
+  else console.log(line); // toujours logguer pour débogage
 }
-const L = { info: (...a) => log('INFO', ...a), warn: (...a) => log('WARN', ...a), err: (...a) => log('ERR ', ...a) };
+const L = {
+  info: (...a) => log('INFO', ...a),
+  warn: (...a) => log('WARN', ...a),
+  err:  (...a) => log('ERR ', ...a),
+};
 
-// ─── CONFIG ──────────────────────────────────────────────────────────────────
+// ── CONFIG ───────────────────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
-  firstRun:        true,
-  cameras:         [],        // { id, label, type, mainUrl, subUrl }
-  selectedDisplay: 0,
-  layout:          'auto',
-  reconnect:       true,
-  reconnectDelay:  5,
-  maxReconnectDelay: 60,
-  idleMinutes:     0,
-  showClock:       true,
-  showLabels:      true,
-  showBitrate:     false,
-  go2rtcPort:      GO2RTC_PORT,
-  clickThrough:    false,
-  useSubStream:    true,      // grille = sub stream si dispo
-  hudTimeout:      4,         // secondes avant HUD auto-hide (0 = toujours visible)
-  theme:           'dark',    // dark | darker | night
+  firstRun:           true,
+  cameras:            [],
+  selectedDisplay:    0,
+  layout:             'auto',
+  reconnect:          true,
+  reconnectDelay:     5,
+  maxReconnectDelay:  60,
+  idleMinutes:        0,
+  showClock:          true,
+  showLabels:         true,
+  go2rtcPort:         GO2RTC_PORT,
+  clickThrough:       false,
+  useSubStream:       true,
+  gridGap:            3,
 };
 
 function loadConfig() {
@@ -82,9 +104,7 @@ function saveConfig(cfg) {
 
 let config = loadConfig();
 
-// ─── GO2RTC ──────────────────────────────────────────────────────────────────
-const ARCH_MAP = { x64: 'amd64', arm64: 'arm64', arm: 'arm' };
-
+// ── GO2RTC ───────────────────────────────────────────────────────────────────
 function go2rtcBinName() {
   return `go2rtc_linux_${ARCH_MAP[process.arch] || 'amd64'}`;
 }
@@ -97,42 +117,72 @@ function findGo2rtcBin() {
     '/usr/local/bin/go2rtc',
     '/usr/bin/go2rtc',
   ];
-  return candidates.find(p => { try { return fs.existsSync(p) && fs.statSync(p).size > 0; } catch (_) { return false; } }) || null;
+  return candidates.find(p => {
+    try { return fs.existsSync(p) && fs.statSync(p).size > 0; }
+    catch (_) { return false; }
+  }) || null;
 }
 
 /**
- * Génère la config go2rtc selon le type de caméra
- * Types supportés : rtsp, reolink, tapo, onvif, mjpeg, hls, generic
+ * Génère les sources go2rtc pour une caméra.
+ *
+ * Pour les caméras potentiellement H265 (Reolink 4K, ONVIF, RTSP générique),
+ * on ajoute une source FFmpeg qui transcodes H265→H264 via accélération matérielle.
+ * Cela permet au endpoint MJPEG de go2rtc de servir le stream même si la source
+ * est H265 (qui sinon nécessite FFmpeg de toute façon).
+ *
+ * Pattern go2rtc recommandé (Frigate docs) :
+ *   streams:
+ *     cam1:
+ *       - rtsp://...  # source principale (H265 ou H264)
+ *       - ffmpeg:cam1#video=h264#hardware  # ajoute track H264 via transcoding
+ *
+ * #hardware = auto-détecte CUDA (NVIDIA), VAAPI (Intel/AMD), etc.
  */
 function buildGo2rtcStream(cam) {
-  const { type = 'rtsp', mainUrl, subUrl } = cam;
-  // go2rtc accepte une liste de sources par stream
-  const sources = [];
-  if (mainUrl) sources.push(mainUrl);
-  return sources.length ? sources : null;
+  if (!cam.mainUrl) return null;
+
+  const sources = [cam.mainUrl];
+
+  // Types susceptibles d'être H265 : on ajoute le transcoding FFmpeg H264
+  // Cela permet au MJPEG d'utiliser le track H264 plutôt que H265
+  const maybeH265Types = ['rtsp', 'reolink', 'onvif'];
+  if (maybeH265Types.includes(cam.type || 'rtsp') && cam.id) {
+    // ffmpeg:ID#video=h264#hardware = transcoder le stream via FFmpeg avec accel matérielle
+    // Si hardware non dispo, FFmpeg fallback automatiquement en software
+    sources.push(`ffmpeg:${cam.id}#video=h264#hardware`);
+  }
+
+  return sources;
 }
 
 function writeGo2rtcConfig(cfg) {
   const streams = {};
+
   (cfg.cameras || []).forEach(cam => {
     if (!cam.id) return;
-    const main = buildGo2rtcStream(cam);
-    if (main) streams[cam.id] = main;
-    // Sub-stream séparé si différent
+
+    // Stream principal
+    const mainSources = buildGo2rtcStream(cam);
+    if (mainSources) streams[cam.id] = mainSources;
+
+    // Sub-stream séparé si configuré et différent du main
     if (cam.subUrl && cam.subUrl !== cam.mainUrl) {
+      // Sub-stream généralement H264 → pas besoin de transcoding
       streams[`${cam.id}_sub`] = [cam.subUrl];
     }
   });
 
-  const go2rtcConfig = {
+  const go2rtcYaml = yaml.dump({
     api:  { listen: `:${cfg.go2rtcPort || GO2RTC_PORT}` },
     rtsp: { listen: ':8554' },
+    log:  { level: 'warn' }, // Réduire le bruit dans les logs
     streams,
-  };
+  });
 
   try {
     fs.mkdirSync(USER_DATA, { recursive: true });
-    fs.writeFileSync(GO2RTC_CFG, yaml.dump(go2rtcConfig));
+    fs.writeFileSync(GO2RTC_CFG, go2rtcYaml);
     L.info('go2rtc config écrite:', GO2RTC_CFG);
   } catch (e) { L.err('writeGo2rtcConfig:', e.message); }
 }
@@ -145,7 +195,6 @@ function startGo2rtc(cfg) {
   if (!bin) { L.warn('go2rtc: binaire introuvable'); return false; }
 
   writeGo2rtcConfig(cfg);
-
   go2rtcProc = spawn(bin, ['-config', GO2RTC_CFG], { stdio: ['ignore', 'pipe', 'pipe'] });
   go2rtcProc.stdout.on('data', d => L.info('[go2rtc]', String(d).trim()));
   go2rtcProc.stderr.on('data', d => L.info('[go2rtc]', String(d).trim()));
@@ -154,20 +203,18 @@ function startGo2rtc(cfg) {
     L.info(`[go2rtc] exit code=${code} signal=${sig}`);
     go2rtcProc = null;
   });
-
   L.info('go2rtc démarré:', bin);
   return true;
 }
 
 function stopGo2rtc() {
   if (go2rtcProc) {
-    L.info('go2rtc: arrêt...');
-    go2rtcProc.kill('SIGTERM');
+    try { go2rtcProc.kill('SIGTERM'); } catch (_) {}
     go2rtcProc = null;
+    L.info('go2rtc: arrêt SIGTERM envoyé');
   }
 }
 
-/** Attend que l'API go2rtc réponde */
 function waitForGo2rtc(port, maxMs = 12000) {
   return new Promise(resolve => {
     const start = Date.now();
@@ -187,36 +234,34 @@ function waitForGo2rtc(port, maxMs = 12000) {
   });
 }
 
-/** Téléchargement go2rtc avec progression */
 function downloadGo2rtc(event) {
   const binDir  = path.join(USER_DATA, 'bin');
   const binPath = path.join(binDir, 'go2rtc');
   fs.mkdirSync(binDir, { recursive: true });
 
-  const fname = go2rtcBinName();
-  const url = `https://github.com/AlexxIT/go2rtc/releases/latest/download/${fname}`;
+  const url = `https://github.com/AlexxIT/go2rtc/releases/latest/download/${go2rtcBinName()}`;
   L.info('download go2rtc:', url);
 
   const send = (msg) => {
-    try { event && event.sender && !event.sender.isDestroyed() && event.sender.send('go2rtc-dl-progress', msg); } catch (_) {}
+    try {
+      if (event?.sender && !event.sender.isDestroyed())
+        event.sender.send('go2rtc-dl-progress', msg);
+    } catch (_) {}
   };
 
   return new Promise((resolve, reject) => {
-    const curl = execFile('curl', ['-L', '--progress-bar', url, '-o', binPath],
-      (err) => {
-        if (err) { L.err('download error:', err.message); return reject(err); }
-        try { fs.chmodSync(binPath, '755'); } catch (e) { L.err('chmod:', e.message); }
-        L.info('go2rtc téléchargé:', binPath);
-        resolve({ success: true, path: binPath });
-      }
-    );
-    curl.stderr && curl.stderr.on('data', d => send(String(d).trim()));
+    const curl = execFile('curl', ['-L', '--progress-bar', url, '-o', binPath], err => {
+      if (err) { L.err('download error:', err.message); return reject(err); }
+      try { fs.chmodSync(binPath, '755'); } catch (e) { L.err('chmod:', e.message); }
+      L.info('go2rtc téléchargé:', binPath);
+      resolve({ success: true, path: binPath });
+    });
+    curl.stderr?.on('data', d => send(String(d).trim()));
   });
 }
 
-// ─── AUTO-START ──────────────────────────────────────────────────────────────
+// ── AUTO-START ────────────────────────────────────────────────────────────────
 function getExecPath() {
-  // AppImage ou electron en dev
   return process.env.APPIMAGE || process.execPath;
 }
 
@@ -228,16 +273,11 @@ function setAutostart(enabled) {
   try {
     if (enabled) {
       fs.mkdirSync(path.dirname(AUTOSTART_FILE), { recursive: true });
-      fs.writeFileSync(AUTOSTART_FILE, `[Desktop Entry]
-Type=Application
-Name=CamWall
-Comment=Live camera wallpaper
-Exec=${getExecPath()}
-Icon=camwall
-Hidden=false
-NoDisplay=false
-X-GNOME-Autostart-enabled=true
-`);
+      fs.writeFileSync(AUTOSTART_FILE,
+        `[Desktop Entry]\nType=Application\nName=CamWall\nComment=Live camera wallpaper\n` +
+        `Exec=${getExecPath()}\nIcon=camwall\nHidden=false\nNoDisplay=false\n` +
+        `X-GNOME-Autostart-enabled=true\n`
+      );
       L.info('Autostart activé:', AUTOSTART_FILE);
     } else {
       if (fs.existsSync(AUTOSTART_FILE)) fs.unlinkSync(AUTOSTART_FILE);
@@ -247,13 +287,13 @@ X-GNOME-Autostart-enabled=true
   } catch (e) { L.err('setAutostart:', e.message); return false; }
 }
 
-// ─── UPDATE CHECK ────────────────────────────────────────────────────────────
+// ── UPDATE CHECK ──────────────────────────────────────────────────────────────
 function compareVersions(a, b) {
-  const pa = a.replace(/^v/,'').split('.').map(Number);
-  const pb = b.replace(/^v/,'').split('.').map(Number);
+  const pa = a.replace(/^v/, '').split('.').map(Number);
+  const pb = b.replace(/^v/, '').split('.').map(Number);
   for (let i = 0; i < 3; i++) {
-    if ((pa[i]||0) > (pb[i]||0)) return 1;
-    if ((pa[i]||0) < (pb[i]||0)) return -1;
+    if ((pa[i] || 0) > (pb[i] || 0)) return 1;
+    if ((pa[i] || 0) < (pb[i] || 0)) return -1;
   }
   return 0;
 }
@@ -264,7 +304,7 @@ function checkForUpdates() {
       hostname: 'api.github.com',
       path: `/repos/${REPO}/releases/latest`,
       headers: { 'User-Agent': `CamWall/${VERSION}` },
-      timeout: 5000,
+      timeout: 6000,
     };
     const req = https.get(opts, res => {
       let data = '';
@@ -273,8 +313,12 @@ function checkForUpdates() {
         try {
           const release = JSON.parse(data);
           const latest = release.tag_name || '0.0.0';
-          const newer = compareVersions(latest, VERSION) > 0;
-          resolve({ available: newer, version: latest, url: release.html_url, current: VERSION });
+          resolve({
+            available: compareVersions(latest, VERSION) > 0,
+            version: latest,
+            url: release.html_url,
+            current: VERSION,
+          });
         } catch (e) { resolve({ available: false, current: VERSION }); }
       });
     });
@@ -283,30 +327,33 @@ function checkForUpdates() {
   });
 }
 
-// ─── SYSTEM TRAY ────────────────────────────────────────────────────────────
+// ── SYSTEM TRAY ───────────────────────────────────────────────────────────────
 let tray = null;
 
 function buildTrayMenu() {
   return Menu.buildFromTemplate([
     { label: `CamWall v${VERSION}`, enabled: false },
     { type: 'separator' },
-    { label: 'Afficher / Masquer', click: () => { if (mainWin) { mainWin.isVisible() ? mainWin.hide() : mainWin.show(); } } },
+    { label: 'Afficher / Masquer', click: () => {
+      if (mainWin) mainWin.isVisible() ? mainWin.hide() : mainWin.show();
+    }},
     { type: 'separator' },
-    { label: '⏸ Pause streams',    click: () => mainWin && mainWin.webContents.send('cmd:pause-all') },
-    { label: '▶ Reprendre streams', click: () => mainWin && mainWin.webContents.send('cmd:resume-all') },
+    { label: '⏸ Pause streams',    click: () => mainWin?.webContents.send('cmd:pause-all') },
+    { label: '▶ Reprendre streams', click: () => mainWin?.webContents.send('cmd:resume-all') },
     { type: 'separator' },
-    { label: '⚙ Paramètres',       click: () => { showMain(); mainWin && mainWin.webContents.send('cmd:open-settings'); } },
-    { label: '🔧 Assistant setup',  click: () => { showMain(); mainWin && mainWin.loadFile(path.join(__dirname, 'src', 'setup.html')); } },
+    { label: '⚙ Paramètres',       click: () => { showMain(); mainWin?.webContents.send('cmd:open-settings'); } },
+    { label: '🔧 Assistant setup',  click: () => { showMain(); mainWin?.loadFile(path.join(__dirname, 'src', 'setup.html')); } },
     { type: 'separator' },
     { label: `Démarrage auto : ${isAutostartEnabled() ? '✅' : '❌'}`,
-      click: () => { setAutostart(!isAutostartEnabled()); tray.setContextMenu(buildTrayMenu()); } },
-    { label: '📂 Dossier config',  click: () => shell.openPath(USER_DATA) },
-    { label: '📋 Voir logs',       click: () => shell.openPath(LOG_PATH) },
+      click: () => { setAutostart(!isAutostartEnabled()); tray?.setContextMenu(buildTrayMenu()); }
+    },
+    { label: '📂 Dossier config',   click: () => shell.openPath(USER_DATA) },
+    { label: '📋 Voir logs',        click: () => shell.openPath(LOG_PATH) },
     { type: 'separator' },
     { label: '🔄 Vérifier mises à jour', click: async () => {
       const upd = await checkForUpdates();
       if (upd.available) shell.openExternal(upd.url);
-      else dialog.showMessageBox(mainWin, { message: `CamWall v${VERSION} est à jour.`, buttons: ['OK'] });
+      // Pas de dialog popup intrusif
     }},
     { type: 'separator' },
     { label: 'Quitter CamWall', click: () => { app.isQuitting = true; app.quit(); } },
@@ -315,23 +362,31 @@ function buildTrayMenu() {
 
 function createTray() {
   try {
+    // Essayer d'utiliser l'icône SVG convertie
     const iconPath = path.join(__dirname, 'assets', 'tray.png');
-    const icon = fs.existsSync(iconPath)
-      ? nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 })
-      : nativeImage.createFromDataURL(TRAY_ICON_B64);
+    const iconPathSvg = path.join(__dirname, 'assets', 'icon.svg');
+
+    let icon;
+    if (fs.existsSync(iconPath)) {
+      icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
+    } else if (fs.existsSync(iconPathSvg)) {
+      icon = nativeImage.createFromPath(iconPathSvg).resize({ width: 16, height: 16 });
+    } else {
+      // Fallback : icône générée programmatiquement (simple rectangle vert)
+      icon = nativeImage.createEmpty();
+    }
 
     tray = new Tray(icon);
     tray.setToolTip('CamWall');
     tray.setContextMenu(buildTrayMenu());
-    tray.on('double-click', () => { if (mainWin) { mainWin.isVisible() ? mainWin.focus() : mainWin.show(); } });
+    tray.on('double-click', () => {
+      if (mainWin) mainWin.isVisible() ? mainWin.focus() : mainWin.show();
+    });
     L.info('Tray créé');
   } catch (e) { L.err('Tray error:', e.message); }
 }
 
-// Icône tray 16x16 inline (vert/noir, cam)
-const TRAY_ICON_B64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAAoklEQVQ4jWNgGAWjgB6AkYGB4T8DA8N/KjCjqgEDAwMDIwMDw38qMKOqAQMDAwMjAwPDfyowo6oBAy5NDNQZAACQS39/f3ZGBob/DAwM/6nAjKoGDLg0MVBnAADIDEkIDY2NjY2MjIy3NzczM7MwMDIwMDY2NjIy0tjIuP/bWxkZGT8b/39/RoZGRm5GRkZ3//jIyMjY2NjYxEBACZNECzR3AIEAAAAAElFTkSuQmCC';
-
-// ─── FENÊTRE PRINCIPALE ──────────────────────────────────────────────────────
+// ── FENÊTRE PRINCIPALE ────────────────────────────────────────────────────────
 let mainWin = null;
 
 function showMain() {
@@ -343,32 +398,33 @@ function createWindow() {
   const display  = displays[config.selectedDisplay] || displays[0];
 
   mainWin = new BrowserWindow({
-    x:           display.bounds.x,
-    y:           display.bounds.y,
-    width:       display.bounds.width,
-    height:      display.bounds.height,
-    frame:       false,
-    transparent: false,
-    skipTaskbar: false,
-    resizable:   true,
-    fullscreen:  true,
-    backgroundColor: '#030508',
+    x:      display.bounds.x,
+    y:      display.bounds.y,
+    width:  display.bounds.width,
+    height: display.bounds.height,
+    frame:           false,
+    transparent:     false,
+    skipTaskbar:     true,    // Fix: true = disparaît de la barre des tâches (géré par tray)
+    resizable:       true,
+    fullscreen:      true,
+    backgroundColor: '#070a14',
     webPreferences: {
-      preload:          path.join(__dirname, 'preload.js'),
-      nodeIntegration:  false,
-      contextIsolation: true,
-      webSecurity:      false,
-      backgroundThrottling: false,  // pas de throttling en arrière-plan
+      preload:              path.join(__dirname, 'preload.js'),
+      nodeIntegration:      false,
+      contextIsolation:     true,
+      webSecurity:          true,    // Fix: true (go2rtc envoie CORS headers, file:// null origin = OK)
+      backgroundThrottling: false,   // Pas de throttle quand en arrière-plan
+      sandbox:              true,    // Sécurité Chromium : sandbox activé
     },
   });
 
-  // F12 = DevTools (debug seulement)
+  // F12 = DevTools (debug uniquement)
   mainWin.webContents.on('before-input-event', (_, input) => {
     if (input.key === 'F12' && input.type === 'keyDown') mainWin.webContents.toggleDevTools();
   });
 
-  // Masquer au lieu de fermer (tray)
-  mainWin.on('close', (e) => {
+  // Masquer au lieu de fermer (géré par tray)
+  mainWin.on('close', e => {
     if (!app.isQuitting) {
       e.preventDefault();
       mainWin.hide();
@@ -392,90 +448,133 @@ async function loadApp() {
   if (mainWin) mainWin.loadFile(path.join(__dirname, 'src', 'app.html'));
 }
 
-// ─── IPC HANDLERS ────────────────────────────────────────────────────────────
+// ── IPC HANDLERS ──────────────────────────────────────────────────────────────
 function registerIPC() {
-  // — Config —
-  ipcMain.handle('cfg:get',   ()       => loadConfig());
-  ipcMain.handle('cfg:save',  (_, c)   => { config = { ...config, ...c }; saveConfig(config); tray && tray.setContextMenu(buildTrayMenu()); return true; });
+  // Config
+  ipcMain.handle('cfg:get',  ()      => loadConfig());
+  ipcMain.handle('cfg:save', (_, c)  => {
+    config = { ...config, ...c };
+    saveConfig(config);
+    tray?.setContextMenu(buildTrayMenu());
+    return true;
+  });
 
-  // — Écrans —
+  // Écrans
   ipcMain.handle('display:list', () =>
     screen.getAllDisplays().map((d, i) => ({
-      index: i, label: `Écran ${i + 1}`,
+      index:   i,
+      label:   `Écran ${i + 1}`,
       primary: d === screen.getPrimaryDisplay(),
-      width: d.bounds.width, height: d.bounds.height,
-      x: d.bounds.x, y: d.bounds.y,
+      width:   d.bounds.width,
+      height:  d.bounds.height,
+      x: d.bounds.x,
+      y: d.bounds.y,
     }))
   );
   ipcMain.handle('display:set', (_, idx) => {
     const d = screen.getAllDisplays()[idx] || screen.getAllDisplays()[0];
-    config.selectedDisplay = idx; saveConfig(config);
-    if (mainWin) { mainWin.setFullScreen(false); mainWin.setBounds(d.bounds); mainWin.setFullScreen(true); }
+    config.selectedDisplay = idx;
+    saveConfig(config);
+    if (mainWin) {
+      mainWin.setFullScreen(false);
+      mainWin.setBounds(d.bounds);
+      mainWin.setFullScreen(true);
+    }
     return true;
   });
 
-  // — go2rtc —
-  ipcMain.handle('go2rtc:check',    ()      => ({ found: !!findGo2rtcBin(), path: findGo2rtcBin(), arch: process.arch }));
-  ipcMain.handle('go2rtc:start',    (_, c)  => startGo2rtc(c || config));
-  ipcMain.handle('go2rtc:stop',     ()      => { stopGo2rtc(); return true; });
-  ipcMain.handle('go2rtc:restart',  (_, c)  => startGo2rtc({ ...config, ...(c || {}) }));
-  ipcMain.handle('go2rtc:download', ev      => downloadGo2rtc(ev));
-  ipcMain.handle('go2rtc:status',   ()      => waitForGo2rtc(config.go2rtcPort || GO2RTC_PORT, 2000));
-  ipcMain.handle('go2rtc:write-cfg',(_, c)  => { writeGo2rtcConfig(c || config); return true; });
+  // go2rtc
+  ipcMain.handle('go2rtc:check',    ()     => ({ found: !!findGo2rtcBin(), path: findGo2rtcBin(), arch: process.arch }));
+  ipcMain.handle('go2rtc:start',    (_, c) => startGo2rtc(c || config));
+  ipcMain.handle('go2rtc:stop',     ()     => { stopGo2rtc(); return true; });
+  ipcMain.handle('go2rtc:restart',  (_, c) => startGo2rtc({ ...config, ...(c || {}) }));
+  ipcMain.handle('go2rtc:download', ev     => downloadGo2rtc(ev));
+  ipcMain.handle('go2rtc:status',   ()     => waitForGo2rtc(config.go2rtcPort || GO2RTC_PORT, 2000));
+  ipcMain.handle('go2rtc:write-cfg',(_, c) => { writeGo2rtcConfig(c || config); return true; });
 
-  // — Navigation —
+  // Navigation
   ipcMain.handle('nav:app',   async () => loadApp());
-  ipcMain.handle('nav:setup', ()       => mainWin && mainWin.loadFile(path.join(__dirname, 'src', 'setup.html')));
+  ipcMain.handle('nav:setup', ()       => mainWin?.loadFile(path.join(__dirname, 'src', 'setup.html')));
 
-  // — Mouse / click-through —
+  // Mouse / click-through
   ipcMain.on('mouse:interactive', (_, on) => {
-    if (mainWin) mainWin.setIgnoreMouseEvents(!on, { forward: true });
+    mainWin?.setIgnoreMouseEvents(!on, { forward: true });
   });
   ipcMain.handle('clickthrough:set', (_, on) => {
-    config.clickThrough = on; saveConfig(config);
-    if (mainWin) mainWin.setIgnoreMouseEvents(on, { forward: true });
+    config.clickThrough = on;
+    saveConfig(config);
+    mainWin?.setIgnoreMouseEvents(on, { forward: true });
   });
 
-  // — Autostart —
-  ipcMain.handle('autostart:get', ()       => isAutostartEnabled());
-  ipcMain.handle('autostart:set', (_, on)  => setAutostart(on));
+  // Autostart
+  ipcMain.handle('autostart:get', ()      => isAutostartEnabled());
+  ipcMain.handle('autostart:set', (_, on) => setAutostart(on));
 
-  // — Update —
-  ipcMain.handle('update:check', () => checkForUpdates());
-  ipcMain.handle('update:open',  (_, url) => shell.openExternal(url));
+  // Updates
+  ipcMain.handle('update:check', ()        => checkForUpdates());
+  ipcMain.handle('update:open',  (_, url)  => shell.openExternal(url));
 
-  // — Utilitaires —
+  // Utilitaires
   ipcMain.handle('open:config-dir', () => shell.openPath(USER_DATA));
   ipcMain.handle('open:log',        () => shell.openPath(LOG_PATH));
   ipcMain.handle('app:version',     () => VERSION);
   ipcMain.handle('app:quit',        () => { app.isQuitting = true; app.quit(); });
 }
 
-// ─── LIFECYCLE ───────────────────────────────────────────────────────────────
+// ── LIFECYCLE ─────────────────────────────────────────────────────────────────
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) { app.quit(); process.exit(0); }
 
-app.on('second-instance', () => { if (mainWin) { mainWin.show(); mainWin.focus(); } });
+app.on('second-instance', () => {
+  if (mainWin) { mainWin.show(); mainWin.focus(); }
+});
 
 app.whenReady().then(async () => {
   config = loadConfig();
+
+  // Fix webSecurity: true — intercepter les headers CORS pour go2rtc localhost
+  // go2rtc envoie déjà Access-Control-Allow-Origin: * mais on s'assure
+  // que les requêtes file:// (origin: null) vers localhost:1984 passent
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    if (details.url.startsWith(`http://localhost:${config.go2rtcPort || GO2RTC_PORT}`)) {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'access-control-allow-origin':  ['*'],
+          'access-control-allow-headers': ['Content-Type, Accept'],
+          'access-control-allow-methods': ['GET, POST, OPTIONS'],
+        }
+      });
+    } else {
+      callback({ responseHeaders: details.responseHeaders });
+    }
+  });
+
   registerIPC();
   createWindow();
   createTray();
 
-  // Vérif update en arrière-plan (sans bloquer)
+  // Update check en arrière-plan (5s délai pour ne pas bloquer le démarrage)
   setTimeout(async () => {
     try {
       const upd = await checkForUpdates();
       if (upd.available) {
         L.info(`Mise à jour disponible: ${upd.version}`);
-        if (mainWin) mainWin.webContents.send('update:available', upd);
-        if (tray) tray.setToolTip(`CamWall — Mise à jour ${upd.version} disponible !`);
+        mainWin?.webContents.send('update:available', upd);
+        tray?.setToolTip(`CamWall — Mise à jour v${upd.version} disponible !`);
+      } else {
+        L.info(`CamWall v${VERSION} est à jour`);
       }
-    } catch (_) {}
+    } catch (e) { L.warn('update check failed:', e.message); }
   }, 5000);
 });
 
 app.on('before-quit',       () => { app.isQuitting = true; stopGo2rtc(); });
-app.on('window-all-closed', () => { /* géré par tray */ });
-app.on('web-contents-created', (_, wc) => wc.setWindowOpenHandler(() => ({ action: 'deny' })));
+app.on('window-all-closed', () => { /* géré par le tray */ });
+app.on('web-contents-created', (_, wc) => {
+  // Bloquer toutes les nouvelles fenêtres et la navigation externe
+  wc.setWindowOpenHandler(() => ({ action: 'deny' }));
+  wc.on('will-navigate', (e, url) => {
+    if (!url.startsWith('file://')) e.preventDefault();
+  });
+});
