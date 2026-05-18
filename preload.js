@@ -1,14 +1,20 @@
 'use strict';
+/**
+ * CamWall v2.1 — preload.js
+ * Fix: onCmd() utilisait || entre ipcRenderer.on() calls
+ *      (ipcRenderer.on retourne ipcRenderer = truthy → court-circuit)
+ *      → 3 appels séparés maintenant
+ */
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('CamWall', {
   // Config
-  getConfig:    ()    => ipcRenderer.invoke('cfg:get'),
-  saveConfig:   (c)   => ipcRenderer.invoke('cfg:save', c),
+  getConfig:  ()    => ipcRenderer.invoke('cfg:get'),
+  saveConfig: (c)   => ipcRenderer.invoke('cfg:save', c),
 
   // Écrans
-  getDisplays:  ()    => ipcRenderer.invoke('display:list'),
-  setDisplay:   (i)   => ipcRenderer.invoke('display:set', i),
+  getDisplays: ()   => ipcRenderer.invoke('display:list'),
+  setDisplay:  (i)  => ipcRenderer.invoke('display:set', i),
 
   // go2rtc
   go2rtcCheck:    ()   => ipcRenderer.invoke('go2rtc:check'),
@@ -31,18 +37,21 @@ contextBridge.exposeInMainWorld('CamWall', {
   setClickThrough: (on) => ipcRenderer.invoke('clickthrough:set', on),
 
   // Autostart
-  getAutostart: ()   => ipcRenderer.invoke('autostart:get'),
-  setAutostart: (on) => ipcRenderer.invoke('autostart:set', on),
+  getAutostart: ()    => ipcRenderer.invoke('autostart:get'),
+  setAutostart: (on)  => ipcRenderer.invoke('autostart:set', on),
 
   // Updates
-  checkUpdate: ()    => ipcRenderer.invoke('update:check'),
-  openUpdate:  (url) => ipcRenderer.invoke('update:open', url),
-  onUpdate:    (cb)  => ipcRenderer.on('update:available', (_, d) => cb(d)),
+  checkUpdate: ()      => ipcRenderer.invoke('update:check'),
+  openUpdate:  (url)   => ipcRenderer.invoke('update:open', url),
+  onUpdate:    (cb)    => ipcRenderer.on('update:available', (_, d) => cb(d)),
 
   // Commandes tray → renderer
-  onCmd: (cb) => ipcRenderer.on('cmd:pause-all',     (_, d) => cb('pause-all', d))
-              || ipcRenderer.on('cmd:resume-all',    (_, d) => cb('resume-all', d))
-              || ipcRenderer.on('cmd:open-settings', (_, d) => cb('open-settings', d)),
+  // Fix v2.1: 3 appels séparés (pas ||) pour enregistrer tous les listeners
+  onCmd: (cb) => {
+    ipcRenderer.on('cmd:pause-all',     (_, d) => cb('pause-all', d));
+    ipcRenderer.on('cmd:resume-all',    (_, d) => cb('resume-all', d));
+    ipcRenderer.on('cmd:open-settings', (_, d) => cb('open-settings', d));
+  },
 
   // Utilitaires
   openConfigDir: () => ipcRenderer.invoke('open:config-dir'),
