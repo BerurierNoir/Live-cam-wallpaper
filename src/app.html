@@ -4,427 +4,644 @@
 <meta charset="UTF-8">
 <title>CamWall</title>
 <style>
-/* ── Fonts système — zéro dépendance réseau ──────────────────── */
+/* ── Variables ─────────────────────────────────────────────── */
 :root {
-  --mono: 'Courier New', 'Liberation Mono', 'DejaVu Sans Mono', monospace;
-  --sans: 'Cantarell', 'Ubuntu', system-ui, sans-serif;
-
-  --bg:      #030508;
-  --s2:      #070b0f;
-  --panel:   #0a0e14;
-  --green:   #00e87a;
-  --gdim:    #006e3a;
-  --gglow:   rgba(0,232,122,0.18);
-  --red:     #ff3b55;
-  --amber:   #ffaa00;
-  --text:    #a8bca8;
-  --tdim:    #2e4838;
-  --border:  rgba(0,200,100,0.1);
-  --borderH: rgba(0,200,100,0.35);
-  --hud-h:   54px;
+  --bg:        #070a14;
+  --surface:   #0c0f1f;
+  --panel:     #0f1229;
+  --card:      rgba(15,18,41,0.85);
+  --indigo:    #6366f1;
+  --cyan:      #06b6d4;
+  --purple:    #a855f7;
+  --green:     #10b981;
+  --red:       #ef4444;
+  --amber:     #f59e0b;
+  --text:      #e2e8f0;
+  --muted:     #94a3b8;
+  --dim:       #475569;
+  --border:    rgba(99,102,241,0.12);
+  --borderH:   rgba(99,102,241,0.4);
+  --glow:      rgba(99,102,241,0.2);
+  --ui:        'Inter','Segoe UI',system-ui,sans-serif;
+  --mono:      'JetBrains Mono','Fira Code','Courier New',monospace;
+  --r:         8px;
+  --r-sm:      5px;
+  --hud:       58px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
   width: 100vw; height: 100vh;
-  background: var(--bg); color: var(--text);
-  font-family: var(--mono);
-  overflow: hidden; user-select: none; -webkit-user-select: none;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui);
+  overflow: hidden;
+  user-select: none; -webkit-user-select: none;
 }
 
-/* CRT subtle */
-body::after {
-  content: ''; position: fixed; inset: 0;
-  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
-  pointer-events: none; z-index: 9998;
+/* Fond espace */
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 25%, rgba(99,102,241,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 85% 75%, rgba(168,85,247,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(6,182,212,0.03) 0%, transparent 70%);
 }
 
-/* ── GRILLE ──────────────────────────────────────────────────── */
+/* ── GRILLE ─────────────────────────────────────────────────── */
 #grid {
   position: fixed; inset: 0;
-  display: grid; gap: 2px; background: #000;
-  transition: grid-template-columns 0.3s ease, grid-template-rows 0.3s ease;
+  display: grid; gap: 3px;
+  background: rgba(0,0,0,0.6);
+  transition: grid-template-columns 0.35s cubic-bezier(0.4,0,0.2,1),
+              grid-template-rows    0.35s cubic-bezier(0.4,0,0.2,1);
+  z-index: 1;
 }
 
-/* ── CELLULE ─────────────────────────────────────────────────── */
+/* ── CELLULE CAMÉRA ─────────────────────────────────────────── */
 .cam-cell {
-  position: relative; background: #000; overflow: hidden;
+  position: relative;
+  background: #000;
+  overflow: hidden;
   cursor: pointer;
-  /* Performance critique */
   contain: layout style paint;
-  will-change: contents;
-  outline: 1px solid rgba(0,200,100,0.04);
-  transition: outline-color 0.2s;
+  border-radius: 3px;
+  border: 1px solid rgba(99,102,241,0.06);
+  transition: border-color 0.25s, box-shadow 0.25s;
 }
-.cam-cell:hover { outline-color: rgba(0,200,100,0.25); }
+.cam-cell:hover {
+  border-color: rgba(99,102,241,0.3);
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.15), inset 0 0 40px rgba(99,102,241,0.04);
+}
 
 .cam-cell img {
   width: 100%; height: 100%;
   object-fit: cover; display: block;
-  /* GPU acceleration */
   transform: translateZ(0);
-  backface-visibility: hidden;
 }
 
-/* corners */
-.cam-cell::before, .cam-cell::after {
-  content: ''; position: absolute;
-  width: 12px; height: 12px;
-  opacity: 0; transition: opacity 0.18s; z-index: 4; pointer-events: none;
-}
-.cam-cell::before { top: 6px; left: 6px; border-top: 1px solid var(--green); border-left: 1px solid var(--green); }
-.cam-cell::after  { bottom: 6px; right: 6px; border-bottom: 1px solid var(--green); border-right: 1px solid var(--green); }
-.cam-cell:hover::before, .cam-cell:hover::after { opacity: 1; }
-
-/* vignette */
-.v {
+/* Overlay gradient */
+.cam-overlay {
   position: absolute; inset: 0; pointer-events: none; z-index: 2;
-  background: linear-gradient(180deg,rgba(0,0,0,0.55) 0%,transparent 20%),
-              linear-gradient(0deg,rgba(0,0,0,0.55) 0%,transparent 20%);
-  opacity: 0; transition: opacity 0.18s;
+  background:
+    linear-gradient(180deg, rgba(7,10,20,0.7) 0%, transparent 25%),
+    linear-gradient(0deg,   rgba(7,10,20,0.7) 0%, transparent 25%);
+  opacity: 0; transition: opacity 0.2s;
 }
-.cam-cell:hover .v { opacity: 1; }
+.cam-cell:hover .cam-overlay { opacity: 1; }
 
-/* badge cam */
-.cam-id {
-  position: absolute; top: 7px; left: 9px;
-  display: flex; align-items: center; gap: 5px;
-  font-size: 9px; letter-spacing: 1.5px;
-  color: var(--green); text-shadow: 0 0 6px var(--gglow); z-index: 5;
+/* Badge haut gauche */
+.cam-badge {
+  position: absolute; top: 10px; left: 12px;
+  display: flex; align-items: center; gap: 7px;
+  z-index: 5;
 }
-.dot {
-  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
-  transition: background 0.3s, box-shadow 0.3s;
+.cam-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  transition: all 0.3s;
 }
-.dot.ok   { background: var(--green); box-shadow: 0 0 5px var(--green); }
-.dot.err  { background: var(--red);   box-shadow: 0 0 5px var(--red);   animation: blink 1.2s infinite; }
-.dot.conn { background: var(--amber); box-shadow: 0 0 5px var(--amber); animation: blink 0.5s infinite; }
-.dot.off  { background: var(--tdim);  box-shadow: none; }
+.cam-dot.ok   { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.cam-dot.err  { background: var(--red);   box-shadow: 0 0 6px var(--red);   animation: pulse-err 1.2s infinite; }
+.cam-dot.conn { background: var(--amber); box-shadow: 0 0 6px var(--amber); animation: pulse-err 0.5s infinite; }
+.cam-dot.off  { background: var(--dim);   box-shadow: none; }
+.cam-id-text {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+  color: rgba(255,255,255,0.6);
+}
 
-/* REC */
+/* REC badge */
 .cam-rec {
-  position: absolute; top: 7px; right: 9px;
-  display: flex; align-items: center; gap: 3px;
-  font-size: 8px; letter-spacing: 2px; color: var(--red);
-  z-index: 5; opacity: 0; transition: opacity 0.18s;
+  position: absolute; top: 10px; right: 12px;
+  display: flex; align-items: center; gap: 5px;
+  font-family: var(--mono); font-size: 9px; letter-spacing: 2px;
+  color: var(--red); z-index: 5;
+  opacity: 0; transition: opacity 0.2s;
 }
-.cam-rec::before { content: ''; width: 5px; height: 5px; background: var(--red); border-radius: 50%; animation: blink 1s infinite; }
+.cam-rec::before {
+  content: ''; width: 6px; height: 6px;
+  background: var(--red); border-radius: 50%;
+  animation: pulse-err 1s infinite;
+}
 .cam-cell:hover .cam-rec { opacity: 1; }
 
-/* label */
-.cam-lbl {
-  position: absolute; bottom: 8px; left: 10px;
-  font-family: var(--sans); font-weight: 700; font-size: 11px;
-  letter-spacing: 1.5px; text-transform: uppercase;
-  color: rgba(255,255,255,0.82); text-shadow: 0 1px 4px rgba(0,0,0,0.95);
-  z-index: 5; opacity: 0; transition: opacity 0.18s;
+/* Label bas gauche */
+.cam-label {
+  position: absolute; bottom: 12px; left: 12px;
+  font-size: 12px; font-weight: 600; letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.9);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.9);
+  z-index: 5; opacity: 0; transition: opacity 0.2s;
 }
-.cam-cell:hover .cam-lbl { opacity: 1; }
+.cam-cell:hover .cam-label { opacity: 1; }
 
-/* snapshot btn */
+/* Snapshot bas droite */
 .cam-snap {
-  position: absolute; bottom: 7px; right: 9px;
-  font-size: 14px; z-index: 5; cursor: pointer;
-  opacity: 0; transition: opacity 0.18s;
-  background: rgba(0,0,0,0.5); border-radius: 3px; padding: 2px 5px;
+  position: absolute; bottom: 10px; right: 12px;
+  width: 30px; height: 30px;
+  background: rgba(15,18,41,0.7);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; cursor: pointer; z-index: 5;
+  opacity: 0; transition: all 0.2s;
 }
 .cam-cell:hover .cam-snap { opacity: 1; }
-.cam-snap:hover { background: rgba(0,200,100,0.12); border-color: var(--borderH); }
+.cam-snap:hover { background: rgba(99,102,241,0.2); border-color: var(--indigo); }
 
-/* pause overlay */
+/* Bouton pause centré */
 .cam-tog {
   position: absolute; top: 50%; left: 50%;
   transform: translate(-50%,-50%) scale(0.8);
-  width: 38px; height: 38px;
-  background: rgba(0,0,0,0.6); border: 1px solid var(--border);
-  border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-size: 13px; cursor: pointer; z-index: 6;
-  opacity: 0; transition: opacity 0.18s, transform 0.18s;
+  width: 44px; height: 44px;
+  background: rgba(7,10,20,0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; cursor: pointer; z-index: 6;
+  opacity: 0; transition: all 0.2s;
 }
 .cam-cell:hover .cam-tog { opacity: 1; transform: translate(-50%,-50%) scale(1); }
-.cam-tog:hover { background: rgba(0,200,100,0.1); border-color: var(--borderH); }
+.cam-tog:hover { background: rgba(99,102,241,0.2); border-color: var(--indigo); }
 
-/* offline */
+/* Overlay hors-ligne */
 .cam-err {
   position: absolute; inset: 0; display: none;
   flex-direction: column; align-items: center; justify-content: center;
-  gap: 10px; z-index: 7; background: rgba(3,5,8,0.82);
+  gap: 12px; z-index: 7;
+  background: rgba(7,10,20,0.85);
+  backdrop-filter: blur(4px);
 }
 .cam-err.show { display: flex; }
-.cam-err-i    { font-size: 24px; opacity: 0.25; }
-.cam-err-m    { font-size: 9px; color: var(--tdim); letter-spacing: 1px; text-align: center; }
-.cam-err-r    { font-size: 9px; color: var(--gdim); letter-spacing: 1px; cursor: pointer; border: 1px solid var(--border); padding: 3px 10px; border-radius: 2px; transition: color 0.15s; }
-.cam-err-r:hover { color: var(--green); border-color: var(--borderH); }
+.cam-err-icon { font-size: 32px; opacity: 0.2; }
+.cam-err-msg  { font-size: 11px; color: var(--dim); letter-spacing: 0.5px; }
+.cam-err-btn  {
+  padding: 6px 14px;
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.3);
+  border-radius: var(--r-sm);
+  font-size: 11px; color: var(--indigo); cursor: pointer;
+  transition: all 0.15s; letter-spacing: 0.5px;
+}
+.cam-err-btn:hover { background: rgba(99,102,241,0.2); border-color: var(--indigo); }
 
-/* focus = plein écran */
-.cam-cell.focused { position: fixed; inset: 0; z-index: 50; outline: 1px solid var(--green); cursor: default; }
-.cam-cell.focused .cam-lbl { opacity: 1; }
+/* Focus = plein écran */
+.cam-cell.focused {
+  position: fixed; inset: 0;
+  z-index: 50; border-radius: 0;
+  border: 2px solid var(--indigo);
+  box-shadow: 0 0 30px rgba(99,102,241,0.4);
+}
+.cam-cell.focused .cam-label { opacity: 1; }
 
-/* état vide */
+/* État vide */
 #empty {
   position: fixed; inset: 0; display: none;
   flex-direction: column; align-items: center; justify-content: center;
-  gap: 16px; z-index: 10;
+  gap: 20px; z-index: 10;
 }
 #empty.show { display: flex; }
-#empty-title { font-family: var(--sans); font-size: 18px; letter-spacing: 3px; color: var(--gdim); }
+#empty-icon { font-size: 48px; opacity: 0.15; }
+#empty-title { font-size: 20px; font-weight: 600; letter-spacing: 2px; color: var(--dim); }
+#empty-sub   { font-size: 13px; color: var(--dim); }
 #empty-btn {
-  padding: 10px 24px; background: rgba(0,200,100,0.08);
-  border: 1px solid rgba(0,200,100,0.3); border-radius: 3px;
-  color: var(--green); font-family: var(--mono); font-size: 10px;
-  letter-spacing: 2px; cursor: pointer; transition: all 0.15s;
+  margin-top: 8px; padding: 12px 28px;
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.35);
+  border-radius: var(--r);
+  font-size: 13px; font-weight: 600; color: var(--indigo);
+  cursor: pointer; transition: all 0.15s; letter-spacing: 0.5px;
 }
-#empty-btn:hover { background: rgba(0,200,100,0.16); border-color: var(--green); }
+#empty-btn:hover { background: rgba(99,102,241,0.2); border-color: var(--indigo); }
 
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+@keyframes pulse-err { 0%,100%{opacity:1} 50%{opacity:0.2} }
 
-/* ── NOTIF UPDATE ─────────────────────────────────────────────── */
-#update-notif {
-  position: fixed; top: 14px; right: 14px;
-  background: rgba(10,14,20,0.95); border: 1px solid rgba(59,142,255,0.4);
-  border-radius: 4px; padding: 10px 14px;
-  font-size: 10px; letter-spacing: 0.5px; color: #3b8eff;
-  z-index: 400; display: none; gap: 10px; align-items: center;
-  box-shadow: 0 0 20px rgba(59,142,255,0.1);
+/* ── NOTIF UPDATE ───────────────────────────────────────────── */
+#upd-notif {
+  position: fixed; top: 16px; right: 16px;
+  display: none; align-items: center; gap: 12px;
+  background: rgba(15,18,41,0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(99,102,241,0.3);
+  border-radius: var(--r);
+  padding: 12px 16px;
+  font-size: 13px; color: var(--muted);
+  z-index: 400;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,102,241,0.1);
 }
-#update-notif.show { display: flex; }
-#update-notif a { color: #3b8eff; text-decoration: none; border-bottom: 1px solid rgba(59,142,255,0.4); }
-#update-notif .nu-close { cursor: pointer; color: var(--tdim); margin-left: 6px; }
-#update-notif .nu-close:hover { color: var(--text); }
+#upd-notif.show { display: flex; }
+#upd-link { color: var(--indigo); cursor: pointer; text-decoration: underline; }
+#upd-x { cursor: pointer; color: var(--dim); font-size: 16px; margin-left: 4px; }
+#upd-x:hover { color: var(--text); }
 
-/* ── HUD ─────────────────────────────────────────────────────── */
+/* ── HUD BOTTOM ─────────────────────────────────────────────── */
 #hud-zone {
   position: fixed; bottom: 0; left: 0; right: 0;
-  height: 70px; z-index: 100; pointer-events: all;
+  height: 72px; z-index: 100; pointer-events: all;
 }
 #hud {
   position: absolute; bottom: 0; left: 0; right: 0;
-  height: var(--hud-h);
-  background: rgba(3,5,8,0.97);
-  backdrop-filter: blur(12px) saturate(1.2);
+  height: var(--hud);
+  background: rgba(7,10,20,0.92);
+  backdrop-filter: blur(20px) saturate(1.5);
   border-top: 1px solid var(--border);
-  display: flex; align-items: center;
+  display: flex; align-items: center; gap: 0;
   transform: translateY(100%);
-  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+  transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
 }
 #hud-zone:hover #hud { transform: translateY(0); }
 
-.hs  { display: flex; align-items: center; gap: 8px; padding: 0 12px; height: 100%; }
-.hd  { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
+/* Ligne indigo en haut du HUD */
+#hud::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--indigo), var(--cyan), transparent);
+  opacity: 0.5;
+}
+
+.hs  { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 100%; }
+.hd  { width: 1px; height: 22px; background: var(--border); flex-shrink: 0; }
 .hsp { flex: 1; }
 
-#hud-logo { font-family: var(--sans); font-weight: 700; font-size: 13px; letter-spacing: 3px; color: var(--green); text-shadow: 0 0 8px var(--gglow); }
-#hud-ver  { font-size: 8px; color: var(--tdim); letter-spacing: 1px; }
-#hud-clk  { font-size: 17px; letter-spacing: 3px; font-variant-numeric: tabular-nums; min-width: 78px; }
-#hud-dt   { font-family: var(--sans); font-size: 10px; color: var(--tdim); letter-spacing: 1px; text-transform: uppercase; }
-#cam-bdg  { font-size: 9px; letter-spacing: 1.5px; color: var(--gdim); border: 1px solid var(--border); padding: 2px 7px; border-radius: 2px; }
-#go2rtc-st{ font-size: 8px; color: var(--tdim); letter-spacing: 1px; display: flex; align-items: center; gap: 4px; }
+#hud-brand {
+  display: flex; flex-direction: column; gap: 2px;
+}
+#hud-logo {
+  font-size: 15px; font-weight: 700; letter-spacing: 3px;
+  background: linear-gradient(135deg, var(--indigo), var(--cyan));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+#hud-ver { font-size: 10px; color: var(--dim); letter-spacing: 1px; font-family: var(--mono); }
 
-/* layout picker */
-#lpick { display: flex; gap: 3px; }
+#hud-time {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+}
+#hud-clk { font-family: var(--mono); font-size: 18px; letter-spacing: 3px; font-variant-numeric: tabular-nums; }
+#hud-dt  { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+
+#cam-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+  background: rgba(99,102,241,0.08);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 4px 10px;
+}
+#cam-badge .dot { width: 6px; height: 6px; }
+
+/* Layout picker */
+#lpick { display: flex; gap: 4px; }
 .lp {
-  width: 26px; height: 26px; display: grid; padding: 5px; gap: 2px;
-  background: transparent; border: 1px solid rgba(0,200,100,0.08);
-  border-radius: 2px; cursor: pointer; transition: all 0.12s;
+  width: 28px; height: 28px; display: grid; padding: 5px; gap: 2px;
+  background: transparent; border: 1px solid var(--border);
+  border-radius: var(--r-sm); cursor: pointer; transition: all 0.15s;
 }
-.lp span { background: rgba(0,200,100,0.3); border-radius: 1px; display: block; }
-.lp:hover  { border-color: rgba(0,200,100,0.3); background: rgba(0,200,100,0.04); }
-.lp.active { border-color: rgba(0,200,100,0.5); background: rgba(0,200,100,0.07); }
-.lp.auto   { align-items: center; justify-content: center; font-size: 7px; letter-spacing: 1px; color: rgba(0,200,100,0.4); padding: 0; }
+.lp span { background: rgba(99,102,241,0.35); border-radius: 1px; display: block; }
+.lp:hover  { border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.06); }
+.lp.active { border-color: var(--indigo); background: rgba(99,102,241,0.12); }
+.lp.auto   { align-items: center; justify-content: center; font-size: 8px; letter-spacing: 1px; color: var(--muted); font-family: var(--mono); padding: 0; }
 
-/* boutons */
+/* Boutons HUD */
 .hbtn {
-  height: 28px; padding: 0 10px;
-  background: transparent; border: 1px solid rgba(0,200,100,0.1);
-  border-radius: 2px; color: var(--text); font-family: var(--mono);
-  font-size: 9px; letter-spacing: 1px; cursor: pointer;
-  display: flex; align-items: center; gap: 5px;
-  transition: all 0.12s; white-space: nowrap;
+  height: 32px; padding: 0 14px;
+  background: rgba(99,102,241,0.06);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--muted); font-family: var(--ui);
+  font-size: 12px; font-weight: 500;
+  cursor: pointer; display: flex; align-items: center; gap: 6px;
+  transition: all 0.15s; white-space: nowrap;
 }
-.hbtn:hover   { background: rgba(0,200,100,0.05); border-color: rgba(0,200,100,0.3); color: var(--green); }
-.hbtn.on      { background: rgba(255,170,0,0.07); border-color: rgba(255,170,0,0.25); color: var(--amber); }
-.hbtn.danger  { border-color: rgba(255,59,85,0.12); }
-.hbtn.danger:hover { background: rgba(255,59,85,0.07); border-color: rgba(255,59,85,0.35); color: var(--red); }
+.hbtn:hover { background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.4); color: var(--text); }
+.hbtn.on    { background: rgba(245,158,11,0.1);  border-color: rgba(245,158,11,0.3); color: var(--amber); }
+.hbtn.quit  { border-color: rgba(239,68,68,0.15); }
+.hbtn.quit:hover { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.4); color: var(--red); }
 
-/* ── PANNEAU CONFIG ───────────────────────────────────────────── */
+/* ── PANNEAU CONFIG ──────────────────────────────────────────── */
 #panel {
-  position: fixed; top: 0; right: 0; bottom: 0; width: 340px;
-  background: var(--panel); border-left: 1px solid var(--border);
-  z-index: 200; transform: translateX(100%);
-  transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+  position: fixed; top: 0; right: 0; bottom: 0; width: 360px;
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  z-index: 200;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
   display: flex; flex-direction: column;
-  contain: layout style;
+  box-shadow: -20px 0 60px rgba(0,0,0,0.5);
 }
 #panel.open { transform: translateX(0); }
 
+/* Ligne indigo en haut */
+#panel::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--indigo), var(--cyan));
+}
+
 #ph {
-  height: 50px; border-bottom: 1px solid var(--border);
+  padding: 20px 20px 0;
+  flex-shrink: 0;
+}
+#ph-top {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 14px; flex-shrink: 0;
-  font-size: 9px; letter-spacing: 2px; color: var(--green); text-transform: uppercase;
+  margin-bottom: 16px;
 }
-#phc {
-  width: 24px; height: 24px; border: 1px solid var(--border); border-radius: 2px;
+#ph-title {
+  font-size: 16px; font-weight: 700; letter-spacing: 0.5px;
+  background: linear-gradient(135deg, var(--indigo), var(--cyan));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+#ph-close {
+  width: 30px; height: 30px;
+  background: rgba(239,68,68,0.06);
+  border: 1px solid rgba(239,68,68,0.15);
+  border-radius: var(--r-sm);
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 11px; color: var(--tdim); transition: all 0.12s;
+  cursor: pointer; font-size: 14px; color: var(--dim);
+  transition: all 0.15s;
 }
-#phc:hover { border-color: var(--red); color: var(--red); }
+#ph-close:hover { background: rgba(239,68,68,0.15); border-color: var(--red); color: var(--red); }
 
-/* tabs du panel */
-#p-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+/* Tabs */
+#p-tabs {
+  display: flex; gap: 2px;
+  background: rgba(0,0,0,0.3);
+  border-radius: var(--r);
+  padding: 3px; margin-bottom: 16px;
+}
 .p-tab {
-  flex: 1; padding: 10px 6px; text-align: center; font-size: 9px;
-  letter-spacing: 1px; color: var(--tdim); text-transform: uppercase;
-  cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s;
+  flex: 1; padding: 7px 4px; text-align: center;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.3px;
+  color: var(--dim); cursor: pointer; border-radius: 6px;
+  transition: all 0.15s;
 }
-.p-tab.active { color: var(--green); border-bottom-color: var(--green); }
-.p-tab:hover  { color: var(--text); }
+.p-tab:hover  { color: var(--muted); }
+.p-tab.active { background: rgba(99,102,241,0.15); color: var(--indigo); }
 
-.p-pane { display: none; flex: 1; overflow-y: auto; padding: 14px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.p-pane { display: none; flex: 1; overflow-y: auto; padding: 0 20px 20px; scrollbar-width: thin; scrollbar-color: rgba(99,102,241,0.2) transparent; }
 .p-pane.active { display: block; }
+.p-pane::-webkit-scrollbar { width: 4px; }
+.p-pane::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.2); border-radius: 2px; }
 
-/* section */
+/* Section */
 .ps { margin-bottom: 20px; }
-.ps-t { font-size: 8px; letter-spacing: 2px; color: var(--gdim); text-transform: uppercase; padding-bottom: 7px; border-bottom: 1px solid var(--border); margin-bottom: 9px; }
+.ps-t {
+  font-size: 11px; font-weight: 600; letter-spacing: 1px;
+  color: var(--indigo); text-transform: uppercase;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
 
-/* cam entry */
-#camlist { display: flex; flex-direction: column; gap: 7px; margin-bottom: 9px; }
-.ce { background: rgba(0,200,100,0.02); border: 1px solid var(--border); border-radius: 3px; padding: 9px; display: flex; flex-direction: column; gap: 5px; }
-.cer { display: flex; gap: 5px; align-items: center; }
-.ce-label { font-size: 8px; color: var(--tdim); letter-spacing: 1px; margin-bottom: 2px; }
+/* Entrée caméra */
+#camlist { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.ce {
+  background: rgba(99,102,241,0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px;
+  display: flex; flex-direction: column; gap: 10px;
+  transition: border-color 0.15s;
+}
+.ce:hover { border-color: rgba(99,102,241,0.2); }
+
+.ce-row { display: flex; gap: 8px; align-items: center; }
+.ce-label { font-size: 11px; color: var(--dim); margin-bottom: 4px; font-weight: 500; }
+
+/* Inputs */
 .pi {
-  flex: 1; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 2px; color: var(--text); font-family: var(--mono); font-size: 10px;
-  padding: 5px 7px; outline: none; transition: border-color 0.12s;
+  flex: 1; width: 100%;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--r-sm);
+  color: var(--text); font-family: var(--mono); font-size: 12px;
+  padding: 8px 10px; outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
-.pi:focus { border-color: var(--gdim); }
-.pi::placeholder { color: #1a3020; }
+.pi:focus { border-color: rgba(99,102,241,0.5); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+.pi::placeholder { color: var(--dim); font-size: 11px; }
+
 .pi-sel {
-  background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 2px; color: var(--text); font-family: var(--mono); font-size: 10px;
-  padding: 5px 7px; outline: none; transition: border-color 0.12s; width: 100%;
+  width: 100%;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--r-sm);
+  color: var(--text); font-family: var(--ui); font-size: 12px;
+  padding: 8px 10px; outline: none; cursor: pointer;
+  transition: border-color 0.15s;
 }
-.pi-sel:focus { border-color: var(--gdim); }
+.pi-sel:focus { border-color: rgba(99,102,241,0.5); }
 .pi-sel option { background: var(--panel); }
-.ce-del { width: 24px; height: 24px; flex-shrink: 0; background: rgba(255,59,85,0.04); border: 1px solid rgba(255,59,85,0.12); border-radius: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 10px; color: var(--red); transition: background 0.12s; }
-.ce-del:hover { background: rgba(255,59,85,0.16); }
+
+.ce-del {
+  width: 32px; height: 32px; flex-shrink: 0;
+  background: rgba(239,68,68,0.05);
+  border: 1px solid rgba(239,68,68,0.12);
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 13px; color: var(--red);
+  transition: all 0.15s;
+}
+.ce-del:hover { background: rgba(239,68,68,0.15); border-color: var(--red); }
+
+/* Note d'aide caméra */
+.cam-help {
+  font-size: 11px; color: var(--dim); line-height: 1.6;
+  background: rgba(6,182,212,0.04);
+  border: 1px solid rgba(6,182,212,0.12);
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+}
+.cam-help strong { color: var(--cyan); }
 
 #btn-add-cam {
-  width: 100%; padding: 7px; background: transparent;
-  border: 1px dashed rgba(0,200,100,0.15); border-radius: 2px;
-  color: var(--gdim); font-family: var(--mono); font-size: 9px;
-  letter-spacing: 1.5px; cursor: pointer; text-align: center; transition: all 0.12s;
+  width: 100%; padding: 10px;
+  background: transparent;
+  border: 1px dashed rgba(99,102,241,0.2);
+  border-radius: var(--r);
+  color: var(--dim); font-size: 12px; font-weight: 500;
+  cursor: pointer; text-align: center; transition: all 0.15s;
 }
-#btn-add-cam:hover { border-color: var(--green); color: var(--green); }
+#btn-add-cam:hover { border-color: var(--indigo); color: var(--indigo); background: rgba(99,102,241,0.05); }
 
-/* rows settings */
-.pr { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 9px; gap: 10px; }
-.pr span { color: var(--tdim); }
-.pr input[type=text], .pr input[type=number], .pr select {
-  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 2px; color: var(--text); font-family: var(--mono); font-size: 10px;
-  padding: 4px 6px; outline: none; max-width: 120px;
+/* Rows settings */
+.pr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+  gap: 12px;
 }
-.tgl { position: relative; width: 34px; height: 17px; cursor: pointer; }
+.pr-label { font-size: 13px; color: var(--muted); }
+.pr-sub   { font-size: 11px; color: var(--dim); margin-top: 1px; }
+.pr-left  { display: flex; flex-direction: column; gap: 2px; }
+
+.pi-sm {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--r-sm);
+  color: var(--text); font-family: var(--mono); font-size: 12px;
+  padding: 6px 8px; outline: none; width: 70px; text-align: center;
+  transition: border-color 0.15s;
+}
+.pi-sm:focus { border-color: rgba(99,102,241,0.5); }
+
+.pi-lg {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--r-sm);
+  color: var(--text); font-family: var(--mono); font-size: 12px;
+  padding: 6px 10px; outline: none; width: 150px;
+  transition: border-color 0.15s;
+}
+.pi-lg:focus { border-color: rgba(99,102,241,0.5); }
+
+/* Toggle */
+.tgl { position: relative; width: 38px; height: 20px; cursor: pointer; flex-shrink: 0; }
 .tgl input { opacity: 0; width: 0; height: 0; }
-.tgl-t { position: absolute; inset: 0; background: #0a1a0f; border: 1px solid rgba(0,200,100,0.12); border-radius: 9px; transition: all 0.18s; }
-.tgl-t::before { content: ''; position: absolute; width: 11px; height: 11px; border-radius: 50%; background: #1a3020; top: 2px; left: 2px; transition: transform 0.18s, background 0.18s; }
-.tgl input:checked + .tgl-t { border-color: rgba(0,200,100,0.35); }
-.tgl input:checked + .tgl-t::before { transform: translateX(17px); background: var(--green); }
-
-/* écrans */
-#displayer { display: flex; flex-direction: column; gap: 5px; }
-.dopt { padding: 8px 10px; background: rgba(0,200,100,0.02); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; font-size: 10px; transition: all 0.12s; }
-.dopt:hover  { border-color: rgba(0,200,100,0.25); }
-.dopt.active { border-color: var(--green); color: var(--green); }
-.dopt .db    { font-size: 9px; color: var(--tdim); }
-
-/* infos système */
-.sys-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 9px; }
-.sys-row span { color: var(--tdim); }
-.sys-row strong { color: var(--text); letter-spacing: 0.5px; }
-
-/* boutons */
-#btn-save {
-  width: 100%; padding: 9px; margin-top: 14px;
-  background: rgba(0,200,100,0.07); border: 1px solid rgba(0,200,100,0.28);
-  border-radius: 2px; color: var(--green); font-family: var(--mono);
-  font-size: 10px; letter-spacing: 2px; cursor: pointer; text-transform: uppercase; transition: all 0.12s;
+.tgl-t {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; transition: all 0.2s;
 }
-#btn-save:hover { background: rgba(0,200,100,0.14); border-color: var(--green); }
-#save-ok { text-align: center; font-size: 8px; color: var(--gdim); letter-spacing: 1px; height: 14px; margin-top: 7px; }
+.tgl-t::before {
+  content: ''; position: absolute;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--dim); top: 2px; left: 2px;
+  transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+.tgl input:checked + .tgl-t { border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.15); }
+.tgl input:checked + .tgl-t::before { transform: translateX(18px); background: var(--indigo); }
 
-.action-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 7px; }
+/* Sélecteur écran */
+#displayer { display: flex; flex-direction: column; gap: 8px; }
+.dopt {
+  padding: 12px 14px;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+  transition: all 0.15s;
+}
+.dopt:hover  { border-color: rgba(99,102,241,0.3); background: rgba(99,102,241,0.05); }
+.dopt.active { border-color: var(--indigo); background: rgba(99,102,241,0.1); }
+.dopt-name  { font-size: 13px; font-weight: 600; color: var(--text); }
+.dopt-info  { font-size: 11px; color: var(--dim); margin-top: 2px; font-family: var(--mono); }
+.dopt-check { color: var(--indigo); font-size: 18px; opacity: 0; transition: opacity 0.15s; }
+.dopt.active .dopt-check { opacity: 1; }
 
-/* update badge */
+/* Infos système */
+.sys-card {
+  background: rgba(0,0,0,0.2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 14px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.sys-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+.sys-row span { color: var(--dim); }
+.sys-row strong { color: var(--text); font-family: var(--mono); }
+
+/* Bouton sauvegarde */
+.btn-primary {
+  width: 100%; padding: 11px;
+  background: rgba(99,102,241,0.15);
+  border: 1px solid rgba(99,102,241,0.35);
+  border-radius: var(--r);
+  color: var(--indigo); font-size: 13px; font-weight: 600;
+  letter-spacing: 0.5px; cursor: pointer; transition: all 0.15s;
+}
+.btn-primary:hover { background: rgba(99,102,241,0.25); border-color: var(--indigo); color: #fff; }
+
+.btn-ghost {
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--muted); font-size: 12px;
+  cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-ghost:hover { border-color: rgba(99,102,241,0.3); color: var(--text); background: rgba(99,102,241,0.06); }
+
+.save-ok { text-align: center; font-size: 11px; color: var(--green); height: 18px; margin-top: 8px; letter-spacing: 0.5px; }
+
+/* Badge update */
 .upd-badge {
-  display: none; background: rgba(59,142,255,0.08);
-  border: 1px solid rgba(59,142,255,0.3); border-radius: 2px;
-  padding: 8px 10px; margin-top: 10px;
-  font-size: 9px; letter-spacing: 0.5px; color: #3b8eff; align-items: center; gap: 8px;
+  display: none; align-items: center; gap: 10px;
+  background: rgba(99,102,241,0.08);
+  border: 1px solid rgba(99,102,241,0.2);
+  border-radius: var(--r); padding: 12px 14px;
+  font-size: 12px; color: var(--muted);
 }
 .upd-badge.show { display: flex; }
-.upd-link { color: #3b8eff; text-decoration: none; border-bottom: 1px solid rgba(59,142,255,0.3); cursor: pointer; }
+.upd-link { color: var(--indigo); cursor: pointer; text-decoration: underline; }
 
-/* hint */
+/* Hint clavier */
 #hint {
-  position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
-  display: flex; gap: 12px;
-  background: rgba(3,5,8,0.82); border: 1px solid var(--border);
-  border-radius: 3px; padding: 5px 14px;
-  font-size: 8px; color: var(--tdim); letter-spacing: 1px;
+  position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 16px; align-items: center;
+  background: rgba(7,10,20,0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 8px 18px;
+  font-size: 11px; color: var(--dim);
   z-index: 300; opacity: 0; transition: opacity 0.4s; pointer-events: none;
 }
 #hint.show { opacity: 1; }
-#hint kbd { color: var(--gdim); margin-right: 2px; }
+#hint kbd {
+  display: inline-block; padding: 2px 7px;
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.2);
+  border-radius: 4px; font-size: 10px; color: var(--indigo);
+  font-family: var(--mono); margin-right: 3px;
+}
+
+.action-row { display: flex; gap: 8px; flex-wrap: wrap; }
 </style>
 </head>
 <body>
 
-<!-- grille + état vide -->
 <div id="grid"></div>
+
 <div id="empty">
-  <div id="empty-title">AUCUNE CAMÉRA</div>
-  <div style="font-size:9px;color:var(--tdim);letter-spacing:1px;">Configure tes caméras dans les paramètres</div>
-  <div id="empty-btn">⚙ OUVRIR LES PARAMÈTRES</div>
+  <div id="empty-icon">📡</div>
+  <div id="empty-title">Aucune caméra configurée</div>
+  <div id="empty-sub">Ajoute tes premières caméras dans les paramètres</div>
+  <div id="empty-btn">⚙ Ouvrir les paramètres</div>
 </div>
 
-<!-- notification mise à jour -->
-<div id="update-notif">
-  <span>🔄 Mise à jour disponible : </span>
-  <a id="upd-link" href="#">télécharger</a>
-  <span class="nu-close" id="upd-close">✕</span>
+<div id="upd-notif">
+  🚀 Mise à jour disponible :
+  <span id="upd-link">télécharger</span>
+  <span id="upd-x">×</span>
 </div>
 
-<!-- HUD bottom -->
+<!-- HUD -->
 <div id="hud-zone">
   <div id="hud">
     <div class="hs">
-      <span id="hud-logo">CamWall</span>
-      <span id="hud-ver"></span>
+      <div id="hud-brand">
+        <div id="hud-logo">CAMWALL</div>
+        <div id="hud-ver"></div>
+      </div>
     </div>
     <div class="hd"></div>
     <div class="hs">
-      <span id="hud-clk">00:00:00</span>
-      <span id="hud-dt"></span>
+      <div id="hud-time">
+        <div id="hud-clk">00:00:00</div>
+        <div id="hud-dt"></div>
+      </div>
     </div>
     <div class="hd"></div>
     <div class="hs">
-      <span id="cam-bdg">— CAM</span>
-      <span id="go2rtc-st"><span class="dot conn" style="width:5px;height:5px;"></span>go2rtc</span>
-    </div>
-    <div class="hd"></div>
-    <div class="hs">
+      <div id="cam-badge"><div class="cam-dot ok"></div><span>— CAM</span></div>
       <div id="lpick"></div>
     </div>
     <div class="hsp"></div>
     <div class="hs">
-      <button class="hbtn" id="btn-pause">⏸ PAUSE</button>
-      <button class="hbtn" id="btn-cfg">⚙ CONFIG</button>
+      <button class="hbtn" id="btn-pause">⏸ Pause</button>
+      <button class="hbtn" id="btn-cfg">⚙ Paramètres</button>
       <div class="hd"></div>
-      <button class="hbtn danger" id="btn-quit" title="Minimiser dans le tray">✕</button>
+      <button class="hbtn quit" id="btn-quit" title="Minimiser dans le tray">×</button>
     </div>
   </div>
 </div>
@@ -432,607 +649,473 @@ body::after {
 <!-- Panneau config -->
 <div id="panel">
   <div id="ph">
-    <span>// Paramètres</span>
-    <div id="phc">✕</div>
-  </div>
-  <div id="p-tabs">
-    <div class="p-tab active" data-tab="cams">📷 Caméras</div>
-    <div class="p-tab" data-tab="display">🖥 Écran</div>
-    <div class="p-tab" data-tab="opts">⚙ Options</div>
-    <div class="p-tab" data-tab="sys">ℹ Système</div>
+    <div id="ph-top">
+      <div id="ph-title">Paramètres</div>
+      <div id="ph-close">×</div>
+    </div>
+    <div id="p-tabs">
+      <div class="p-tab active" data-tab="cams">📷 Caméras</div>
+      <div class="p-tab" data-tab="display">🖥 Écran</div>
+      <div class="p-tab" data-tab="opts">⚙ Options</div>
+      <div class="p-tab" data-tab="sys">ℹ Système</div>
+    </div>
   </div>
 
-  <!-- Tab Caméras -->
+  <!-- Caméras -->
   <div class="p-pane active" id="tab-cams">
     <div id="camlist"></div>
-    <div id="btn-add-cam">+ AJOUTER UNE CAMÉRA</div>
-    <button id="btn-save">SAUVEGARDER &amp; APPLIQUER</button>
-    <div id="save-ok"></div>
+    <div id="btn-add-cam">＋ Ajouter une caméra</div>
+    <div style="height:16px"></div>
+    <button class="btn-primary" id="btn-save">Sauvegarder &amp; Appliquer</button>
+    <div class="save-ok" id="save-ok"></div>
   </div>
 
-  <!-- Tab Écran -->
+  <!-- Écran -->
   <div class="p-pane" id="tab-display">
     <div class="ps">
       <div class="ps-t">Écran dédié</div>
       <div id="displayer"></div>
     </div>
     <div class="ps">
-      <div class="ps-t">Layout</div>
-      <div class="pr"><span>Sub-stream en grille</span><label class="tgl"><input type="checkbox" id="s-sub" checked><span class="tgl-t"></span></label></div>
-      <div class="pr"><span>Gap entre cellules (px)</span><input id="s-gap" type="number" value="2" min="0" max="20" style="width:50px"></div>
+      <div class="ps-t">Grille</div>
+      <div class="pr">
+        <div class="pr-left"><div class="pr-label">Sub-stream en grille</div><div class="pr-sub">Économie de bande passante sur les 4K</div></div>
+        <label class="tgl"><input type="checkbox" id="s-sub" checked><span class="tgl-t"></span></label>
+      </div>
+      <div class="pr">
+        <div class="pr-label">Espacement cellules (px)</div>
+        <input class="pi-sm" id="s-gap" type="number" value="3" min="0" max="20">
+      </div>
     </div>
   </div>
 
-  <!-- Tab Options -->
+  <!-- Options -->
   <div class="p-pane" id="tab-opts">
     <div class="ps">
-      <div class="ps-t">Connexion</div>
-      <div class="pr"><span>go2rtc URL</span><input id="s-server" type="text" value="http://localhost:1984" style="width:140px"></div>
-      <div class="pr"><span>Reconnexion auto</span><label class="tgl"><input type="checkbox" id="s-reconnect" checked><span class="tgl-t"></span></label></div>
-      <div class="pr"><span>Délai initial (s)</span><input id="s-delay" type="number" value="5" min="1" max="30" style="width:50px"></div>
-      <div class="pr"><span>Délai max (s)</span><input id="s-maxdelay" type="number" value="60" min="10" max="300" style="width:50px"></div>
+      <div class="ps-t">Connexion go2rtc</div>
+      <div class="pr">
+        <div class="pr-label">URL serveur</div>
+        <input class="pi-lg" id="s-server" type="text" value="http://localhost:1984">
+      </div>
+      <div class="pr">
+        <div class="pr-left"><div class="pr-label">Reconnexion auto</div></div>
+        <label class="tgl"><input type="checkbox" id="s-reconnect" checked><span class="tgl-t"></span></label>
+      </div>
+      <div class="pr">
+        <div class="pr-label">Délai initial (s)</div>
+        <input class="pi-sm" id="s-delay" type="number" value="5" min="1" max="30">
+      </div>
+      <div class="pr">
+        <div class="pr-label">Délai maximum (s)</div>
+        <input class="pi-sm" id="s-maxdelay" type="number" value="60" min="10" max="300">
+      </div>
     </div>
     <div class="ps">
       <div class="ps-t">Comportement</div>
-      <div class="pr"><span>Pause si inactif (min, 0=off)</span><input id="s-idle" type="number" value="0" min="0" max="120" style="width:50px"></div>
-      <div class="pr"><span>Click-through (expérimental)</span><label class="tgl"><input type="checkbox" id="s-ct"><span class="tgl-t"></span></label></div>
-      <div class="pr"><span>Démarrage automatique</span><label class="tgl"><input type="checkbox" id="s-autostart"><span class="tgl-t"></span></label></div>
+      <div class="pr">
+        <div class="pr-left"><div class="pr-label">Pause si inactif</div><div class="pr-sub">0 = désactivé</div></div>
+        <input class="pi-sm" id="s-idle" type="number" value="0" min="0" max="120">
+      </div>
+      <div class="pr">
+        <div class="pr-left"><div class="pr-label">Démarrage automatique</div><div class="pr-sub">Au login du bureau</div></div>
+        <label class="tgl"><input type="checkbox" id="s-autostart"><span class="tgl-t"></span></label>
+      </div>
     </div>
     <div class="ps">
       <div class="ps-t">Affichage</div>
-      <div class="pr"><span>Horloge</span><label class="tgl"><input type="checkbox" id="s-clock" checked><span class="tgl-t"></span></label></div>
-      <div class="pr"><span>Labels caméras</span><label class="tgl"><input type="checkbox" id="s-labels" checked><span class="tgl-t"></span></label></div>
+      <div class="pr">
+        <div class="pr-label">Horloge dans le HUD</div>
+        <label class="tgl"><input type="checkbox" id="s-clock" checked><span class="tgl-t"></span></label>
+      </div>
+      <div class="pr">
+        <div class="pr-label">Labels caméras</div>
+        <label class="tgl"><input type="checkbox" id="s-labels" checked><span class="tgl-t"></span></label>
+      </div>
     </div>
-    <button id="btn-save2" style="width:100%;padding:9px;margin-top:14px;background:rgba(0,200,100,0.07);border:1px solid rgba(0,200,100,0.28);border-radius:2px;color:var(--green);font-family:var(--mono);font-size:10px;letter-spacing:2px;cursor:pointer;text-transform:uppercase;transition:all 0.12s">SAUVEGARDER</button>
-    <div id="save-ok2" style="text-align:center;font-size:8px;color:var(--gdim);letter-spacing:1px;height:14px;margin-top:7px"></div>
+    <button class="btn-primary" id="btn-save2">Sauvegarder</button>
+    <div class="save-ok" id="save-ok2"></div>
   </div>
 
-  <!-- Tab Système -->
+  <!-- Système -->
   <div class="p-pane" id="tab-sys">
     <div class="ps">
       <div class="ps-t">Informations</div>
-      <div id="sys-info"></div>
+      <div id="sys-info" class="sys-card"></div>
     </div>
     <div class="ps">
-      <div class="ps-t">Mise à jour</div>
+      <div class="ps-t">Mises à jour</div>
       <div id="upd-badge" class="upd-badge">
-        <span>Nouvelle version disponible !</span>
+        🚀 Nouvelle version disponible !
         <span class="upd-link" id="upd-dl">Télécharger</span>
       </div>
       <div class="action-row" style="margin-top:10px">
-        <button class="hbtn" id="btn-checkupd">🔄 Vérifier</button>
-        <span id="upd-status" style="font-size:9px;color:var(--tdim);align-self:center;letter-spacing:0.5px"></span>
+        <button class="btn-ghost" id="btn-checkupd">🔄 Vérifier</button>
+        <span id="upd-status" style="font-size:12px;color:var(--dim);align-self:center"></span>
       </div>
     </div>
     <div class="ps">
       <div class="ps-t">Utilitaires</div>
       <div class="action-row">
-        <button class="hbtn" id="btn-opendir">📂 Config</button>
-        <button class="hbtn" id="btn-openlog">📋 Logs</button>
-        <button class="hbtn" id="btn-setup">🔧 Assistant</button>
+        <button class="btn-ghost" id="btn-opendir">📂 Config</button>
+        <button class="btn-ghost" id="btn-openlog">📋 Logs</button>
+        <button class="btn-ghost" id="btn-setup">🔧 Assistant</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- hint clavier -->
+<!-- Hint clavier -->
 <div id="hint">
-  <span><kbd>Clic</kbd>zoom</span>
-  <span><kbd>ESC</kbd>retour/fermer</span>
-  <span><kbd>P</kbd>pause</span>
-  <span><kbd>S</kbd>settings</span>
-  <span><kbd>F12</kbd>debug</span>
+  <span><kbd>Clic</kbd> zoom cam</span>
+  <span><kbd>ESC</kbd> retour</span>
+  <span><kbd>P</kbd> pause</span>
+  <span><kbd>S</kbd> settings</span>
+  <span><kbd>F12</kbd> debug</span>
 </div>
 
 <script>
 const API = window.CamWall;
 let cfg = {}, camPaused = {}, camRetries = {}, retryTimers = {};
-let globalPaused = false, focusedCam = null, layoutOvr = null;
-let updateInfo = null;
+let globalPaused = false, focusedCam = null, layoutOvr = null, updateInfo = null;
 
-// ── URL helpers ──────────────────────────────────────────────
-const go2rtcBase = () => `http://localhost:${cfg.go2rtcPort || 1984}`;
-const mjpegUrl = (id) => `${go2rtcBase()}/api/stream.mjpeg?src=${encodeURIComponent(id)}`;
-// En mode grille: sub stream si dispo et activé
-const streamId = (cam, focused) => {
-  if (!focused && cfg.useSubStream !== false && cam.subUrl && cam.id+'_sub') return cam.id+'_sub';
-  return cam.id;
-};
+const go2rtcBase = () => `http://localhost:${cfg.go2rtcPort||1984}`;
+const mjpegUrl   = (id) => `${go2rtcBase()}/api/stream.mjpeg?src=${encodeURIComponent(id)}&_=${Date.now()}`;
+const streamId   = (cam, focused) => (!focused && cfg.useSubStream!==false && cam.subUrl) ? cam.id+'_sub' : cam.id;
 
-// ── Exponential backoff ──────────────────────────────────────
-function nextRetryDelay(id) {
-  const base = cfg.reconnectDelay || 5;
-  const max  = cfg.maxReconnectDelay || 60;
-  camRetries[id] = (camRetries[id] || 0) + 1;
-  return Math.min(base * Math.pow(1.5, camRetries[id] - 1), max);
+// Exponential backoff
+function nextDelay(id) {
+  const base=cfg.reconnectDelay||5, max=cfg.maxReconnectDelay||60;
+  camRetries[id]=(camRetries[id]||0)+1;
+  return Math.min(base*Math.pow(1.6,camRetries[id]-1),max);
 }
-function resetRetry(id) { camRetries[id] = 0; }
+function resetRetry(id) { camRetries[id]=0; }
 
 // ── Layouts ──────────────────────────────────────────────────
-const LAYOUTS = [
-  {id:'auto'}, {id:'1',cols:1,rows:1}, {id:'2',cols:2,rows:1},
-  {id:'4',cols:2,rows:2}, {id:'6',cols:3,rows:2}, {id:'9',cols:3,rows:3},
-];
-function autoGrid(n) {
-  if(n<=1)return[1,1]; if(n===2)return[2,1];
-  if(n<=4)return[2,2]; if(n<=6)return[3,2]; return[3,3];
+const LAYOUTS=[{id:'auto'},{id:'1',cols:1,rows:1},{id:'2',cols:2,rows:1},{id:'4',cols:2,rows:2},{id:'6',cols:3,rows:2},{id:'9',cols:3,rows:3}];
+function autoGrid(n){if(n<=1)return[1,1];if(n===2)return[2,1];if(n<=4)return[2,2];if(n<=6)return[3,2];return[3,3];}
+function applyLayout(){
+  const grid=document.getElementById('grid');
+  const gap=cfg.gridGap!==undefined?cfg.gridGap:3;
+  grid.style.gap=`${gap}px`;
+  if(focusedCam){grid.style.gridTemplateColumns='1fr';grid.style.gridTemplateRows='1fr';return;}
+  const lid=layoutOvr||'auto', l=LAYOUTS.find(x=>x.id===lid);
+  const[c,r]=l&&l.cols?[l.cols,l.rows]:autoGrid(cfg.cameras.length);
+  grid.style.gridTemplateColumns=`repeat(${c},1fr)`;
+  grid.style.gridTemplateRows=`repeat(${r},1fr)`;
+  document.querySelectorAll('.lp').forEach(b=>b.classList.toggle('active',b.dataset.id===lid));
 }
-function applyLayout() {
-  const grid = document.getElementById('grid');
-  const gap  = cfg.gridGap !== undefined ? cfg.gridGap : 2;
-  grid.style.gap = `${gap}px`;
-  if (focusedCam) { grid.style.gridTemplateColumns='1fr'; grid.style.gridTemplateRows='1fr'; return; }
-  const lid = layoutOvr || 'auto';
-  const l   = LAYOUTS.find(x=>x.id===lid);
-  const [c,r] = l&&l.cols ? [l.cols,l.rows] : autoGrid(cfg.cameras.length);
-  grid.style.gridTemplateColumns = `repeat(${c},1fr)`;
-  grid.style.gridTemplateRows    = `repeat(${r},1fr)`;
-  document.querySelectorAll('.lp').forEach(b => b.classList.toggle('active', b.dataset.id===lid));
-}
-function buildLP() {
-  const p = document.getElementById('lpick'); p.innerHTML='';
-  LAYOUTS.forEach(l => {
-    const btn = document.createElement('div');
-    btn.className = 'lp'+(l.id==='auto'?' auto':'');
-    btn.dataset.id = l.id;
-    if(l.id==='auto') btn.textContent='AUTO';
-    else {
-      const c=Math.min(l.cols,3),r=Math.min(l.rows,3);
-      btn.style.gridTemplateColumns=`repeat(${c},1fr)`;
-      btn.style.gridTemplateRows=`repeat(${r},1fr)`;
-      for(let i=0;i<c*r;i++) btn.appendChild(document.createElement('span'));
-    }
-    btn.addEventListener('click',()=>{ layoutOvr=l.id==='auto'?null:l.id; applyLayout(); });
+function buildLP(){
+  const p=document.getElementById('lpick');p.innerHTML='';
+  LAYOUTS.forEach(l=>{
+    const btn=document.createElement('div');
+    btn.className='lp'+(l.id==='auto'?' auto':'');btn.dataset.id=l.id;
+    if(l.id==='auto'){btn.textContent='AUTO';}
+    else{const c=Math.min(l.cols,3),r=Math.min(l.rows,3);btn.style.gridTemplateColumns=`repeat(${c},1fr)`;btn.style.gridTemplateRows=`repeat(${r},1fr)`;for(let i=0;i<c*r;i++)btn.appendChild(document.createElement('span'));}
+    btn.addEventListener('click',()=>{layoutOvr=l.id==='auto'?null:l.id;applyLayout();});
     p.appendChild(btn);
   });
 }
 
-// ── Clock ────────────────────────────────────────────────────
-function startClock() {
+// ── Clock ─────────────────────────────────────────────────────
+function startClock(){
   const p=n=>String(n).padStart(2,'0');
-  const tick=()=>{
+  setInterval(()=>{
     const now=new Date();
-    const c=document.getElementById('hud-clk');
-    const d=document.getElementById('hud-dt');
-    if(c) c.textContent=`${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`;
+    const c=document.getElementById('hud-clk'),d=document.getElementById('hud-dt');
+    if(c&&cfg.showClock!==false) c.textContent=`${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`;
     if(d) d.textContent=now.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'}).toUpperCase();
-  };
-  tick(); setInterval(tick,1000);
+  },1000);
 }
 
-// ── go2rtc status ────────────────────────────────────────────
-async function checkGo2rtcStatus() {
-  const el = document.getElementById('go2rtc-st');
-  if (!el) return;
-  try {
-    const ok = await API.go2rtcStatus();
-    const dot = el.querySelector('.dot');
-    if (dot) dot.className = `dot ${ok?'ok':'err'}`;
-  } catch(_) {}
-}
-setInterval(checkGo2rtcStatus, 10000);
+// ── Grille ────────────────────────────────────────────────────
+function setDot(cell,state){const d=cell.querySelector('.cam-dot');if(d)d.className=`cam-dot ${state}`;}
 
-// ── GRILLE CAMERAS ───────────────────────────────────────────
-function setDot(cell, state) {
-  const d = cell.querySelector('.dot'); if(d) d.className=`dot ${state}`;
-}
-
-function loadCam(cam, cell, focused=false) {
-  const img = cell.querySelector('img');
-  const err = cell.querySelector('.cam-err');
-  if (!img || !cam.mainUrl) return;
-  if (camPaused[cam.id] || globalPaused) return;
-
+function loadCam(cam,cell,focused=false){
+  const img=cell.querySelector('img'),err=cell.querySelector('.cam-err');
+  if(!img||(!cam.mainUrl&&cam.type!=='reolink'))return;
+  if(camPaused[cam.id]||globalPaused)return;
   clearTimeout(retryTimers[cam.id]);
-  setDot(cell, 'conn');
-  if(err) err.classList.remove('show');
-
-  const sid = streamId(cam, focused);
-  // Timestamp pour forcer refresh et éviter cache
-  img.src = `${go2rtcBase()}/api/stream.mjpeg?src=${encodeURIComponent(sid)}&_=${Date.now()}`;
+  setDot(cell,'conn');if(err)err.classList.remove('show');
+  const sid=streamId(cam,focused);
+  img.src=`${go2rtcBase()}/api/stream.mjpeg?src=${encodeURIComponent(sid)}&_=${Date.now()}`;
 }
 
-function renderGrid() {
-  const grid  = document.getElementById('grid');
-  const empty = document.getElementById('empty');
-  const names = cfg.cameras.map(c=>c.id);
-
-  // Supprimer les cellules obsolètes
-  [...grid.querySelectorAll('.cam-cell')].forEach(cell=>{
-    if(!names.includes(cell.dataset.id)) {
-      clearTimeout(retryTimers[cell.dataset.id]);
-      cell.remove();
-    }
-  });
-
-  if(cfg.cameras.length===0) { empty.classList.add('show'); applyLayout(); return; }
+function renderGrid(){
+  const grid=document.getElementById('grid');
+  const empty=document.getElementById('empty');
+  const names=cfg.cameras.map(c=>c.id);
+  [...grid.querySelectorAll('.cam-cell')].forEach(cell=>{if(!names.includes(cell.dataset.id)){clearTimeout(retryTimers[cell.dataset.id]);cell.remove();}});
+  if(cfg.cameras.length===0){empty.classList.add('show');applyLayout();return;}
   empty.classList.remove('show');
 
-  cfg.cameras.forEach((cam,idx) => {
-    let cell = document.getElementById(`cell-${cam.id}`);
-    if(!cell) {
-      cell = document.createElement('div');
-      cell.className='cam-cell'; cell.id=`cell-${cam.id}`; cell.dataset.id=cam.id;
-
-      const img = document.createElement('img');
-      img.alt = cam.label||cam.id;
-      img.loading = 'lazy';
-
-      img.onload = () => { setDot(cell,'ok'); resetRetry(cam.id); };
-      img.onerror = () => {
-        if(camPaused[cam.id]||globalPaused) return;
+  cfg.cameras.forEach((cam,idx)=>{
+    let cell=document.getElementById(`cell-${cam.id}`);
+    if(!cell){
+      cell=document.createElement('div');
+      cell.className='cam-cell';cell.id=`cell-${cam.id}`;cell.dataset.id=cam.id;
+      const img=document.createElement('img');img.alt=cam.label||cam.id;
+      img.onload=()=>{setDot(cell,'ok');resetRetry(cam.id);};
+      img.onerror=()=>{
+        if(camPaused[cam.id]||globalPaused)return;
         setDot(cell,'err');
-        const e = cell.querySelector('.cam-err');
-        if(e) { e.classList.add('show'); const m=e.querySelector('.cam-err-m'); if(m) m.textContent='SIGNAL PERDU'; }
-        if(cfg.reconnect!==false) {
-          const delay = nextRetryDelay(cam.id);
-          const m = cell.querySelector('.cam-err-m');
-          if(m) m.textContent = `SIGNAL PERDU — retry dans ${Math.round(delay)}s`;
-          retryTimers[cam.id] = setTimeout(()=>loadCam(cam,cell,!!focusedCam&&focusedCam===cam.id), delay*1000);
-        }
+        const e=cell.querySelector('.cam-err');
+        if(e){e.classList.add('show');const m=e.querySelector('.cam-err-msg');if(m){const d=nextDelay(cam.id);m.textContent=`Signal perdu — retry dans ${Math.round(d)}s`;}}
+        if(cfg.reconnect!==false){const d=nextDelay(cam.id);retryTimers[cam.id]=setTimeout(()=>loadCam(cam,cell,!!focusedCam&&focusedCam===cam.id),d*1000);}
       };
-
-      cell.innerHTML = `
-        <div class="v"></div>
-        <div class="cam-id"><div class="dot conn"></div><span>CAM_${String(idx+1).padStart(2,'0')}</span></div>
+      cell.innerHTML=`
+        <div class="cam-overlay"></div>
+        <div class="cam-badge"><div class="cam-dot conn"></div><span class="cam-id-text">CAM_${String(idx+1).padStart(2,'0')}</span></div>
         <div class="cam-rec">REC</div>
-        <div class="cam-lbl">${cam.label||cam.id}</div>
+        <div class="cam-label">${cam.label||cam.id}</div>
         <div class="cam-snap" title="Snapshot">📸</div>
         <div class="cam-tog" title="Pause/Reprendre">⏸</div>
         <div class="cam-err">
-          <div class="cam-err-i">⬛</div>
-          <div class="cam-err-m">SIGNAL PERDU</div>
-          <div class="cam-err-r">↺ RECONNECTER</div>
-        </div>
-      `;
-      cell.insertBefore(img, cell.firstChild);
-
-      // Reconnecter manuel
-      cell.querySelector('.cam-err-r').addEventListener('click', e=>{
-        e.stopPropagation();
-        clearTimeout(retryTimers[cam.id]);
-        resetRetry(cam.id);
-        loadCam(cam,cell);
-      });
-
-      // Focus
-      cell.addEventListener('click', e=>{
-        if(e.target.closest('.cam-tog,.cam-snap,.cam-err-r')) return;
-        toggleFocus(cam.id);
-      });
-
-      // Pause individuelle
-      cell.querySelector('.cam-tog').addEventListener('click', e=>{
-        e.stopPropagation();
-        camPaused[cam.id]=!camPaused[cam.id];
+          <div class="cam-err-icon">📡</div>
+          <div class="cam-err-msg">Signal perdu</div>
+          <div class="cam-err-btn">↺ Reconnecter</div>
+        </div>`;
+      cell.insertBefore(img,cell.firstChild);
+      cell.querySelector('.cam-err-btn').addEventListener('click',e=>{e.stopPropagation();clearTimeout(retryTimers[cam.id]);resetRetry(cam.id);loadCam(cam,cell);});
+      cell.addEventListener('click',e=>{if(e.target.closest('.cam-tog,.cam-snap,.cam-err-btn'))return;toggleFocus(cam.id);});
+      cell.querySelector('.cam-tog').addEventListener('click',e=>{
+        e.stopPropagation();camPaused[cam.id]=!camPaused[cam.id];
         const btn=cell.querySelector('.cam-tog');
-        if(camPaused[cam.id]) {
-          clearTimeout(retryTimers[cam.id]);
-          cell.querySelector('img').src=''; setDot(cell,'off'); btn.textContent='▶';
-        } else { btn.textContent='⏸'; loadCam(cam,cell); }
+        if(camPaused[cam.id]){clearTimeout(retryTimers[cam.id]);cell.querySelector('img').src='';setDot(cell,'off');btn.textContent='▶';}
+        else{btn.textContent='⏸';loadCam(cam,cell);}
       });
-
-      // Snapshot
-      cell.querySelector('.cam-snap').addEventListener('click', async e=>{
+      cell.querySelector('.cam-snap').addEventListener('click',async e=>{
         e.stopPropagation();
-        try {
-          const snapUrl=`${go2rtcBase()}/api/frame.jpeg?src=${encodeURIComponent(cam.id)}&_=${Date.now()}`;
-          const res=await fetch(snapUrl);
-          const blob=await res.blob();
-          const a=document.createElement('a');
-          a.href=URL.createObjectURL(blob);
-          a.download=`${cam.id}_${new Date().toISOString().replace(/[:.]/g,'-')}.jpg`;
-          a.click(); URL.revokeObjectURL(a.href);
-        } catch(err) { alert('Snapshot échoué: '+err.message); }
+        try{const r=await fetch(`${go2rtcBase()}/api/frame.jpeg?src=${encodeURIComponent(cam.id)}&_=${Date.now()}`);const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`${cam.id}_${new Date().toISOString().replace(/[:.]/g,'-')}.jpg`;a.click();URL.revokeObjectURL(a.href);}
+        catch(err){console.error('Snapshot:',err);}
       });
-
       grid.appendChild(cell);
-      // Lazy start: décaler de 200ms par caméra pour éviter burst réseau
-      setTimeout(()=>loadCam(cam,cell), idx*200);
-
+      setTimeout(()=>loadCam(cam,cell),idx*250);
     } else {
-      const lbl=cell.querySelector('.cam-lbl');
-      const ids=cell.querySelector('.cam-id span');
-      if(lbl) lbl.textContent=cam.label||cam.id;
-      if(ids) ids.textContent=`CAM_${String(idx+1).padStart(2,'0')}`;
+      const l=cell.querySelector('.cam-label'),s=cell.querySelector('.cam-id-text');
+      if(l)l.textContent=cam.label||cam.id;if(s)s.textContent=`CAM_${String(idx+1).padStart(2,'0')}`;
     }
-
-    const lbl=cell.querySelector('.cam-lbl');
-    if(lbl) lbl.style.display=cfg.showLabels!==false?'':'none';
+    const l=cell.querySelector('.cam-label');if(l)l.style.display=cfg.showLabels!==false?'':'none';
   });
-
-  document.getElementById('cam-bdg').textContent=`${cfg.cameras.length} CAM`;
+  document.getElementById('cam-badge').querySelector('span').textContent=`${cfg.cameras.length} CAM`;
   applyLayout();
 }
 
 // ── Focus ─────────────────────────────────────────────────────
-function toggleFocus(id) {
+function toggleFocus(id){
   const cells=[...document.querySelectorAll('.cam-cell')];
   const cam=cfg.cameras.find(c=>c.id===id);
-  if(focusedCam===id) {
-    focusedCam=null;
-    cells.forEach(c=>{ c.style.display=''; c.classList.remove('focused'); });
-    // Repasser en sub-stream si applicable
-    if(cam) {
-      const cell=document.getElementById(`cell-${id}`);
-      if(cell) loadCam(cam,cell,false);
-    }
+  if(focusedCam===id){
+    focusedCam=null;cells.forEach(c=>{c.style.display='';c.classList.remove('focused');});
+    if(cam){const cell=document.getElementById(`cell-${id}`);if(cell)loadCam(cam,cell,false);}
   } else {
-    focusedCam=id;
-    cells.forEach(c=>{
-      if(c.dataset.id===id){ c.classList.add('focused'); c.style.display=''; }
-      else c.style.display='none';
-    });
-    // Passer en main stream sur focus
-    if(cam){ const cell=document.getElementById(`cell-${id}`); if(cell) loadCam(cam,cell,true); }
+    focusedCam=id;cells.forEach(c=>{if(c.dataset.id===id){c.classList.add('focused');c.style.display='';}else c.style.display='none';});
+    if(cam){const cell=document.getElementById(`cell-${id}`);if(cell)loadCam(cam,cell,true);}
   }
   applyLayout();
 }
 
-// ── Pause global ───────────────────────────────────────────────
+// ── Pause global ──────────────────────────────────────────────
 document.getElementById('btn-pause').addEventListener('click',()=>{
   globalPaused=!globalPaused;
   const btn=document.getElementById('btn-pause');
-  btn.textContent=globalPaused?'▶ REPRENDRE':'⏸ PAUSE';
-  btn.classList.toggle('on',globalPaused);
+  btn.textContent=globalPaused?'▶ Reprendre':'⏸ Pause';btn.classList.toggle('on',globalPaused);
   cfg.cameras.forEach(cam=>{
-    const cell=document.getElementById(`cell-${cam.id}`);
-    const img=cell&&cell.querySelector('img');
-    if(!img) return;
-    if(globalPaused){ clearTimeout(retryTimers[cam.id]); img.src=''; setDot(cell,'off'); }
-    else if(!camPaused[cam.id]){ resetRetry(cam.id); loadCam(cam,cell); }
+    const cell=document.getElementById(`cell-${cam.id}`),img=cell&&cell.querySelector('img');if(!img)return;
+    if(globalPaused){clearTimeout(retryTimers[cam.id]);img.src='';setDot(cell,'off');}
+    else if(!camPaused[cam.id]){resetRetry(cam.id);loadCam(cam,cell,focusedCam===cam.id);}
   });
 });
 
-// ── Idle ──────────────────────────────────────────────────────
+// ── Idle + Visibility ─────────────────────────────────────────
 let idleTimer=null;
 function resetIdle(){
-  if(idleTimer) clearTimeout(idleTimer);
-  if(cfg.idleMinutes>0) idleTimer=setTimeout(()=>{ if(!globalPaused) document.getElementById('btn-pause').click(); }, cfg.idleMinutes*60000);
+  if(idleTimer)clearTimeout(idleTimer);
+  if(cfg.idleMinutes>0)idleTimer=setTimeout(()=>{if(!globalPaused)document.getElementById('btn-pause').click();},cfg.idleMinutes*60000);
 }
 ['mousemove','keydown','click'].forEach(e=>document.addEventListener(e,resetIdle));
-
-// ── Visibility ────────────────────────────────────────────────
 document.addEventListener('visibilitychange',()=>{
   cfg.cameras.forEach(cam=>{
-    const cell=document.getElementById(`cell-${cam.id}`);
-    const img=cell&&cell.querySelector('img');
-    if(!img) return;
-    if(document.hidden){ clearTimeout(retryTimers[cam.id]); img.src=''; }
-    else if(!camPaused[cam.id]&&!globalPaused) loadCam(cam,cell,focusedCam===cam.id);
+    const cell=document.getElementById(`cell-${cam.id}`),img=cell&&cell.querySelector('img');if(!img)return;
+    if(document.hidden){clearTimeout(retryTimers[cam.id]);img.src='';}
+    else if(!camPaused[cam.id]&&!globalPaused)loadCam(cam,cell,focusedCam===cam.id);
   });
 });
 
-// ── Panel / Tabs ───────────────────────────────────────────────
-const panelEl=document.getElementById('panel');
-const btnCfg=document.getElementById('btn-cfg');
-
+// ── Panel & Tabs ──────────────────────────────────────────────
+const panelEl=document.getElementById('panel'),btnCfg=document.getElementById('btn-cfg');
 document.querySelectorAll('.p-tab').forEach(tab=>{
   tab.addEventListener('click',()=>{
     document.querySelectorAll('.p-tab,.p-pane').forEach(el=>el.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
-    if(tab.dataset.tab==='display') loadDisplays();
-    if(tab.dataset.tab==='sys') loadSysInfo();
+    tab.classList.add('active');document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
+    if(tab.dataset.tab==='display')loadDisplays();
+    if(tab.dataset.tab==='sys')loadSysInfo();
   });
 });
+btnCfg.addEventListener('click',()=>{const open=panelEl.classList.toggle('open');btnCfg.classList.toggle('on',open);if(open)renderPanel();});
+document.getElementById('ph-close').addEventListener('click',()=>{panelEl.classList.remove('open');btnCfg.classList.remove('on');});
+document.getElementById('empty-btn').addEventListener('click',()=>{panelEl.classList.add('open');btnCfg.classList.add('on');renderPanel();});
 
-btnCfg.addEventListener('click',()=>{
-  const open=panelEl.classList.toggle('open');
-  btnCfg.classList.toggle('on',open);
-  if(open) renderPanel();
-});
-document.getElementById('phc').addEventListener('click',()=>{
-  panelEl.classList.remove('open'); btnCfg.classList.remove('on');
-});
-document.getElementById('empty-btn').addEventListener('click',()=>{ panelEl.classList.add('open'); btnCfg.classList.add('on'); renderPanel(); });
-
-// ── Render camera entries ─────────────────────────────────────
-const CAM_TYPES = [
-  { value:'rtsp',    label:'RTSP (générique)' },
-  { value:'reolink', label:'Reolink (natif)' },
-  { value:'tapo',    label:'Tapo / TP-Link' },
-  { value:'onvif',   label:'ONVIF' },
-  { value:'mjpeg',   label:'HTTP MJPEG' },
-  { value:'hls',     label:'HLS (HTTP)' },
+// ── Camera types ──────────────────────────────────────────────
+const CAM_TYPES=[
+  {value:'rtsp',    label:'RTSP (générique)'},
+  {value:'reolink', label:'Reolink (natif)'},
+  {value:'tapo',    label:'Tapo / TP-Link'},
+  {value:'onvif',   label:'ONVIF'},
+  {value:'mjpeg',   label:'HTTP MJPEG'},
+  {value:'hls',     label:'HLS'},
 ];
-
-const URL_HINTS = {
-  rtsp:    { main:'rtsp://user:pass@IP:554/stream', sub:'rtsp://user:pass@IP:554/stream_sub' },
-  reolink: { main:'reolink://user:pass@IP', sub:'' },
-  tapo:    { main:'tapo://user:pass@IP', sub:'' },
-  onvif:   { main:'onvif://user:pass@IP', sub:'' },
-  mjpeg:   { main:'http://IP/mjpeg', sub:'' },
-  hls:     { main:'http://IP/stream.m3u8', sub:'' },
+const URL_HINTS={
+  rtsp:    {main:'rtsp://user:pass@IP:554/stream',    sub:'rtsp://user:pass@IP:554/stream_sub',help:''},
+  reolink: {main:'rtsp://admin:pass@IP:554/h264Preview_01_sub', sub:'', help:'<strong>Reolink 4K (H265)</strong> : utilise le sub-stream H264 en URL principale pour un affichage fiable. Ex : <strong>h264Preview_01_sub</strong>'},
+  tapo:    {main:'tapo://user:pass@IP',sub:'',help:''},
+  onvif:   {main:'onvif://user:pass@IP',sub:'',help:''},
+  mjpeg:   {main:'http://IP/mjpeg',sub:'',help:''},
+  hls:     {main:'http://IP/stream.m3u8',sub:'',help:''},
 };
 
-function renderPanel() {
-  const list=document.getElementById('camlist'); list.innerHTML='';
+function renderPanel(){
+  const list=document.getElementById('camlist');list.innerHTML='';
   cfg.cameras.forEach((cam,i)=>{
-    const hints=URL_HINTS[cam.type||'rtsp']||URL_HINTS.rtsp;
-    const e=document.createElement('div'); e.className='ce';
+    const h=URL_HINTS[cam.type||'rtsp']||URL_HINTS.rtsp;
     const typeOpts=CAM_TYPES.map(t=>`<option value="${t.value}"${(cam.type||'rtsp')===t.value?' selected':''}>${t.label}</option>`).join('');
+    const e=document.createElement('div');e.className='ce';
     e.innerHTML=`
-      <div class="cer">
-        <input class="pi" placeholder="ID (ex: exterieur)" value="${cam.id||''}" data-f="id" data-i="${i}" style="flex:0.6">
-        <input class="pi" placeholder="Label" value="${cam.label||''}" data-f="label" data-i="${i}">
-        <div class="ce-del" data-i="${i}">✕</div>
+      <div class="ce-row">
+        <input class="pi" placeholder="ID (ex: exterieur)" value="${cam.id||''}" data-f="id" data-i="${i}" style="flex:0.5">
+        <input class="pi" placeholder="Label affiché" value="${cam.label||''}" data-f="label" data-i="${i}">
+        <div class="ce-del" data-i="${i}" title="Supprimer">×</div>
       </div>
-      <div class="ce-label">Type de caméra</div>
-      <select class="pi-sel" data-f="type" data-i="${i}">${typeOpts}</select>
-      <div class="ce-label">URL principale (main / HD)</div>
-      <input class="pi" placeholder="${hints.main}" value="${cam.mainUrl||''}" data-f="mainUrl" data-i="${i}">
-      <div class="ce-label">URL sub-stream (SD, optionnel — meilleure perf en grille)</div>
-      <input class="pi" placeholder="${hints.sub||'Identique à main si vide'}" value="${cam.subUrl||''}" data-f="subUrl" data-i="${i}">
+      <div>
+        <div class="ce-label">Type de caméra</div>
+        <select class="pi-sel" data-f="type" data-i="${i}">${typeOpts}</select>
+      </div>
+      <div>
+        <div class="ce-label">URL principale (HD)</div>
+        <input class="pi" placeholder="${h.main}" value="${cam.mainUrl||''}" data-f="mainUrl" data-i="${i}">
+      </div>
+      <div>
+        <div class="ce-label">URL sub-stream (SD, optionnel — grille légère)</div>
+        <input class="pi" placeholder="Laisser vide si idem" value="${cam.subUrl||''}" data-f="subUrl" data-i="${i}">
+      </div>
+      ${h.help?`<div class="cam-help">${h.help}</div>`:''}
     `;
     list.appendChild(e);
-
-    // Type change → update placeholders
     const sel=e.querySelector('select');
     sel.addEventListener('change',()=>{
-      const h=URL_HINTS[sel.value]||URL_HINTS.rtsp;
+      const nh=URL_HINTS[sel.value]||URL_HINTS.rtsp;
       const inputs=e.querySelectorAll('input.pi');
-      inputs[2].placeholder=h.main; inputs[3].placeholder=h.sub||'';
+      inputs[0].placeholder=nh.main;if(inputs[1])inputs[1].placeholder=nh.sub||'';
+      const help=e.querySelector('.cam-help');if(help)help.innerHTML=nh.help||'';
     });
   });
-
-  list.querySelectorAll('.pi,.pi-sel').forEach(inp=>inp.addEventListener('input',()=>{ cfg.cameras[+inp.dataset.i][inp.dataset.f]=inp.value; }));
-  list.querySelectorAll('select').forEach(sel=>sel.addEventListener('change',()=>{ cfg.cameras[+sel.dataset.i][sel.dataset.f]=sel.value; }));
+  list.querySelectorAll('.pi').forEach(inp=>inp.addEventListener('input',()=>{cfg.cameras[+inp.dataset.i][inp.dataset.f]=inp.value;}));
+  list.querySelectorAll('select').forEach(sel=>sel.addEventListener('change',()=>{cfg.cameras[+sel.dataset.i][sel.dataset.f]=sel.value;}));
   list.querySelectorAll('.ce-del').forEach(btn=>btn.addEventListener('click',()=>{
-    const i=+btn.dataset.i;
-    clearTimeout(retryTimers[cfg.cameras[i].id]);
-    const cell=document.getElementById(`cell-${cfg.cameras[i].id}`);
-    if(cell) cell.remove();
-    cfg.cameras.splice(i,1); renderPanel(); renderGrid();
+    const i=+btn.dataset.i;clearTimeout(retryTimers[cfg.cameras[i].id]);
+    const cell=document.getElementById(`cell-${cfg.cameras[i].id}`);if(cell)cell.remove();
+    cfg.cameras.splice(i,1);renderPanel();renderGrid();
   }));
-
   // Opts
-  document.getElementById('s-server').value      = `http://localhost:${cfg.go2rtcPort||1984}`;
-  document.getElementById('s-reconnect').checked = cfg.reconnect!==false;
-  document.getElementById('s-delay').value       = cfg.reconnectDelay||5;
-  document.getElementById('s-maxdelay').value    = cfg.maxReconnectDelay||60;
-  document.getElementById('s-idle').value        = cfg.idleMinutes||0;
-  document.getElementById('s-ct').checked        = !!cfg.clickThrough;
-  document.getElementById('s-clock').checked     = cfg.showClock!==false;
-  document.getElementById('s-labels').checked    = cfg.showLabels!==false;
-  document.getElementById('s-sub').checked       = cfg.useSubStream!==false;
-  document.getElementById('s-gap').value         = cfg.gridGap!==undefined?cfg.gridGap:2;
-
-  // Autostart
-  API.getAutostart().then(on=>{ const el=document.getElementById('s-autostart'); if(el) el.checked=on; });
+  document.getElementById('s-server').value    =`http://localhost:${cfg.go2rtcPort||1984}`;
+  document.getElementById('s-reconnect').checked=cfg.reconnect!==false;
+  document.getElementById('s-delay').value     =cfg.reconnectDelay||5;
+  document.getElementById('s-maxdelay').value  =cfg.maxReconnectDelay||60;
+  document.getElementById('s-idle').value      =cfg.idleMinutes||0;
+  document.getElementById('s-clock').checked   =cfg.showClock!==false;
+  document.getElementById('s-labels').checked  =cfg.showLabels!==false;
+  document.getElementById('s-sub').checked     =cfg.useSubStream!==false;
+  document.getElementById('s-gap').value       =cfg.gridGap!==undefined?cfg.gridGap:3;
+  API.getAutostart().then(on=>{const el=document.getElementById('s-autostart');if(el)el.checked=on;});
 }
 
 document.getElementById('btn-add-cam').addEventListener('click',()=>{
-  cfg.cameras.push({id:`cam${cfg.cameras.length+1}`,label:'',type:'rtsp',mainUrl:'',subUrl:''});
-  renderPanel();
+  cfg.cameras.push({id:`cam${cfg.cameras.length+1}`,label:'',type:'rtsp',mainUrl:'',subUrl:''});renderPanel();
 });
 
-async function saveCfg(showOkId) {
+async function saveCfg(okId){
   const sv=document.getElementById('s-server').value.replace(/\/+$/,'');
-  cfg.go2rtcPort      = parseInt(sv.split(':').pop())||1984;
-  cfg.reconnect       = document.getElementById('s-reconnect').checked;
-  cfg.reconnectDelay  = +document.getElementById('s-delay').value;
-  cfg.maxReconnectDelay= +document.getElementById('s-maxdelay').value;
-  cfg.idleMinutes     = +document.getElementById('s-idle').value;
-  cfg.clickThrough    = document.getElementById('s-ct').checked;
-  cfg.showClock       = document.getElementById('s-clock').checked;
-  cfg.showLabels      = document.getElementById('s-labels').checked;
-  cfg.useSubStream    = document.getElementById('s-sub').checked;
-  cfg.gridGap         = +document.getElementById('s-gap').value;
-
+  cfg.go2rtcPort     =parseInt(sv.split(':').pop())||1984;
+  cfg.reconnect      =document.getElementById('s-reconnect').checked;
+  cfg.reconnectDelay =+document.getElementById('s-delay').value;
+  cfg.maxReconnectDelay=+document.getElementById('s-maxdelay').value;
+  cfg.idleMinutes    =+document.getElementById('s-idle').value;
+  cfg.showClock      =document.getElementById('s-clock').checked;
+  cfg.showLabels     =document.getElementById('s-labels').checked;
+  cfg.useSubStream   =document.getElementById('s-sub').checked;
+  cfg.gridGap        =+document.getElementById('s-gap').value;
   await API.saveConfig(cfg);
   await API.setAutostart(document.getElementById('s-autostart').checked);
-  await API.setClickThrough(cfg.clickThrough);
   await API.go2rtcRestart(cfg);
-
-  // Re-charger les streams après délai go2rtc restart
-  setTimeout(()=>{
-    Object.keys(retryTimers).forEach(id=>clearTimeout(retryTimers[id]));
-    cfg.cameras.forEach(cam=>{
-      const cell=document.getElementById(`cell-${cam.id}`); if(cell) loadCam(cam,cell);
-    });
-    renderGrid();
-  }, 1800);
-
-  document.getElementById('hud-clk').style.display=cfg.showClock?'':'none';
-  document.getElementById('hud-dt').style.display =cfg.showClock?'':'none';
-  applyLayout();
-  resetIdle();
-
-  const ok=document.getElementById(showOkId||'save-ok');
-  if(ok){ ok.textContent='✓ SAUVEGARDÉ'; setTimeout(()=>ok.textContent='',2500); }
-  panelEl.classList.remove('open'); btnCfg.classList.remove('on');
+  setTimeout(()=>{Object.keys(retryTimers).forEach(id=>clearTimeout(retryTimers[id]));cfg.cameras.forEach(cam=>{const cell=document.getElementById(`cell-${cam.id}`);if(cell)loadCam(cam,cell);});renderGrid();},1800);
+  applyLayout();resetIdle();
+  const ok=document.getElementById(okId||'save-ok');
+  if(ok){ok.textContent='✅ Configuration sauvegardée';setTimeout(()=>ok.textContent='',3000);}
+  panelEl.classList.remove('open');btnCfg.classList.remove('on');
 }
-
 document.getElementById('btn-save').addEventListener('click',()=>saveCfg('save-ok'));
 document.getElementById('btn-save2').addEventListener('click',()=>saveCfg('save-ok2'));
 
-async function loadDisplays() {
+async function loadDisplays(){
   const displays=await API.getDisplays();
-  const el=document.getElementById('displayer'); el.innerHTML='';
+  const el=document.getElementById('displayer');el.innerHTML='';
   displays.forEach(d=>{
-    const opt=document.createElement('div');
-    opt.className='dopt'+(d.index===cfg.selectedDisplay?' active':'');
-    opt.innerHTML=`<span>${d.label}${d.primary?' ⭐':''}</span><span class="db">${d.width}×${d.height}</span>`;
-    opt.addEventListener('click',async()=>{ await API.setDisplay(d.index); cfg.selectedDisplay=d.index; [...el.children].forEach(c=>c.classList.remove('active')); opt.classList.add('active'); });
+    const opt=document.createElement('div');opt.className='dopt'+(d.index===cfg.selectedDisplay?' active':'');
+    opt.innerHTML=`<div><div class="dopt-name">${d.label}${d.primary?' ★ Principal':''}</div><div class="dopt-info">${d.width} × ${d.height} px</div></div><div class="dopt-check">✓</div>`;
+    opt.addEventListener('click',async()=>{await API.setDisplay(d.index);cfg.selectedDisplay=d.index;[...el.children].forEach(c=>c.classList.remove('active'));opt.classList.add('active');});
     el.appendChild(opt);
   });
 }
 
-async function loadSysInfo() {
-  const [ver,autostart,go2rtcOk]=await Promise.all([API.getVersion(),API.getAutostart(),API.go2rtcStatus()]);
-  const el=document.getElementById('sys-info');
-  el.innerHTML=`
-    <div class="sys-row"><span>Version</span><strong>${ver}</strong></div>
+async function loadSysInfo(){
+  const[ver,autostart,go2rtcOk]=await Promise.all([API.getVersion(),API.getAutostart(),API.go2rtcStatus()]);
+  document.getElementById('sys-info').innerHTML=`
+    <div class="sys-row"><span>Version</span><strong>v${ver}</strong></div>
     <div class="sys-row"><span>go2rtc</span><strong>${go2rtcOk?'✅ Actif':'❌ Inactif'}</strong></div>
     <div class="sys-row"><span>Démarrage auto</span><strong>${autostart?'✅ Activé':'❌ Désactivé'}</strong></div>
-    <div class="sys-row"><span>Caméras</span><strong>${cfg.cameras.length}</strong></div>
+    <div class="sys-row"><span>Caméras</span><strong>${cfg.cameras.length} configurée${cfg.cameras.length>1?'s':''}</strong></div>
     <div class="sys-row"><span>Sub-stream</span><strong>${cfg.useSubStream!==false?'✅ Activé':'❌ Désactivé'}</strong></div>
-  `;
-  if(updateInfo&&updateInfo.available){
-    document.getElementById('upd-badge').classList.add('show');
-    const dl=document.getElementById('upd-dl');
-    if(dl) dl.onclick=()=>API.openUpdate(updateInfo.url);
-  }
+    <div class="sys-row"><span>Architecture</span><strong>${navigator.platform}</strong></div>`;
+  if(updateInfo?.available){document.getElementById('upd-badge').classList.add('show');const dl=document.getElementById('upd-dl');if(dl)dl.onclick=()=>API.openUpdate(updateInfo.url);}
 }
 
 document.getElementById('btn-checkupd').addEventListener('click',async()=>{
-  const st=document.getElementById('upd-status'); st.textContent='Vérification...';
-  const upd=await API.checkUpdate();
-  updateInfo=upd;
-  if(upd.available){ st.textContent=`v${upd.version} disponible !`; document.getElementById('upd-badge').classList.add('show'); document.getElementById('upd-dl').onclick=()=>API.openUpdate(upd.url); }
+  const st=document.getElementById('upd-status');st.textContent='Vérification...';
+  const upd=await API.checkUpdate();updateInfo=upd;
+  if(upd.available){st.textContent=`v${upd.version} disponible !`;document.getElementById('upd-badge').classList.add('show');document.getElementById('upd-dl').onclick=()=>API.openUpdate(upd.url);}
   else st.textContent=`À jour (v${upd.current})`;
 });
 
 document.getElementById('btn-opendir').addEventListener('click',()=>API.openConfigDir());
-document.getElementById('btn-openlog').addEventListener('click', ()=>API.openLog());
-document.getElementById('btn-setup').addEventListener('click',  ()=>API.goToSetup());
-document.getElementById('btn-quit').addEventListener('click',   ()=>API.quit());
+document.getElementById('btn-openlog').addEventListener('click',()=>API.openLog());
+document.getElementById('btn-setup').addEventListener('click',()=>API.goToSetup());
+document.getElementById('btn-quit').addEventListener('click',()=>API.quit());
 
-// ── Commandes depuis tray ──────────────────────────────────────
-API.onCmd && API.onCmd((cmd)=>{
-  if(cmd==='pause-all'&&!globalPaused) document.getElementById('btn-pause').click();
-  if(cmd==='resume-all'&&globalPaused) document.getElementById('btn-pause').click();
-  if(cmd==='open-settings'){ panelEl.classList.add('open'); btnCfg.classList.add('on'); renderPanel(); }
+API.onCmd&&API.onCmd((cmd)=>{
+  if(cmd==='pause-all'&&!globalPaused)document.getElementById('btn-pause').click();
+  if(cmd==='resume-all'&&globalPaused)document.getElementById('btn-pause').click();
+  if(cmd==='open-settings'){panelEl.classList.add('open');btnCfg.classList.add('on');renderPanel();}
 });
-
-// ── Update notification ───────────────────────────────────────
 API.onUpdate&&API.onUpdate(upd=>{
-  updateInfo=upd;
-  const n=document.getElementById('update-notif');
-  const l=document.getElementById('upd-link');
-  if(n&&l){ n.classList.add('show'); l.textContent=`v${upd.version}`; l.onclick=e=>{e.preventDefault();API.openUpdate(upd.url);}; }
+  updateInfo=upd;const n=document.getElementById('upd-notif'),l=document.getElementById('upd-link');
+  if(n&&l){n.classList.add('show');l.onclick=()=>API.openUpdate(upd.url);}
 });
-document.getElementById('upd-close').addEventListener('click',()=>document.getElementById('update-notif').classList.remove('show'));
+document.getElementById('upd-x').addEventListener('click',()=>document.getElementById('upd-notif').classList.remove('show'));
 
-// ── Clavier ───────────────────────────────────────────────────
 document.addEventListener('keydown',e=>{
-  if(e.target.matches('input,select')) return;
-  if(e.key==='Escape'){ if(focusedCam) toggleFocus(focusedCam); else{ panelEl.classList.remove('open'); btnCfg.classList.remove('on'); } }
-  if(e.key==='p'||e.key==='P') document.getElementById('btn-pause').click();
-  if(e.key==='s'||e.key==='S') btnCfg.click();
+  if(e.target.matches('input,select'))return;
+  if(e.key==='Escape'){if(focusedCam)toggleFocus(focusedCam);else{panelEl.classList.remove('open');btnCfg.classList.remove('on');}}
+  if(e.key==='p'||e.key==='P')document.getElementById('btn-pause').click();
+  if(e.key==='s'||e.key==='S')btnCfg.click();
 });
 
-// ── Init ──────────────────────────────────────────────────────
-async function init() {
-  cfg = await API.getConfig();
-  const ver = await API.getVersion();
-  const hudVer = document.getElementById('hud-ver');
-  if(hudVer) hudVer.textContent=`v${ver}`;
-
-  buildLP();
-  startClock();
-  renderGrid();
-  resetIdle();
-  await checkGo2rtcStatus();
-
-  if(!cfg.showClock){ ['hud-clk','hud-dt'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; }); }
-
+async function init(){
+  cfg=await API.getConfig();
+  const ver=await API.getVersion();
+  const v=document.getElementById('hud-ver');if(v)v.textContent=`v${ver}`;
+  buildLP();startClock();renderGrid();resetIdle();
   const h=document.getElementById('hint');
-  setTimeout(()=>h.classList.add('show'),1000);
-  setTimeout(()=>h.classList.remove('show'),8000);
+  setTimeout(()=>h.classList.add('show'),1000);setTimeout(()=>h.classList.remove('show'),8000);
 }
-
 init().catch(console.error);
 </script>
 </body>
