@@ -21,17 +21,12 @@ extraResources:
 
 linux:
   target:
-    - type: AppImage
-      arch: x64
-    - type: deb
-      arch: x64
+    - AppImage
+    - deb
   category: Utility
   icon: assets/icon.png
-  synopsis: "Live camera wallpaper — stream RTSP cameras directly on your desktop"
-  description: |
-    CamWall turns any screen into a live surveillance display.
-    Supports multiple RTSP cameras via go2rtc, with a minimal
-    hover-triggered HUD and full configuration UI.
+  synopsis: "Live camera wallpaper for Linux"
+  description: "Stream RTSP cameras directly on your desktop with a minimal HUD"
   maintainer: "Your Name <your@email.com>"
   desktop:
     Name: CamWall
@@ -40,15 +35,3 @@ linux:
 
 appImage:
   license: LICENSE
-
-deb:
-  depends:
-    - libgtk-3-0
-    - libnotify4
-    - libnss3
-    - libxss1
-    - libxtst6
-    - xdg-utils
-    - libatspi2.0-0
-    - libuuid1
-    - libsecret-1-0
