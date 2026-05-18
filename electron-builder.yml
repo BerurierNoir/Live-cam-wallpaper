@@ -24,14 +24,32 @@ linux:
     - AppImage
     - deb
   category: Utility
+  # icon.png généré par scripts/generate-icon.js (SVG → PNG 512x512)
+  # Si absent, electron-builder utilise son icône par défaut
   icon: assets/icon.png
   synopsis: "Live camera wallpaper for Linux"
-  description: "Stream RTSP cameras directly on your desktop with a minimal HUD"
+  description: |
+    CamWall turns any monitor into a live surveillance display.
+    Supports RTSP, Reolink, Tapo, ONVIF, MJPEG and HLS cameras
+    via go2rtc with hardware-accelerated H265 transcoding.
   maintainer: "Your Name <your@email.com>"
   desktop:
     Name: CamWall
-    Comment: Live camera wallpaper
+    Comment: Live camera wallpaper — RTSP, Reolink, Tapo, ONVIF
     Categories: Utility;Video;
+    StartupNotify: false
 
 appImage:
   license: LICENSE
+
+deb:
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+    - libuuid1
+    - libsecret-1-0
