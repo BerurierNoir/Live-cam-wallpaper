@@ -1,10 +1,11 @@
 'use strict';
 
 /**
- * CamWall v2.1 — main process
+ * CamWall v2.2 — main process
  * Changelog v2.1:
  *   - Fix: webSecurity false → true (go2rtc envoie déjà CORS headers)
- *   - Fix: buildGo2rtcStream ajoute FFmpeg H264 pour streams H265
+ *   - Fix v2.2: URL-decode des URLs avant écriture go2rtc YAML (%21→!, etc.)
+ *   - Fix v2.2: supprimé auto-FFmpeg transcoding (cause issues si ffmpeg absent)
  *   - Fix: skipTaskbar true (cohérent avec tray)
  *   - Fix: supprimé import dialog inutilisé
  *   - Fix: log rotation (max 2MB)
@@ -139,21 +140,21 @@ function findGo2rtcBin() {
  *
  * #hardware = auto-détecte CUDA (NVIDIA), VAAPI (Intel/AMD), etc.
  */
+function decodeUrl(url) {
+  // go2rtc YAML attend les caractères littéraux (! pas %21, @ pas %40, etc.)
+  // L'utilisateur saisit souvent des URLs avec encodage URL (%21 pour !)
+  try { return decodeURIComponent(url); }
+  catch (_) { return url; }
+}
+
 function buildGo2rtcStream(cam) {
   if (!cam.mainUrl) return null;
 
-  const sources = [cam.mainUrl];
-
-  // Types susceptibles d'être H265 : on ajoute le transcoding FFmpeg H264
-  // Cela permet au MJPEG d'utiliser le track H264 plutôt que H265
-  const maybeH265Types = ['rtsp', 'reolink', 'onvif'];
-  if (maybeH265Types.includes(cam.type || 'rtsp') && cam.id) {
-    // ffmpeg:ID#video=h264#hardware = transcoder le stream via FFmpeg avec accel matérielle
-    // Si hardware non dispo, FFmpeg fallback automatiquement en software
-    sources.push(`ffmpeg:${cam.id}#video=h264#hardware`);
-  }
-
-  return sources;
+  // CRITIQUE: décoder l'URL avant écriture YAML
+  // go2rtc ne fait pas de décodage URL — il passe l'URL telle quelle à ffmpeg/rtsp
+  // Si le mot de passe contient %21 au lieu de !, la connexion échoue
+  const url = decodeUrl(cam.mainUrl);
+  return [url];
 }
 
 function writeGo2rtcConfig(cfg) {
@@ -169,7 +170,7 @@ function writeGo2rtcConfig(cfg) {
     // Sub-stream séparé si configuré et différent du main
     if (cam.subUrl && cam.subUrl !== cam.mainUrl) {
       // Sub-stream généralement H264 → pas besoin de transcoding
-      streams[`${cam.id}_sub`] = [cam.subUrl];
+      streams[`${cam.id}_sub`] = [decodeUrl(cam.subUrl)];
     }
   });
 
@@ -578,3 +579,4 @@ app.on('web-contents-created', (_, wc) => {
     if (!url.startsWith('file://')) e.preventDefault();
   });
 });
+
