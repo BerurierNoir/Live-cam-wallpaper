@@ -312,18 +312,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
       <div class="cc-row"><span class="cc-lbl">Label</span><input class="pi-in" id="cc-lbl" type="text" placeholder="Optionnel" style="width:160px"></div>
       <div class="cc-row" id="cc-img-row" style="display:none"><span class="cc-lbl">Image de fond</span><button class="btn-ghost" id="cc-img-btn">&#x1F4C2; Choisir</button></div>
       <div class="cc-row" id="cc-url-row" style="display:none"><span class="cc-lbl" style="white-space:nowrap">URL de la page</span><input class="pi-in" id="cc-url" type="text" placeholder="http://192.168.1.x:3001/status/default" style="width:210px"></div>
-      <!-- KUMA config -->
-      <div id="cc-kuma-cfg" style="display:none;flex-direction:column;gap:6px;padding:8px 0;border-top:1px solid var(--border)">
-        <div class="cc-row"><span class="cc-lbl">URL Uptime Kuma</span><input class="pi-in" id="cc-kuma-url" type="text" placeholder="http://192.168.1.x:3001" style="width:190px"></div>
-        <div class="cc-row"><span class="cc-lbl">Slug de la page</span><input class="pi-in" id="cc-kuma-slug" type="text" placeholder="default" style="width:120px"></div>
-        <div class="cc-row"><span class="cc-lbl" style="font-size:10px;color:var(--dim)">Page publique = pas d'auth requise</span></div>
-      </div>
-      <!-- BESZEL config -->
-      <div id="cc-bsz-cfg" style="display:none;flex-direction:column;gap:6px;padding:8px 0;border-top:1px solid var(--border)">
-        <div class="cc-row"><span class="cc-lbl">URL Beszel</span><input class="pi-in" id="cc-bsz-url" type="text" placeholder="http://192.168.1.x:8090" style="width:190px"></div>
-        <div class="cc-row"><span class="cc-lbl">Email</span><input class="pi-in" id="cc-bsz-email" type="text" placeholder="admin@example.com" style="width:180px"></div>
-        <div class="cc-row"><span class="cc-lbl">Mot de passe</span><input class="pi-in" id="cc-bsz-pass" type="password" placeholder="••••••••" style="width:140px"></div>
-      </div>
+      
       <button class="btn-primary" id="cc-save">Appliquer cette case</button>
     </div>
   </div>
@@ -783,23 +772,61 @@ function openCellCfg(idx){
 }
 function updateCellCfgUI(type){
   document.getElementById('cc-cam-row').style.display=type==='camera'?'flex':'none';
-  document.getElementById('cc-img-row').style.display=type==='empty'?'flex':'none';
+  // Champs dynamiques selon le type
+  const old=document.getElementById('cc-extra');
+  if(old)old.remove();
+  const ex=document.createElement('div');
+  ex.id='cc-extra';
+  ex.style.cssText='display:flex;flex-direction:column;gap:6px;padding:8px 0;border-top:1px solid var(--border);margin-top:4px;';
+  const cur=(cfg.grid?.cells||[])[selectedCell]||{};
+  switch(type){
+    case 'empty':
+      ex.innerHTML=`<div class="cc-row"><span class="cc-lbl">Image de fond</span><button class="btn-ghost" id="cc-img-btn">📂 Choisir</button></div>`;
+      break;
+    case 'webpage':
+      ex.innerHTML=`<div class="cc-row"><span class="cc-lbl">URL</span><input class="pi-in" id="cc-url" type="text" value="${cur.url||''}" placeholder="http://192.168.1.x:port" style="width:210px"></div>`;
+      break;
+    case 'kuma':
+      ex.innerHTML=`
+        <div class="cc-row"><span class="cc-lbl">URL Kuma</span><input class="pi-in" id="cc-kuma-url" type="text" value="${cur.kumaUrl||''}" placeholder="http://192.168.1.x:3001" style="width:190px"></div>
+        <div class="cc-row"><span class="cc-lbl">Slug de la page</span><input class="pi-in" id="cc-kuma-slug" type="text" value="${cur.kumaSlug||'default'}" placeholder="default" style="width:120px"></div>
+        <div style="font-size:10px;color:var(--dim)">Page publique = pas d'auth requise</div>`;
+      break;
+    case 'beszel':
+      ex.innerHTML=`
+        <div class="cc-row"><span class="cc-lbl">URL Beszel</span><input class="pi-in" id="cc-bsz-url" type="text" value="${cur.bszUrl||''}" placeholder="http://192.168.1.x:8090" style="width:190px"></div>
+        <div class="cc-row"><span class="cc-lbl">Email</span><input class="pi-in" id="cc-bsz-email" type="text" value="${cur.bszEmail||''}" placeholder="admin@example.com" style="width:180px"></div>
+        <div class="cc-row"><span class="cc-lbl">Mot de passe</span><input class="pi-in" id="cc-bsz-pass" type="password" value="${cur.bszPass||''}" placeholder="••••••••" style="width:140px"></div>`;
+      break;
+  }
+  const saveBtn=document.getElementById('cc-save');
+  if(ex.innerHTML&&saveBtn)saveBtn.parentNode.insertBefore(ex,saveBtn);
+  // Rebind image picker
+  const imgBtn=document.getElementById('cc-img-btn');
+  if(imgBtn)imgBtn.onclick=async()=>{
+    const p=await API.pickImage();
+    if(p){const d=await API.imageToDataUrl(p);if(d){(cfg.grid.cells||[])[selectedCell]={...((cfg.grid.cells||[])[selectedCell]||{}),imageData:d,image:p};}}
+  };
 }
 document.getElementById('cc-save').addEventListener('click',()=>{
   if(selectedCell===null)return;
   const cells=cfg.grid?.cells||[];
+  const _type=document.getElementById('cc-type').value;
+  const _g=id=>{const el=document.getElementById(id);return el?el.value:'';};
   cells[selectedCell]={...cells[selectedCell],
     id:`cell-${selectedCell}`,
-    type:document.getElementById('cc-type').value,
-    cameraId:document.getElementById('cc-cam').value,
-    label:document.getElementById('cc-lbl').value,
-    url:document.getElementById('cc-url').value,
-    kumaUrl:document.getElementById('cc-kuma-url').value,
-    kumaSlug:document.getElementById('cc-kuma-slug').value||'default',
-    bszUrl:document.getElementById('cc-bsz-url').value,
-    bszEmail:document.getElementById('cc-bsz-email').value,
-    bszPass:document.getElementById('cc-bsz-pass').value,
+    type:_type,
+    cameraId:_g('cc-cam'),
+    label:_g('cc-lbl'),
+    url:_g('cc-url'),
+    kumaUrl:_g('cc-kuma-url'),
+    kumaSlug:_g('cc-kuma-slug')||'default',
+    bszUrl:_g('cc-bsz-url'),
+    bszEmail:_g('cc-bsz-email'),
+    bszPass:_g('cc-bsz-pass'),
   };
+  // Supprimer les champs dynamiques
+  const ex=document.getElementById('cc-extra');if(ex)ex.remove();
   cfg.grid.cells=cells;API.saveConfig(cfg);renderGrid();renderGridPreview();
   document.getElementById('cell-cfg').style.display='none';selectedCell=null;
   document.querySelectorAll('.gp-cell').forEach(el=>el.classList.remove('sel'));
