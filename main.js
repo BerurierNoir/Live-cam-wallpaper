@@ -413,7 +413,7 @@ function createWindow() {
       preload:              path.join(__dirname, 'preload.js'),
       nodeIntegration:      false,
       contextIsolation:     true,
-      webSecurity:          true,    // Fix: true (go2rtc envoie CORS headers, file:// null origin = OK)
+      webSecurity:          false,   // App locale: file:// → http://localhost nécessite false (pas de contenu externe chargé)
       backgroundThrottling: false,   // Pas de throttle quand en arrière-plan
       sandbox:              true,    // Sécurité Chromium : sandbox activé
     },
@@ -579,4 +579,5 @@ app.on('web-contents-created', (_, wc) => {
     if (!url.startsWith('file://')) e.preventDefault();
   });
 });
+
 
