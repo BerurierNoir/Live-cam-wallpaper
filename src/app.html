@@ -4,1117 +4,656 @@
 <meta charset="UTF-8">
 <title>CamWall</title>
 <style>
-/* ── Variables ─────────────────────────────────────────────── */
 :root {
-  --bg:        #070a14;
-  --surface:   #0c0f1f;
-  --panel:     #0f1229;
-  --card:      rgba(15,18,41,0.85);
-  --indigo:    #6366f1;
-  --cyan:      #06b6d4;
-  --purple:    #a855f7;
-  --green:     #10b981;
-  --red:       #ef4444;
-  --amber:     #f59e0b;
-  --text:      #e2e8f0;
-  --muted:     #94a3b8;
-  --dim:       #475569;
-  --border:    rgba(99,102,241,0.12);
-  --borderH:   rgba(99,102,241,0.4);
-  --glow:      rgba(99,102,241,0.2);
-  --ui:        'Inter','Segoe UI',system-ui,sans-serif;
-  --mono:      'JetBrains Mono','Fira Code','Courier New',monospace;
-  --r:         8px;
-  --r-sm:      5px;
-  --hud:       58px;
+  --bg:#070a14;--surface:#0c0f1f;--panel:#0f1229;
+  --indigo:#6366f1;--cyan:#06b6d4;--purple:#a855f7;
+  --green:#10b981;--red:#ef4444;--amber:#f59e0b;
+  --text:#e2e8f0;--muted:#94a3b8;--dim:#475569;
+  --border:rgba(99,102,241,.12);--borderH:rgba(99,102,241,.4);
+  --ui:system-ui,'Segoe UI',sans-serif;--mono:'Courier New',monospace;--hud:52px;
 }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100vw;height:100vh;background:var(--bg);color:var(--text);font-family:var(--ui);overflow:hidden;user-select:none}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 80% 60% at 15% 25%,rgba(99,102,241,.07) 0%,transparent 60%),radial-gradient(ellipse 60% 50% at 85% 75%,rgba(168,85,247,.05) 0%,transparent 60%);}
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* GRILLE */
+#grid{position:fixed;inset:0;display:grid;gap:3px;background:rgba(0,0,0,.6);transition:gap .2s;z-index:1;}
 
-html, body {
-  width: 100vw; height: 100vh;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--ui);
-  overflow: hidden;
-  user-select: none; -webkit-user-select: none;
-}
+/* CELLULE */
+.cell{position:relative;background:#000;overflow:hidden;border-radius:4px;border:1px solid rgba(99,102,241,.07);transition:border-color .2s,box-shadow .2s;cursor:pointer;contain:layout style paint;}
+.cell:hover{border-color:rgba(99,102,241,.3);box-shadow:0 0 0 1px rgba(99,102,241,.15);}
+.cell::before,.cell::after{content:'';position:absolute;width:12px;height:12px;opacity:0;transition:opacity .2s;z-index:4;pointer-events:none;}
+.cell::before{top:6px;left:6px;border-top:1px solid var(--indigo);border-left:1px solid var(--indigo);}
+.cell::after{bottom:6px;right:6px;border-bottom:1px solid var(--indigo);border-right:1px solid var(--indigo);}
+.cell:hover::before,.cell:hover::after{opacity:1;}
+.cell-badge{position:absolute;top:8px;left:10px;display:flex;align-items:center;gap:6px;z-index:5;opacity:0;transition:opacity .2s;}
+.cell:hover .cell-badge{opacity:1;}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.dot.ok{background:var(--green);box-shadow:0 0 5px var(--green);}
+.dot.err{background:var(--red);box-shadow:0 0 5px var(--red);animation:blink 1.2s infinite;}
+.dot.conn{background:var(--amber);box-shadow:0 0 5px var(--amber);animation:blink .5s infinite;}
+.dot.off{background:var(--dim);box-shadow:none;}
+.cell-type-lbl{font-size:9px;letter-spacing:1px;color:rgba(255,255,255,.45);font-family:var(--mono);}
+.cell-label{position:absolute;bottom:8px;left:10px;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.85);text-shadow:0 1px 5px rgba(0,0,0,.95);z-index:5;opacity:0;transition:opacity .2s;}
+.cell:hover .cell-label{opacity:1;}
 
-/* Fond espace */
-body::before {
-  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background:
-    radial-gradient(ellipse 80% 60% at 15% 25%, rgba(99,102,241,0.07) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 85% 75%, rgba(168,85,247,0.05) 0%, transparent 60%),
-    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(6,182,212,0.03) 0%, transparent 70%);
-}
+/* CAMERA WIDGET */
+.cam-img{width:100%;height:100%;object-fit:cover;display:block;transform:translateZ(0);}
+.cam-overlay{position:absolute;inset:0;pointer-events:none;z-index:2;background:linear-gradient(180deg,rgba(7,10,20,.6) 0%,transparent 20%),linear-gradient(0deg,rgba(7,10,20,.6) 0%,transparent 20%);opacity:0;transition:opacity .2s;}
+.cell:hover .cam-overlay{opacity:1;}
+.cam-err{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:7;background:rgba(7,10,20,.85);}
+.cam-err.show{display:flex;}
+.cam-err-icon{font-size:28px;opacity:.2;}
+.cam-err-msg{font-size:11px;color:var(--dim);}
+.cam-err-btn{padding:5px 14px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:5px;font-size:11px;color:var(--indigo);cursor:pointer;transition:all .15s;}
+.cam-err-btn:hover{background:rgba(99,102,241,.2);}
+.cam-snap{position:absolute;bottom:8px;right:10px;width:28px;height:28px;background:rgba(7,10,20,.7);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;z-index:5;opacity:0;transition:all .2s;}
+.cell:hover .cam-snap{opacity:1;}
+.cam-snap:hover{background:rgba(99,102,241,.2);}
+.cam-tog{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(.85);width:40px;height:40px;background:rgba(7,10,20,.7);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;z-index:6;opacity:0;transition:all .2s;}
+.cell:hover .cam-tog{opacity:1;transform:translate(-50%,-50%) scale(1);}
+.cam-tog:hover{background:rgba(99,102,241,.2);}
 
-/* ── GRILLE ─────────────────────────────────────────────────── */
-#grid {
-  position: fixed; inset: 0;
-  display: grid; gap: 3px;
-  background: rgba(0,0,0,0.6);
-  transition: grid-template-columns 0.35s cubic-bezier(0.4,0,0.2,1),
-              grid-template-rows    0.35s cubic-bezier(0.4,0,0.2,1);
-  z-index: 1;
-}
+/* SYSTEME WIDGET */
+.sys-widget{position:absolute;inset:0;padding:14px;display:flex;flex-direction:column;gap:7px;overflow:hidden;background:linear-gradient(135deg,rgba(7,10,20,.96),rgba(12,15,31,.98));}
+.widget-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:linear-gradient(135deg,var(--indigo),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px;flex-shrink:0;}
+.sys-row{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.sys-icon{font-size:13px;width:18px;text-align:center;flex-shrink:0;}
+.sys-info{flex:1;min-width:0;}
+.sys-name{font-size:9px;color:var(--muted);letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sys-val{font-size:11px;font-weight:600;color:var(--text);font-family:var(--mono);}
+.sys-bar-wrap{height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;margin-top:3px;}
+.sys-bar{height:100%;border-radius:2px;transition:width .5s ease;}
+.bar-cpu{background:linear-gradient(90deg,var(--indigo),var(--cyan));}
+.bar-ram{background:linear-gradient(90deg,var(--purple),var(--indigo));}
+.bar-gpu{background:linear-gradient(90deg,#22c55e,var(--cyan));}
+.bar-disk{background:linear-gradient(90deg,var(--amber),#f97316);}
+.sys-div{height:1px;background:var(--border);flex-shrink:0;}
 
-/* ── CELLULE CAMÉRA ─────────────────────────────────────────── */
-.cam-cell {
-  position: relative;
-  background: #000;
-  overflow: hidden;
-  cursor: pointer;
-  contain: layout style paint;
-  border-radius: 3px;
-  border: 1px solid rgba(99,102,241,0.06);
-  transition: border-color 0.25s, box-shadow 0.25s;
-}
-.cam-cell:hover {
-  border-color: rgba(99,102,241,0.3);
-  box-shadow: 0 0 0 1px rgba(99,102,241,0.15), inset 0 0 40px rgba(99,102,241,0.04);
-}
+/* PROXMOX WIDGET */
+.px-widget{position:absolute;inset:0;padding:14px;display:flex;flex-direction:column;gap:5px;overflow:hidden;background:linear-gradient(135deg,rgba(7,10,20,.96),rgba(12,15,31,.98));}
+.px-node-row{display:flex;gap:10px;font-size:10px;color:var(--muted);flex-shrink:0;}
+.px-node-val{color:var(--text);font-family:var(--mono);}
+.px-list{display:flex;flex-direction:column;gap:3px;overflow:hidden;flex:1;}
+.px-item{display:flex;align-items:center;gap:6px;padding:4px 7px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);border-radius:4px;flex-shrink:0;}
+.px-item-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.px-run{background:var(--green);box-shadow:0 0 4px var(--green);}
+.px-stop{background:var(--dim);}
+.px-item-name{font-size:11px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.px-item-type{font-size:8px;color:var(--dim);letter-spacing:1px;padding:1px 5px;border:1px solid var(--border);border-radius:2px;}
+.px-item-cpu{font-size:9px;color:var(--muted);font-family:var(--mono);margin-left:auto;}
 
-.cam-cell img {
-  width: 100%; height: 100%;
-  object-fit: cover; display: block;
-  transform: translateZ(0);
-}
+/* HORLOGE WIDGET */
+.clock-widget{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,rgba(7,10,20,.96),rgba(12,15,31,.98));}
+.clock-time{font-size:clamp(22px,5.5vw,68px);font-weight:300;letter-spacing:4px;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,var(--text),var(--muted));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.clock-date{font-size:clamp(10px,1.4vw,16px);color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+.clock-sub{font-size:clamp(9px,.9vw,12px);color:var(--dim);letter-spacing:1px;font-family:var(--mono);}
 
-/* Overlay gradient */
-.cam-overlay {
-  position: absolute; inset: 0; pointer-events: none; z-index: 2;
-  background:
-    linear-gradient(180deg, rgba(7,10,20,0.7) 0%, transparent 25%),
-    linear-gradient(0deg,   rgba(7,10,20,0.7) 0%, transparent 25%);
-  opacity: 0; transition: opacity 0.2s;
-}
-.cam-cell:hover .cam-overlay { opacity: 1; }
+/* VIDE WIDGET */
+.empty-widget{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(7,10,20,.8),rgba(12,15,31,.9));}
+.empty-widget img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.65;}
+.empty-ph{display:flex;flex-direction:column;align-items:center;gap:8px;opacity:.15;position:relative;z-index:1;}
+.empty-ph-icon{font-size:28px;}
+.empty-ph-txt{font-size:9px;letter-spacing:1px;color:var(--muted);}
 
-/* Badge haut gauche */
-.cam-badge {
-  position: absolute; top: 10px; left: 12px;
-  display: flex; align-items: center; gap: 7px;
-  z-index: 5;
-}
-.cam-dot {
-  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
-  transition: all 0.3s;
-}
-.cam-dot.ok   { background: var(--green); box-shadow: 0 0 6px var(--green); }
-.cam-dot.err  { background: var(--red);   box-shadow: 0 0 6px var(--red);   animation: pulse-err 1.2s infinite; }
-.cam-dot.conn { background: var(--amber); box-shadow: 0 0 6px var(--amber); animation: pulse-err 0.5s infinite; }
-.cam-dot.off  { background: var(--dim);   box-shadow: none; }
-.cam-id-text {
-  font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
-  color: rgba(255,255,255,0.6);
-}
+/* ZOOM OVERLAY */
+#zoom-overlay{position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center;background:rgba(7,10,20,.88);backdrop-filter:blur(22px);}
+#zoom-overlay.show{display:flex;animation:fadeIn .2s ease;}
+#zoom-box{position:relative;width:68vw;height:68vh;background:#000;border-radius:8px;border:1px solid rgba(99,102,241,.3);overflow:hidden;box-shadow:0 0 80px rgba(0,0,0,.9);animation:zoomIn .25s cubic-bezier(.4,0,.2,1);}
+#zoom-inner{position:absolute;inset:0;}
+#zoom-inner img,#zoom-inner .cam-img{width:100%;height:100%;object-fit:cover;}
+#zoom-inner .sys-widget,#zoom-inner .px-widget,#zoom-inner .clock-widget,#zoom-inner .empty-widget{position:absolute;inset:0;}
+#zoom-lbl{position:absolute;top:12px;left:14px;font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.8);text-shadow:0 1px 5px rgba(0,0,0,.9);z-index:10;}
+#zoom-close{position:absolute;top:10px;right:10px;width:32px;height:32px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--red);transition:all .15s;z-index:10;}
+#zoom-close:hover{background:rgba(239,68,68,.3);}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes zoomIn{from{transform:scale(.88);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
 
-/* REC badge */
-.cam-rec {
-  position: absolute; top: 10px; right: 12px;
-  display: flex; align-items: center; gap: 5px;
-  font-family: var(--mono); font-size: 9px; letter-spacing: 2px;
-  color: var(--red); z-index: 5;
-  opacity: 0; transition: opacity 0.2s;
-}
-.cam-rec::before {
-  content: ''; width: 6px; height: 6px;
-  background: var(--red); border-radius: 50%;
-  animation: pulse-err 1s infinite;
-}
-.cam-cell:hover .cam-rec { opacity: 1; }
+/* HUD */
+#hud-zone{position:fixed;bottom:0;left:0;right:0;height:66px;z-index:100;pointer-events:all;}
+#hud{position:absolute;bottom:0;left:0;right:0;height:var(--hud);background:rgba(7,10,20,.97);backdrop-filter:blur(16px) saturate(1.5);border-top:1px solid var(--border);display:flex;align-items:center;transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);}
+#hud::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--indigo),var(--cyan),transparent);opacity:.5;}
+#hud-zone:hover #hud{transform:translateY(0);}
+.hs{display:flex;align-items:center;gap:8px;padding:0 12px;height:100%;}
+.hd{width:1px;height:20px;background:var(--border);flex-shrink:0;}
+.hsp{flex:1;}
+#hud-logo{font-size:14px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,var(--indigo),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+#hud-ver{font-size:9px;color:var(--dim);letter-spacing:1px;font-family:var(--mono);}
+#hud-clk{font-family:var(--mono);font-size:17px;letter-spacing:3px;font-variant-numeric:tabular-nums;}
+#hud-dt{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.hbtn{height:30px;padding:0 12px;background:rgba(99,102,241,.06);border:1px solid var(--border);border-radius:5px;color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap;}
+.hbtn:hover{background:rgba(99,102,241,.12);border-color:rgba(99,102,241,.4);color:var(--text);}
+.hbtn.on{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.3);color:var(--amber);}
+.hbtn.quit{border-color:rgba(239,68,68,.15);}
+.hbtn.quit:hover{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4);color:var(--red);}
+.hbtn.active{background:rgba(99,102,241,.12);border-color:rgba(99,102,241,.4);color:var(--indigo);}
 
-/* Label bas gauche */
-.cam-label {
-  position: absolute; bottom: 12px; left: 12px;
-  font-size: 12px; font-weight: 600; letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.9);
-  text-shadow: 0 2px 8px rgba(0,0,0,0.9);
-  z-index: 5; opacity: 0; transition: opacity 0.2s;
-}
-.cam-cell:hover .cam-label { opacity: 1; }
+/* PANEL */
+#panel{position:fixed;top:0;right:0;bottom:0;width:380px;background:var(--panel);border-left:1px solid var(--border);z-index:200;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:-20px 0 60px rgba(0,0,0,.5);}
+#panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--indigo),var(--cyan));}
+#panel.open{transform:translateX(0);}
+#ph{padding:20px 20px 0;flex-shrink:0;}
+#ph-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+#ph-title{font-size:16px;font-weight:700;background:linear-gradient(135deg,var(--indigo),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+#ph-close{width:30px;height:30px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:var(--dim);transition:all .15s;}
+#ph-close:hover{background:rgba(239,68,68,.15);border-color:var(--red);color:var(--red);}
+#p-tabs{display:flex;gap:2px;background:rgba(0,0,0,.3);border-radius:8px;padding:3px;margin-bottom:14px;}
+.p-tab{flex:1;padding:7px 3px;text-align:center;font-size:10px;font-weight:500;color:var(--dim);cursor:pointer;border-radius:6px;transition:all .15s;}
+.p-tab:hover{color:var(--muted);}
+.p-tab.active{background:rgba(99,102,241,.15);color:var(--indigo);}
+.p-pane{display:none;flex:1;overflow-y:auto;padding:0 20px 20px;scrollbar-width:thin;scrollbar-color:rgba(99,102,241,.2) transparent;}
+.p-pane.active{display:block;}
+.ps{margin-bottom:18px;}
+.ps-t{font-size:11px;font-weight:600;letter-spacing:1px;color:var(--indigo);text-transform:uppercase;padding-bottom:7px;border-bottom:1px solid var(--border);margin-bottom:10px;}
 
-/* Snapshot bas droite */
-.cam-snap {
-  position: absolute; bottom: 10px; right: 12px;
-  width: 30px; height: 30px;
-  background: rgba(15,18,41,0.7);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; cursor: pointer; z-index: 5;
-  opacity: 0; transition: all 0.2s;
-}
-.cam-cell:hover .cam-snap { opacity: 1; }
-.cam-snap:hover { background: rgba(99,102,241,0.2); border-color: var(--indigo); }
+/* GRILLE CONFIG */
+.grid-size-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.gsz-lbl{font-size:12px;color:var(--muted);}
+.grid-preview{display:grid;gap:3px;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:6px;padding:10px;min-height:100px;margin-bottom:12px;}
+.gp-cell{background:rgba(99,102,241,.05);border:1px solid var(--border);border-radius:4px;min-height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--dim);transition:all .15s;flex-direction:column;gap:3px;}
+.gp-cell:hover{border-color:rgba(99,102,241,.3);background:rgba(99,102,241,.1);}
+.gp-cell.sel{border-color:var(--indigo);background:rgba(99,102,241,.15);color:var(--indigo);}
+.gp-cell-icon{font-size:14px;}
+.gp-cell-type{font-size:8px;letter-spacing:1px;}
+#cell-cfg{background:rgba(99,102,241,.04);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px;}
+#cell-cfg h4{font-size:12px;font-weight:600;color:var(--indigo);margin-bottom:10px;}
+.cc-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);gap:10px;}
+.cc-lbl{font-size:12px;color:var(--muted);}
 
-/* Bouton pause centré */
-.cam-tog {
-  position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%,-50%) scale(0.8);
-  width: 44px; height: 44px;
-  background: rgba(7,10,20,0.75);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 16px; cursor: pointer; z-index: 6;
-  opacity: 0; transition: all 0.2s;
-}
-.cam-cell:hover .cam-tog { opacity: 1; transform: translate(-50%,-50%) scale(1); }
-.cam-tog:hover { background: rgba(99,102,241,0.2); border-color: var(--indigo); }
-
-/* Overlay hors-ligne */
-.cam-err {
-  position: absolute; inset: 0; display: none;
-  flex-direction: column; align-items: center; justify-content: center;
-  gap: 12px; z-index: 7;
-  background: rgba(7,10,20,0.85);
-  backdrop-filter: blur(4px);
-}
-.cam-err.show { display: flex; }
-.cam-err-icon { font-size: 32px; opacity: 0.2; }
-.cam-err-msg  { font-size: 11px; color: var(--dim); letter-spacing: 0.5px; }
-.cam-err-btn  {
-  padding: 6px 14px;
-  background: rgba(99,102,241,0.1);
-  border: 1px solid rgba(99,102,241,0.3);
-  border-radius: var(--r-sm);
-  font-size: 11px; color: var(--indigo); cursor: pointer;
-  transition: all 0.15s; letter-spacing: 0.5px;
-}
-.cam-err-btn:hover { background: rgba(99,102,241,0.2); border-color: var(--indigo); }
-
-/* Focus = plein écran */
-.cam-cell.focused {
-  position: fixed; inset: 0;
-  z-index: 50; border-radius: 0;
-  border: 2px solid var(--indigo);
-  box-shadow: 0 0 30px rgba(99,102,241,0.4);
-}
-.cam-cell.focused .cam-label { opacity: 1; }
-
-/* État vide */
-#empty {
-  position: fixed; inset: 0; display: none;
-  flex-direction: column; align-items: center; justify-content: center;
-  gap: 20px; z-index: 10;
-}
-#empty.show { display: flex; }
-#empty-icon { font-size: 48px; opacity: 0.15; }
-#empty-title { font-size: 20px; font-weight: 600; letter-spacing: 2px; color: var(--dim); }
-#empty-sub   { font-size: 13px; color: var(--dim); }
-#empty-btn {
-  margin-top: 8px; padding: 12px 28px;
-  background: rgba(99,102,241,0.1);
-  border: 1px solid rgba(99,102,241,0.35);
-  border-radius: var(--r);
-  font-size: 13px; font-weight: 600; color: var(--indigo);
-  cursor: pointer; transition: all 0.15s; letter-spacing: 0.5px;
-}
-#empty-btn:hover { background: rgba(99,102,241,0.2); border-color: var(--indigo); }
-
-@keyframes pulse-err { 0%,100%{opacity:1} 50%{opacity:0.2} }
-
-/* ── NOTIF UPDATE ───────────────────────────────────────────── */
-#upd-notif {
-  position: fixed; top: 16px; right: 16px;
-  display: none; align-items: center; gap: 12px;
-  background: rgba(15,18,41,0.95);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(99,102,241,0.3);
-  border-radius: var(--r);
-  padding: 12px 16px;
-  font-size: 13px; color: var(--muted);
-  z-index: 400;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,102,241,0.1);
-}
-#upd-notif.show { display: flex; }
-#upd-link { color: var(--indigo); cursor: pointer; text-decoration: underline; }
-#upd-x { cursor: pointer; color: var(--dim); font-size: 16px; margin-left: 4px; }
-#upd-x:hover { color: var(--text); }
-
-/* ── HUD BOTTOM ─────────────────────────────────────────────── */
-#hud-zone {
-  position: fixed; bottom: 0; left: 0; right: 0;
-  height: 72px; z-index: 100; pointer-events: all;
-}
-#hud {
-  position: absolute; bottom: 0; left: 0; right: 0;
-  height: var(--hud);
-  background: rgba(7,10,20,0.92);
-  backdrop-filter: blur(20px) saturate(1.5);
-  border-top: 1px solid var(--border);
-  display: flex; align-items: center; gap: 0;
-  transform: translateY(100%);
-  transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
-}
-#hud-zone:hover #hud { transform: translateY(0); }
-
-/* Ligne indigo en haut du HUD */
-#hud::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--indigo), var(--cyan), transparent);
-  opacity: 0.5;
-}
-
-.hs  { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 100%; }
-.hd  { width: 1px; height: 22px; background: var(--border); flex-shrink: 0; }
-.hsp { flex: 1; }
-
-#hud-brand {
-  display: flex; flex-direction: column; gap: 2px;
-}
-#hud-logo {
-  font-size: 15px; font-weight: 700; letter-spacing: 3px;
-  background: linear-gradient(135deg, var(--indigo), var(--cyan));
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-#hud-ver { font-size: 10px; color: var(--dim); letter-spacing: 1px; font-family: var(--mono); }
-
-#hud-time {
-  display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
-}
-#hud-clk { font-family: var(--mono); font-size: 18px; letter-spacing: 3px; font-variant-numeric: tabular-nums; }
-#hud-dt  { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
-
-#cam-badge {
-  display: flex; align-items: center; gap: 6px;
-  font-family: var(--mono); font-size: 11px; color: var(--muted);
-  background: rgba(99,102,241,0.08);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  padding: 4px 10px;
-}
-#cam-badge .dot { width: 6px; height: 6px; }
-
-/* Layout picker */
-#lpick { display: flex; gap: 4px; }
-.lp {
-  width: 28px; height: 28px; display: grid; padding: 5px; gap: 2px;
-  background: transparent; border: 1px solid var(--border);
-  border-radius: var(--r-sm); cursor: pointer; transition: all 0.15s;
-}
-.lp span { background: rgba(99,102,241,0.35); border-radius: 1px; display: block; }
-.lp:hover  { border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.06); }
-.lp.active { border-color: var(--indigo); background: rgba(99,102,241,0.12); }
-.lp.auto   { align-items: center; justify-content: center; font-size: 8px; letter-spacing: 1px; color: var(--muted); font-family: var(--mono); padding: 0; }
-
-/* Boutons HUD */
-.hbtn {
-  height: 32px; padding: 0 14px;
-  background: rgba(99,102,241,0.06);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  color: var(--muted); font-family: var(--ui);
-  font-size: 12px; font-weight: 500;
-  cursor: pointer; display: flex; align-items: center; gap: 6px;
-  transition: all 0.15s; white-space: nowrap;
-}
-.hbtn:hover { background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.4); color: var(--text); }
-.hbtn.on    { background: rgba(245,158,11,0.1);  border-color: rgba(245,158,11,0.3); color: var(--amber); }
-.hbtn.quit  { border-color: rgba(239,68,68,0.15); }
-.hbtn.quit:hover { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.4); color: var(--red); }
-
-/* ── PANNEAU CONFIG ──────────────────────────────────────────── */
-#panel {
-  position: fixed; top: 0; right: 0; bottom: 0; width: 360px;
-  background: var(--panel);
-  border-left: 1px solid var(--border);
-  z-index: 200;
-  transform: translateX(100%);
-  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
-  display: flex; flex-direction: column;
-  box-shadow: -20px 0 60px rgba(0,0,0,0.5);
-}
-#panel.open { transform: translateX(0); }
-
-/* Ligne indigo en haut */
-#panel::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, var(--indigo), var(--cyan));
-}
-
-#ph {
-  padding: 20px 20px 0;
-  flex-shrink: 0;
-}
-#ph-top {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 16px;
-}
-#ph-title {
-  font-size: 16px; font-weight: 700; letter-spacing: 0.5px;
-  background: linear-gradient(135deg, var(--indigo), var(--cyan));
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-#ph-close {
-  width: 30px; height: 30px;
-  background: rgba(239,68,68,0.06);
-  border: 1px solid rgba(239,68,68,0.15);
-  border-radius: var(--r-sm);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 14px; color: var(--dim);
-  transition: all 0.15s;
-}
-#ph-close:hover { background: rgba(239,68,68,0.15); border-color: var(--red); color: var(--red); }
-
-/* Tabs */
-#p-tabs {
-  display: flex; gap: 2px;
-  background: rgba(0,0,0,0.3);
-  border-radius: var(--r);
-  padding: 3px; margin-bottom: 16px;
-}
-.p-tab {
-  flex: 1; padding: 7px 4px; text-align: center;
-  font-size: 11px; font-weight: 500; letter-spacing: 0.3px;
-  color: var(--dim); cursor: pointer; border-radius: 6px;
-  transition: all 0.15s;
-}
-.p-tab:hover  { color: var(--muted); }
-.p-tab.active { background: rgba(99,102,241,0.15); color: var(--indigo); }
-
-.p-pane { display: none; flex: 1; overflow-y: auto; padding: 0 20px 20px; scrollbar-width: thin; scrollbar-color: rgba(99,102,241,0.2) transparent; }
-.p-pane.active { display: block; }
-.p-pane::-webkit-scrollbar { width: 4px; }
-.p-pane::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.2); border-radius: 2px; }
-
-/* Section */
-.ps { margin-bottom: 20px; }
-.ps-t {
-  font-size: 11px; font-weight: 600; letter-spacing: 1px;
-  color: var(--indigo); text-transform: uppercase;
-  padding-bottom: 8px; border-bottom: 1px solid var(--border);
-  margin-bottom: 12px;
-}
-
-/* Entrée caméra */
-#camlist { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
-.ce {
-  background: rgba(99,102,241,0.03);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 14px;
-  display: flex; flex-direction: column; gap: 10px;
-  transition: border-color 0.15s;
-}
-.ce:hover { border-color: rgba(99,102,241,0.2); }
-
-.ce-row { display: flex; gap: 8px; align-items: center; }
-.ce-label { font-size: 11px; color: var(--dim); margin-bottom: 4px; font-weight: 500; }
-
-/* Inputs */
-.pi {
-  flex: 1; width: 100%;
-  background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: var(--r-sm);
-  color: var(--text); font-family: var(--mono); font-size: 12px;
-  padding: 8px 10px; outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-.pi:focus { border-color: rgba(99,102,241,0.5); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
-.pi::placeholder { color: var(--dim); font-size: 11px; }
-
-.pi-sel {
-  width: 100%;
-  background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: var(--r-sm);
-  color: var(--text); font-family: var(--ui); font-size: 12px;
-  padding: 8px 10px; outline: none; cursor: pointer;
-  transition: border-color 0.15s;
-}
-.pi-sel:focus { border-color: rgba(99,102,241,0.5); }
-.pi-sel option { background: var(--panel); }
-
-.ce-del {
-  width: 32px; height: 32px; flex-shrink: 0;
-  background: rgba(239,68,68,0.05);
-  border: 1px solid rgba(239,68,68,0.12);
-  border-radius: var(--r-sm);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 13px; color: var(--red);
-  transition: all 0.15s;
-}
-.ce-del:hover { background: rgba(239,68,68,0.15); border-color: var(--red); }
-
-/* Note d'aide caméra */
-.cam-help {
-  font-size: 11px; color: var(--dim); line-height: 1.6;
-  background: rgba(6,182,212,0.04);
-  border: 1px solid rgba(6,182,212,0.12);
-  border-radius: var(--r-sm);
-  padding: 8px 10px;
-}
-.cam-help strong { color: var(--cyan); }
-
-#btn-add-cam {
-  width: 100%; padding: 10px;
-  background: transparent;
-  border: 1px dashed rgba(99,102,241,0.2);
-  border-radius: var(--r);
-  color: var(--dim); font-size: 12px; font-weight: 500;
-  cursor: pointer; text-align: center; transition: all 0.15s;
-}
-#btn-add-cam:hover { border-color: var(--indigo); color: var(--indigo); background: rgba(99,102,241,0.05); }
-
-/* Rows settings */
-.pr {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
-  gap: 12px;
-}
-.pr-label { font-size: 13px; color: var(--muted); }
-.pr-sub   { font-size: 11px; color: var(--dim); margin-top: 1px; }
-.pr-left  { display: flex; flex-direction: column; gap: 2px; }
-
-.pi-sm {
-  background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: var(--r-sm);
-  color: var(--text); font-family: var(--mono); font-size: 12px;
-  padding: 6px 8px; outline: none; width: 70px; text-align: center;
-  transition: border-color 0.15s;
-}
-.pi-sm:focus { border-color: rgba(99,102,241,0.5); }
-
-.pi-lg {
-  background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: var(--r-sm);
-  color: var(--text); font-family: var(--mono); font-size: 12px;
-  padding: 6px 10px; outline: none; width: 150px;
-  transition: border-color 0.15s;
-}
-.pi-lg:focus { border-color: rgba(99,102,241,0.5); }
-
-/* Toggle */
-.tgl { position: relative; width: 38px; height: 20px; cursor: pointer; flex-shrink: 0; }
-.tgl input { opacity: 0; width: 0; height: 0; }
-.tgl-t {
-  position: absolute; inset: 0;
-  background: rgba(0,0,0,0.4);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 10px; transition: all 0.2s;
-}
-.tgl-t::before {
-  content: ''; position: absolute;
-  width: 14px; height: 14px; border-radius: 50%;
-  background: var(--dim); top: 2px; left: 2px;
-  transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-}
-.tgl input:checked + .tgl-t { border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.15); }
-.tgl input:checked + .tgl-t::before { transform: translateX(18px); background: var(--indigo); }
-
-/* Sélecteur écran */
-#displayer { display: flex; flex-direction: column; gap: 8px; }
-.dopt {
-  padding: 12px 14px;
-  background: rgba(0,0,0,0.2);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  cursor: pointer; display: flex; align-items: center; justify-content: space-between;
-  transition: all 0.15s;
-}
-.dopt:hover  { border-color: rgba(99,102,241,0.3); background: rgba(99,102,241,0.05); }
-.dopt.active { border-color: var(--indigo); background: rgba(99,102,241,0.1); }
-.dopt-name  { font-size: 13px; font-weight: 600; color: var(--text); }
-.dopt-info  { font-size: 11px; color: var(--dim); margin-top: 2px; font-family: var(--mono); }
-.dopt-check { color: var(--indigo); font-size: 18px; opacity: 0; transition: opacity 0.15s; }
-.dopt.active .dopt-check { opacity: 1; }
-
-/* Infos système */
-.sys-card {
-  background: rgba(0,0,0,0.2); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 14px;
-  display: flex; flex-direction: column; gap: 8px;
-}
-.sys-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
-.sys-row span { color: var(--dim); }
-.sys-row strong { color: var(--text); font-family: var(--mono); }
-
-/* Bouton sauvegarde */
-.btn-primary {
-  width: 100%; padding: 11px;
-  background: rgba(99,102,241,0.15);
-  border: 1px solid rgba(99,102,241,0.35);
-  border-radius: var(--r);
-  color: var(--indigo); font-size: 13px; font-weight: 600;
-  letter-spacing: 0.5px; cursor: pointer; transition: all 0.15s;
-}
-.btn-primary:hover { background: rgba(99,102,241,0.25); border-color: var(--indigo); color: #fff; }
-
-.btn-ghost {
-  padding: 8px 14px;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  color: var(--muted); font-size: 12px;
-  cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
-}
-.btn-ghost:hover { border-color: rgba(99,102,241,0.3); color: var(--text); background: rgba(99,102,241,0.06); }
-
-.save-ok { text-align: center; font-size: 11px; color: var(--green); height: 18px; margin-top: 8px; letter-spacing: 0.5px; }
-
-/* Badge update */
-.upd-badge {
-  display: none; align-items: center; gap: 10px;
-  background: rgba(99,102,241,0.08);
-  border: 1px solid rgba(99,102,241,0.2);
-  border-radius: var(--r); padding: 12px 14px;
-  font-size: 12px; color: var(--muted);
-}
-.upd-badge.show { display: flex; }
-.upd-link { color: var(--indigo); cursor: pointer; text-decoration: underline; }
-
-/* Hint clavier */
-#hint {
-  position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
-  display: flex; gap: 16px; align-items: center;
-  background: rgba(7,10,20,0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 8px 18px;
-  font-size: 11px; color: var(--dim);
-  z-index: 300; opacity: 0; transition: opacity 0.4s; pointer-events: none;
-}
-#hint.show { opacity: 1; }
-#hint kbd {
-  display: inline-block; padding: 2px 7px;
-  background: rgba(99,102,241,0.1);
-  border: 1px solid rgba(99,102,241,0.2);
-  border-radius: 4px; font-size: 10px; color: var(--indigo);
-  font-family: var(--mono); margin-right: 3px;
-}
-
-.action-row { display: flex; gap: 8px; flex-wrap: wrap; }
+/* INPUTS */
+.pi-sel,.pi-in{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.08);border-radius:5px;color:var(--text);font-size:12px;padding:6px 9px;outline:none;transition:border-color .15s;}
+.pi-sel{cursor:pointer;font-family:var(--ui);}
+.pi-sel option{background:var(--panel);}
+.pi-in{font-family:var(--mono);}
+.pi-sel:focus,.pi-in:focus{border-color:rgba(99,102,241,.5);}
+.pi-in::placeholder{color:var(--dim);}
+.pi-sm{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.06);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:12px;padding:5px 8px;outline:none;width:68px;text-align:center;}
+.pi-lg{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.06);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:11px;padding:6px 9px;outline:none;width:100%;display:block;margin-bottom:8px;}
+.pi-sm:focus,.pi-lg:focus{border-color:rgba(99,102,241,.5);}
+.pr{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04);gap:12px;}
+.pr-lbl{font-size:13px;color:var(--muted);}
+.pr-sub{font-size:11px;color:var(--dim);margin-top:2px;}
+.pr-left{display:flex;flex-direction:column;gap:2px;}
+.tgl{position:relative;width:38px;height:20px;cursor:pointer;flex-shrink:0;}
+.tgl input{opacity:0;width:0;height:0;}
+.tgl-t{position:absolute;inset:0;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08);border-radius:10px;transition:all .2s;}
+.tgl-t::before{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:var(--dim);top:2px;left:2px;transition:all .2s;}
+.tgl input:checked+.tgl-t{border-color:rgba(99,102,241,.4);}
+.tgl input:checked+.tgl-t::before{transform:translateX(18px);background:var(--indigo);}
+.dopt{padding:9px 12px;background:rgba(0,0,0,.2);border:1px solid var(--border);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:all .15s;margin-bottom:6px;}
+.dopt:hover{border-color:rgba(99,102,241,.3);}
+.dopt.active{border-color:var(--indigo);background:rgba(99,102,241,.1);}
+.dopt-name{font-size:13px;font-weight:600;}
+.dopt-info{font-size:11px;color:var(--dim);font-family:var(--mono);}
+.dopt-chk{color:var(--indigo);opacity:0;font-size:16px;}
+.dopt.active .dopt-chk{opacity:1;}
+.sys-card{background:rgba(0,0,0,.2);border:1px solid var(--border);border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:7px;}
+.scr{display:flex;justify-content:space-between;align-items:center;font-size:12px;}
+.scr span{color:var(--dim);}.scr strong{color:var(--text);font-family:var(--mono);}
+.btn-primary{width:100%;padding:10px;margin-top:12px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:6px;color:var(--indigo);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;}
+.btn-primary:hover{background:rgba(99,102,241,.2);border-color:var(--indigo);color:#fff;}
+.btn-ghost{padding:8px 14px;background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--muted);font-size:12px;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn-ghost:hover{border-color:rgba(99,102,241,.3);color:var(--text);}
+.save-ok{text-align:center;font-size:11px;color:var(--green);height:18px;margin-top:8px;}
+.action-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+#hint{position:fixed;top:14px;left:50%;transform:translateX(-50%);display:flex;gap:16px;background:rgba(7,10,20,.85);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:8px;padding:8px 18px;font-size:11px;color:var(--dim);z-index:300;opacity:0;transition:opacity .4s;pointer-events:none;}
+#hint.show{opacity:1;}
+#hint kbd{display:inline-block;padding:2px 7px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);border-radius:4px;font-size:10px;color:var(--indigo);margin-right:3px;}
+#upd-notif{position:fixed;top:14px;right:14px;display:none;align-items:center;gap:10px;background:rgba(7,10,20,.95);backdrop-filter:blur(12px);border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--muted);z-index:400;}
+#upd-notif.show{display:flex;}
+#upd-link{color:var(--indigo);cursor:pointer;text-decoration:underline;}
+.px-info{font-size:10px;color:var(--dim);line-height:1.8;background:rgba(99,102,241,.04);border:1px solid var(--border);border-radius:6px;padding:10px;}
+.px-info span{color:var(--indigo);font-family:var(--mono);}
 </style>
 </head>
 <body>
-
 <div id="grid"></div>
 
-<div id="empty">
-  <div id="empty-icon">📡</div>
-  <div id="empty-title">Aucune caméra configurée</div>
-  <div id="empty-sub">Ajoute tes premières caméras dans les paramètres</div>
-  <div id="empty-btn">⚙ Ouvrir les paramètres</div>
+<div id="zoom-overlay">
+  <div id="zoom-box">
+    <div id="zoom-lbl"></div>
+    <div id="zoom-close">&#x00D7;</div>
+    <div id="zoom-inner"></div>
+  </div>
 </div>
 
-<div id="upd-notif">
-  🚀 Mise à jour disponible :
-  <span id="upd-link">télécharger</span>
-  <span id="upd-x">×</span>
-</div>
+<div id="upd-notif">&#x1F680; Mise &#xE0; jour : <span id="upd-link">t&#xE9;l&#xE9;charger</span> <span style="cursor:pointer;color:var(--dim)" id="upd-x">&#x00D7;</span></div>
 
-<!-- HUD -->
 <div id="hud-zone">
   <div id="hud">
-    <div class="hs">
-      <div id="hud-brand">
-        <div id="hud-logo">CAMWALL</div>
-        <div id="hud-ver"></div>
-      </div>
-    </div>
+    <div class="hs"><div><div id="hud-logo">CAMWALL</div><div id="hud-ver"></div></div></div>
     <div class="hd"></div>
-    <div class="hs">
-      <div id="hud-time">
-        <div id="hud-clk">00:00:00</div>
-        <div id="hud-dt"></div>
-      </div>
-    </div>
-    <div class="hd"></div>
-    <div class="hs">
-      <div id="cam-badge"><div class="cam-dot ok"></div><span>— CAM</span></div>
-      <div id="lpick"></div>
-    </div>
+    <div class="hs"><div id="hud-clk">00:00:00</div><div id="hud-dt"></div></div>
     <div class="hsp"></div>
     <div class="hs">
-      <button class="hbtn" id="btn-pause">⏸ Pause</button>
-      <button class="hbtn" id="btn-cfg">⚙ Paramètres</button>
+      <button class="hbtn" id="btn-pause">&#x23F8; Pause</button>
+      <button class="hbtn active" id="btn-cfg">&#x2699; Param&#xE8;tres</button>
       <div class="hd"></div>
-      <button class="hbtn quit" id="btn-quit" title="Minimiser dans le tray">×</button>
+      <button class="hbtn quit" id="btn-quit">&#x00D7;</button>
     </div>
   </div>
 </div>
 
-<!-- Panneau config -->
 <div id="panel">
   <div id="ph">
-    <div id="ph-top">
-      <div id="ph-title">Paramètres</div>
-      <div id="ph-close">×</div>
-    </div>
+    <div id="ph-top"><div id="ph-title">Param&#xE8;tres</div><div id="ph-close">&#x00D7;</div></div>
     <div id="p-tabs">
-      <div class="p-tab active" data-tab="cams">📷 Caméras</div>
-      <div class="p-tab" data-tab="display">🖥 Écran</div>
-      <div class="p-tab" data-tab="opts">⚙ Options</div>
-      <div class="p-tab" data-tab="sys">ℹ Système</div>
+      <div class="p-tab active" data-tab="grid">&#x229E; Grille</div>
+      <div class="p-tab" data-tab="cams">&#x1F4F7; Cams</div>
+      <div class="p-tab" data-tab="proxmox">&#x1F5A5; Proxmox</div>
+      <div class="p-tab" data-tab="opts">&#x2699; Options</div>
+      <div class="p-tab" data-tab="sys">&#x2139; Syst&#xE8;me</div>
     </div>
   </div>
 
-  <!-- Caméras -->
-  <div class="p-pane active" id="tab-cams">
-    <div id="camlist"></div>
-    <div id="btn-add-cam">＋ Ajouter une caméra</div>
-    <div style="height:16px"></div>
-    <button class="btn-primary" id="btn-save">Sauvegarder &amp; Appliquer</button>
-    <div class="save-ok" id="save-ok"></div>
-  </div>
-
-  <!-- Écran -->
-  <div class="p-pane" id="tab-display">
-    <div class="ps">
-      <div class="ps-t">Écran dédié</div>
-      <div id="displayer"></div>
-    </div>
-    <div class="ps">
-      <div class="ps-t">Grille</div>
-      <div class="pr">
-        <div class="pr-left"><div class="pr-label">Sub-stream en grille</div><div class="pr-sub">Économie de bande passante sur les 4K</div></div>
-        <label class="tgl"><input type="checkbox" id="s-sub" checked><span class="tgl-t"></span></label>
-      </div>
-      <div class="pr">
-        <div class="pr-label">Espacement cellules (px)</div>
-        <input class="pi-sm" id="s-gap" type="number" value="3" min="0" max="20">
+  <div class="p-pane active" id="tab-grid">
+    <div class="ps"><div class="ps-t">Taille de la grille</div>
+      <div class="grid-size-row">
+        <span class="gsz-lbl">Colonnes</span>
+        <input class="pi-sm" id="g-cols" type="number" value="2" min="1" max="8">
+        <span class="gsz-lbl">&#x00D7; Lignes</span>
+        <input class="pi-sm" id="g-rows" type="number" value="2" min="1" max="8">
+        <button class="btn-ghost" id="btn-apply-grid" style="padding:6px 12px">Appliquer</button>
       </div>
     </div>
+    <div class="ps"><div class="ps-t">Cases &#x2014; double-clic pour configurer</div>
+      <div id="grid-preview" class="grid-preview"></div>
+    </div>
+    <div id="cell-cfg" style="display:none">
+      <h4 id="cell-cfg-title">Case #0</h4>
+      <div class="cc-row"><span class="cc-lbl">Type</span>
+        <select class="pi-sel" id="cc-type">
+          <option value="camera">&#x1F4F7; Cam&#xE9;ra</option>
+          <option value="sysinfo">&#x1F4BB; Syst&#xE8;me</option>
+          <option value="proxmox">&#x1F5A5; Proxmox</option>
+          <option value="clock">&#x1F550; Horloge</option>
+          <option value="empty">&#x2B1B; Vide / Image</option>
+        </select>
+      </div>
+      <div class="cc-row" id="cc-cam-row"><span class="cc-lbl">Cam&#xE9;ra</span><select class="pi-sel" id="cc-cam" style="width:180px"></select></div>
+      <div class="cc-row"><span class="cc-lbl">Label</span><input class="pi-in" id="cc-lbl" type="text" placeholder="Optionnel" style="width:160px"></div>
+      <div class="cc-row" id="cc-img-row" style="display:none"><span class="cc-lbl">Image de fond</span><button class="btn-ghost" id="cc-img-btn">&#x1F4C2; Choisir</button></div>
+      <button class="btn-primary" id="cc-save">Appliquer cette case</button>
+    </div>
   </div>
 
-  <!-- Options -->
+  <div class="p-pane" id="tab-cams">
+    <div id="cam-list"></div>
+    <div id="btn-add-cam" style="width:100%;padding:9px;background:transparent;border:1px dashed rgba(99,102,241,.2);border-radius:6px;color:var(--dim);font-size:12px;cursor:pointer;text-align:center;transition:all .15s;margin-bottom:14px;">&#xFF0B; Ajouter une cam&#xE9;ra</div>
+    <button class="btn-primary" id="btn-save-cams">Sauvegarder &amp; Appliquer</button>
+    <div class="save-ok" id="save-ok-cams"></div>
+  </div>
+
+  <div class="p-pane" id="tab-proxmox">
+    <div class="ps"><div class="ps-t">Connexion Proxmox</div>
+      <div class="pr"><div class="pr-left"><div class="pr-lbl">Activ&#xE9;</div></div><label class="tgl"><input type="checkbox" id="px-enabled"><span class="tgl-t"></span></label></div>
+      <div class="pr"><div class="pr-lbl">URL serveur</div></div>
+      <input class="pi-lg" id="px-url" type="text" placeholder="https://192.168.1.x:8006">
+      <div class="pr"><div class="pr-lbl">N&#x153;ud Proxmox</div><input class="pi-sm" id="px-node" type="text" placeholder="pve" style="width:90px"></div>
+      <div class="pr"><div class="pr-lbl">Token ID</div></div>
+      <input class="pi-lg" id="px-token-id" type="text" placeholder="root@pam!camwall">
+      <div class="pr"><div class="pr-lbl">Token Secret (UUID)</div></div>
+      <input class="pi-lg" id="px-token-secret" type="password" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+      <button class="btn-primary" id="btn-save-proxmox">Sauvegarder</button>
+      <div class="save-ok" id="save-ok-px"></div>
+    </div>
+    <div class="ps"><div class="ps-t">Cr&#xE9;er un token Proxmox</div>
+      <div class="px-info">Datacenter &#x2192; Permissions &#x2192; API Tokens &#x2192; Add<br>User : <span>root@pam</span> &nbsp; Token ID : <span>camwall</span><br>Privilege Separation : OFF (ou ajouter PVEAuditor)<br><br>Le token secret n'est affich&#xE9; qu'une seule fois.</div>
+    </div>
+  </div>
+
   <div class="p-pane" id="tab-opts">
-    <div class="ps">
-      <div class="ps-t">Connexion go2rtc</div>
-      <div class="pr">
-        <div class="pr-label">URL serveur</div>
-        <input class="pi-lg" id="s-server" type="text" value="http://localhost:1984">
-      </div>
-      <div class="pr">
-        <div class="pr-left"><div class="pr-label">Reconnexion auto</div></div>
-        <label class="tgl"><input type="checkbox" id="s-reconnect" checked><span class="tgl-t"></span></label>
-      </div>
-      <div class="pr">
-        <div class="pr-label">Délai initial (s)</div>
-        <input class="pi-sm" id="s-delay" type="number" value="5" min="1" max="30">
-      </div>
-      <div class="pr">
-        <div class="pr-label">Délai maximum (s)</div>
-        <input class="pi-sm" id="s-maxdelay" type="number" value="60" min="10" max="300">
-      </div>
+    <div class="ps"><div class="ps-t">go2rtc</div>
+      <div class="pr"><div class="pr-lbl">URL serveur</div><input class="pi-sm" id="s-server" type="text" value="http://localhost:1984" style="width:160px"></div>
+      <div class="pr"><div class="pr-left"><div class="pr-lbl">Reconnexion auto</div></div><label class="tgl"><input type="checkbox" id="s-reconnect" checked><span class="tgl-t"></span></label></div>
+      <div class="pr"><div class="pr-lbl">D&#xE9;lai (s)</div><input class="pi-sm" id="s-delay" type="number" value="5"></div>
     </div>
-    <div class="ps">
-      <div class="ps-t">Comportement</div>
-      <div class="pr">
-        <div class="pr-left"><div class="pr-label">Pause si inactif</div><div class="pr-sub">0 = désactivé</div></div>
-        <input class="pi-sm" id="s-idle" type="number" value="0" min="0" max="120">
-      </div>
-      <div class="pr">
-        <div class="pr-left"><div class="pr-label">Démarrage automatique</div><div class="pr-sub">Au login du bureau</div></div>
-        <label class="tgl"><input type="checkbox" id="s-autostart"><span class="tgl-t"></span></label>
-      </div>
+    <div class="ps"><div class="ps-t">Affichage</div>
+      <div class="pr"><div class="pr-lbl">Gap grille (px)</div><input class="pi-sm" id="s-gap" type="number" value="3" min="0" max="20"></div>
+      <div class="pr"><div class="pr-left"><div class="pr-lbl">Horloge dans HUD</div></div><label class="tgl"><input type="checkbox" id="s-clock" checked><span class="tgl-t"></span></label></div>
+      <div class="pr"><div class="pr-left"><div class="pr-lbl">D&#xE9;marrage automatique</div><div class="pr-sub">Au login du bureau</div></div><label class="tgl"><input type="checkbox" id="s-autostart"><span class="tgl-t"></span></label></div>
     </div>
-    <div class="ps">
-      <div class="ps-t">Affichage</div>
-      <div class="pr">
-        <div class="pr-label">Horloge dans le HUD</div>
-        <label class="tgl"><input type="checkbox" id="s-clock" checked><span class="tgl-t"></span></label>
-      </div>
-      <div class="pr">
-        <div class="pr-label">Labels caméras</div>
-        <label class="tgl"><input type="checkbox" id="s-labels" checked><span class="tgl-t"></span></label>
-      </div>
-    </div>
-    <button class="btn-primary" id="btn-save2">Sauvegarder</button>
-    <div class="save-ok" id="save-ok2"></div>
+    <div class="ps"><div class="ps-t">&#xC9;cran d&#xE9;di&#xE9;</div><div id="displayer"></div></div>
+    <button class="btn-primary" id="btn-save-opts">Sauvegarder</button>
+    <div class="save-ok" id="save-ok-opts"></div>
   </div>
 
-  <!-- Système -->
   <div class="p-pane" id="tab-sys">
-    <div class="ps">
-      <div class="ps-t">Informations</div>
-      <div id="sys-info" class="sys-card"></div>
+    <div class="ps"><div class="ps-t">Informations</div><div id="sys-info-panel" class="sys-card"></div></div>
+    <div class="ps"><div class="ps-t">Mises &#xE0; jour</div>
+      <div class="action-row"><button class="btn-ghost" id="btn-checkupd">&#x1F504; V&#xE9;rifier</button><span id="upd-status" style="font-size:12px;color:var(--dim);align-self:center"></span></div>
     </div>
-    <div class="ps">
-      <div class="ps-t">Mises à jour</div>
-      <div id="upd-badge" class="upd-badge">
-        🚀 Nouvelle version disponible !
-        <span class="upd-link" id="upd-dl">Télécharger</span>
-      </div>
-      <div class="action-row" style="margin-top:10px">
-        <button class="btn-ghost" id="btn-checkupd">🔄 Vérifier</button>
-        <span id="upd-status" style="font-size:12px;color:var(--dim);align-self:center"></span>
-      </div>
-    </div>
-    <div class="ps">
-      <div class="ps-t">Utilitaires</div>
+    <div class="ps"><div class="ps-t">Utilitaires</div>
       <div class="action-row">
-        <button class="btn-ghost" id="btn-opendir">📂 Config</button>
-        <button class="btn-ghost" id="btn-openlog">📋 Logs</button>
-        <button class="btn-ghost" id="btn-setup">🔧 Assistant</button>
+        <button class="btn-ghost" id="btn-opendir">&#x1F4C2; Config</button>
+        <button class="btn-ghost" id="btn-openlog">&#x1F4CB; Logs</button>
+        <button class="btn-ghost" id="btn-setup">&#x1F527; Assistant</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Hint clavier -->
 <div id="hint">
-  <span><kbd>Clic</kbd> zoom cam</span>
-  <span><kbd>ESC</kbd> retour</span>
-  <span><kbd>P</kbd> pause</span>
-  <span><kbd>S</kbd> settings</span>
-  <span><kbd>F12</kbd> debug</span>
+  <span><kbd>Double-clic</kbd>zoom</span>
+  <span><kbd>ESC</kbd>fermer</span>
+  <span><kbd>P</kbd>pause</span>
+  <span><kbd>S</kbd>settings</span>
 </div>
 
 <script>
-const API = window.CamWall;
-let cfg = {}, camPaused = {}, camRetries = {}, retryTimers = {};
-let globalPaused = false, focusedCam = null, layoutOvr = null, updateInfo = null;
+const API=window.CamWall;
+let cfg={},camPaused={},camRetries={},retryTimers={};
+let globalPaused=false,selectedCell=null,updateInfo=null;
 
-const go2rtcBase = () => `http://localhost:${cfg.go2rtcPort||1984}`;
-const mjpegUrl   = (id) => `${go2rtcBase()}/api/stream.mjpeg?src=${encodeURIComponent(id)}&_=${Date.now()}`;
-const streamId   = (cam, focused) => (!focused && cfg.useSubStream!==false && cam.subUrl) ? cam.id+'_sub' : cam.id;
+const go2rtcBase=()=>`http://localhost:${cfg.go2rtcPort||1984}`;
+function mjpegUrl(id){return `${go2rtcBase()}/api/stream.mjpeg?src=${encodeURIComponent(id)}&_=${Date.now()}`;}
+function nextDelay(id){const base=cfg.reconnectDelay||5,max=cfg.maxReconnectDelay||60;camRetries[id]=(camRetries[id]||0)+1;return Math.min(base*Math.pow(1.6,camRetries[id]-1),max);}
+function resetRetry(id){camRetries[id]=0;}
+function getWeek(d){const s=new Date(d.getFullYear(),0,1);return Math.ceil(((d-s)/86400000+s.getDay()+1)/7);}
+function fmtUptime(s){const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return `${h}h${m}m`;}
+function fmtBytes(b){return b>1e9?`${(b/1e9).toFixed(1)}Go`:b>1e6?`${(b/1e6).toFixed(0)}Mo`:`${b}o`;}
 
-// Exponential backoff
-function nextDelay(id) {
-  const base=cfg.reconnectDelay||5, max=cfg.maxReconnectDelay||60;
-  camRetries[id]=(camRetries[id]||0)+1;
-  return Math.min(base*Math.pow(1.6,camRetries[id]-1),max);
-}
-function resetRetry(id) { camRetries[id]=0; }
-
-// ── Layouts ──────────────────────────────────────────────────
-const LAYOUTS=[{id:'auto'},{id:'1',cols:1,rows:1},{id:'2',cols:2,rows:1},{id:'4',cols:2,rows:2},{id:'6',cols:3,rows:2},{id:'9',cols:3,rows:3}];
-function autoGrid(n){if(n<=1)return[1,1];if(n===2)return[2,1];if(n<=4)return[2,2];if(n<=6)return[3,2];return[3,3];}
-function applyLayout(){
-  const grid=document.getElementById('grid');
-  const gap=cfg.gridGap!==undefined?cfg.gridGap:3;
-  grid.style.gap=`${gap}px`;
-  if(focusedCam){grid.style.gridTemplateColumns='1fr';grid.style.gridTemplateRows='1fr';return;}
-  const lid=layoutOvr||'auto', l=LAYOUTS.find(x=>x.id===lid);
-  const[c,r]=l&&l.cols?[l.cols,l.rows]:autoGrid(cfg.cameras.length);
-  grid.style.gridTemplateColumns=`repeat(${c},1fr)`;
-  grid.style.gridTemplateRows=`repeat(${r},1fr)`;
-  document.querySelectorAll('.lp').forEach(b=>b.classList.toggle('active',b.dataset.id===lid));
-}
-function buildLP(){
-  const p=document.getElementById('lpick');p.innerHTML='';
-  LAYOUTS.forEach(l=>{
-    const btn=document.createElement('div');
-    btn.className='lp'+(l.id==='auto'?' auto':'');btn.dataset.id=l.id;
-    if(l.id==='auto'){btn.textContent='AUTO';}
-    else{const c=Math.min(l.cols,3),r=Math.min(l.rows,3);btn.style.gridTemplateColumns=`repeat(${c},1fr)`;btn.style.gridTemplateRows=`repeat(${r},1fr)`;for(let i=0;i<c*r;i++)btn.appendChild(document.createElement('span'));}
-    btn.addEventListener('click',()=>{layoutOvr=l.id==='auto'?null:l.id;applyLayout();});
-    p.appendChild(btn);
-  });
-}
-
-// ── Clock ─────────────────────────────────────────────────────
+// CLOCK
 function startClock(){
   const p=n=>String(n).padStart(2,'0');
   setInterval(()=>{
     const now=new Date();
     const c=document.getElementById('hud-clk'),d=document.getElementById('hud-dt');
-    if(c&&cfg.showClock!==false) c.textContent=`${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`;
-    if(d) d.textContent=now.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'}).toUpperCase();
+    if(c&&cfg.showClock!==false)c.textContent=`${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`;
+    if(d)d.textContent=now.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'}).toUpperCase();
+    document.querySelectorAll('.clock-time').forEach(el=>el.textContent=`${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`);
+    document.querySelectorAll('.clock-date').forEach(el=>el.textContent=now.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}));
+    document.querySelectorAll('.clock-sub').forEach(el=>el.textContent=`${now.getFullYear()} - Semaine ${getWeek(now)}`);
   },1000);
 }
 
-// ── Grille ────────────────────────────────────────────────────
-function setDot(cell,state){const d=cell.querySelector('.cam-dot');if(d)d.className=`cam-dot ${state}`;}
-
-function loadCam(cam,cell,focused=false){
-  const img=cell.querySelector('img'),err=cell.querySelector('.cam-err');
-  if(!img||(!cam.mainUrl&&cam.type!=='reolink'))return;
-  if(camPaused[cam.id]||globalPaused)return;
-  clearTimeout(retryTimers[cam.id]);
-  setDot(cell,'conn');if(err)err.classList.remove('show');
-  const sid=streamId(cam,focused);
-  img.src=`${go2rtcBase()}/api/stream.mjpeg?src=${encodeURIComponent(sid)}&_=${Date.now()}`;
-}
-
+// GRILLE
 function renderGrid(){
   const grid=document.getElementById('grid');
-  const empty=document.getElementById('empty');
-  const names=cfg.cameras.map(c=>c.id);
-  [...grid.querySelectorAll('.cam-cell')].forEach(cell=>{if(!names.includes(cell.dataset.id)){clearTimeout(retryTimers[cell.dataset.id]);cell.remove();}});
-  if(cfg.cameras.length===0){empty.classList.add('show');applyLayout();return;}
-  empty.classList.remove('show');
-
-  cfg.cameras.forEach((cam,idx)=>{
-    let cell=document.getElementById(`cell-${cam.id}`);
-    if(!cell){
-      cell=document.createElement('div');
-      cell.className='cam-cell';cell.id=`cell-${cam.id}`;cell.dataset.id=cam.id;
-      const img=document.createElement('img');img.alt=cam.label||cam.id;
-      img.onload=()=>{setDot(cell,'ok');resetRetry(cam.id);};
-      img.onerror=()=>{
-        if(camPaused[cam.id]||globalPaused)return;
-        setDot(cell,'err');
-        const e=cell.querySelector('.cam-err');
-        if(e){e.classList.add('show');const m=e.querySelector('.cam-err-msg');if(m){const d=nextDelay(cam.id);m.textContent=`Signal perdu — retry dans ${Math.round(d)}s`;}}
-        if(cfg.reconnect!==false){const d=nextDelay(cam.id);retryTimers[cam.id]=setTimeout(()=>loadCam(cam,cell,!!focusedCam&&focusedCam===cam.id),d*1000);}
-      };
-      cell.innerHTML=`
-        <div class="cam-overlay"></div>
-        <div class="cam-badge"><div class="cam-dot conn"></div><span class="cam-id-text">CAM_${String(idx+1).padStart(2,'0')}</span></div>
-        <div class="cam-rec">REC</div>
-        <div class="cam-label">${cam.label||cam.id}</div>
-        <div class="cam-snap" title="Snapshot">📸</div>
-        <div class="cam-tog" title="Pause/Reprendre">⏸</div>
-        <div class="cam-err">
-          <div class="cam-err-icon">📡</div>
-          <div class="cam-err-msg">Signal perdu</div>
-          <div class="cam-err-btn">↺ Reconnecter</div>
-        </div>`;
-      cell.insertBefore(img,cell.firstChild);
-      cell.querySelector('.cam-err-btn').addEventListener('click',e=>{e.stopPropagation();clearTimeout(retryTimers[cam.id]);resetRetry(cam.id);loadCam(cam,cell);});
-      cell.addEventListener('click',e=>{if(e.target.closest('.cam-tog,.cam-snap,.cam-err-btn'))return;toggleFocus(cam.id);});
-      cell.querySelector('.cam-tog').addEventListener('click',e=>{
-        e.stopPropagation();camPaused[cam.id]=!camPaused[cam.id];
-        const btn=cell.querySelector('.cam-tog');
-        if(camPaused[cam.id]){clearTimeout(retryTimers[cam.id]);cell.querySelector('img').src='';setDot(cell,'off');btn.textContent='▶';}
-        else{btn.textContent='⏸';loadCam(cam,cell);}
-      });
-      cell.querySelector('.cam-snap').addEventListener('click',async e=>{
-        e.stopPropagation();
-        try{const r=await fetch(`${go2rtcBase()}/api/frame.jpeg?src=${encodeURIComponent(cam.id)}&_=${Date.now()}`);const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`${cam.id}_${new Date().toISOString().replace(/[:.]/g,'-')}.jpg`;a.click();URL.revokeObjectURL(a.href);}
-        catch(err){console.error('Snapshot:',err);}
-      });
-      grid.appendChild(cell);
-      setTimeout(()=>loadCam(cam,cell),idx*250);
-    } else {
-      const l=cell.querySelector('.cam-label'),s=cell.querySelector('.cam-id-text');
-      if(l)l.textContent=cam.label||cam.id;if(s)s.textContent=`CAM_${String(idx+1).padStart(2,'0')}`;
-    }
-    const l=cell.querySelector('.cam-label');if(l)l.style.display=cfg.showLabels!==false?'':'none';
-  });
-  document.getElementById('cam-badge').querySelector('span').textContent=`${cfg.cameras.length} CAM`;
-  applyLayout();
-}
-
-// ── Focus ─────────────────────────────────────────────────────
-function toggleFocus(id){
-  const cells=[...document.querySelectorAll('.cam-cell')];
-  const cam=cfg.cameras.find(c=>c.id===id);
-  if(focusedCam===id){
-    focusedCam=null;cells.forEach(c=>{c.style.display='';c.classList.remove('focused');});
-    if(cam){const cell=document.getElementById(`cell-${id}`);if(cell)loadCam(cam,cell,false);}
-  } else {
-    focusedCam=id;cells.forEach(c=>{if(c.dataset.id===id){c.classList.add('focused');c.style.display='';}else c.style.display='none';});
-    if(cam){const cell=document.getElementById(`cell-${id}`);if(cell)loadCam(cam,cell,true);}
+  const {cols=2,rows=2,cells=[]}=cfg.grid||{};
+  grid.style.gridTemplateColumns=`repeat(${cols},1fr)`;
+  grid.style.gridTemplateRows=`repeat(${rows},1fr)`;
+  grid.style.gap=`${cfg.gridGap||3}px`;
+  grid.innerHTML='';
+  for(let i=0;i<cols*rows;i++){
+    const cc=cells[i]||{id:`cell-${i}`,type:'empty'};
+    grid.appendChild(createCell(cc,i));
   }
-  applyLayout();
 }
 
-// ── Pause global ──────────────────────────────────────────────
+const TYPE_ICONS={camera:'📷',sysinfo:'💻',proxmox:'🖥️',clock:'🕐',empty:'⬛'};
+const TYPE_LABELS={camera:'CAM',sysinfo:'SYSTEM',proxmox:'PROXMOX',clock:'CLOCK',empty:'EMPTY'};
+
+function createCell(cc,idx){
+  const div=document.createElement('div');
+  div.className='cell';div.dataset.idx=idx;
+  div.innerHTML=`<div class="cell-badge"><div class="dot ${cc.type==='camera'?'conn':'off'}"></div><span class="cell-type-lbl">${TYPE_LABELS[cc.type]||cc.type.toUpperCase()}</span></div>${cc.label?`<div class="cell-label">${cc.label}</div>`:''}`;
+  const content=buildContent(cc,div);
+  if(content)div.appendChild(content);
+  div.addEventListener('dblclick',e=>{if(!e.target.closest('.cam-tog,.cam-snap,.cam-err-btn'))openZoom(cc,div);});
+  return div;
+}
+
+function buildContent(cc,parentDiv){
+  switch(cc.type){
+    case'camera':return buildCam(cc,parentDiv);
+    case'sysinfo':return buildSys();
+    case'proxmox':return buildPx(cc);
+    case'clock':return buildClock();
+    case'empty':return buildEmpty(cc);
+    default:return null;
+  }
+}
+
+// CAM WIDGET
+function buildCam(cc,parentDiv){
+  const wrap=document.createElement('div');
+  wrap.style.cssText='position:absolute;inset:0;';
+  const cam=cfg.cameras?.find(c=>c.id===cc.cameraId);
+  const img=document.createElement('img');img.className='cam-img';img.alt=cc.label||'cam';
+  wrap.appendChild(img);
+  wrap.insertAdjacentHTML('beforeend','<div class="cam-overlay"></div><div class="cam-err"><div class="cam-err-icon">📡</div><div class="cam-err-msg">Signal perdu</div><div class="cam-err-btn">↺ Reconnecter</div></div>');
+  const snap=Object.assign(document.createElement('div'),{className:'cam-snap',title:'Snapshot',textContent:'📸'});
+  const tog=Object.assign(document.createElement('div'),{className:'cam-tog',title:'Pause',textContent:'⏸'});
+  wrap.append(snap,tog);
+  if(cam){
+    loadCamImg(img,cam,parentDiv,wrap);
+    snap.onclick=async e=>{e.stopPropagation();try{const r=await fetch(`${go2rtcBase()}/api/frame.jpeg?src=${encodeURIComponent(cam.id)}&_=${Date.now()}`);const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`${cam.id}_${Date.now()}.jpg`;a.click();}catch(_){}};
+    tog.onclick=e=>{e.stopPropagation();camPaused[cam.id]=!camPaused[cam.id];if(camPaused[cam.id]){clearTimeout(retryTimers[cam.id]);img.src='';setDot(parentDiv,'off');tog.textContent='▶';}else{tog.textContent='⏸';loadCamImg(img,cam,parentDiv,wrap);}};
+    wrap.querySelector('.cam-err-btn').onclick=e=>{e.stopPropagation();clearTimeout(retryTimers[cam.id]);resetRetry(cam.id);loadCamImg(img,cam,parentDiv,wrap);};
+  } else {
+    const err=wrap.querySelector('.cam-err');err.classList.add('show');err.querySelector('.cam-err-msg').textContent='Cam non configurée';setDot(parentDiv,'err');
+  }
+  return wrap;
+}
+function loadCamImg(img,cam,parentDiv,wrap){
+  setDot(parentDiv,'conn');wrap.querySelector('.cam-err').classList.remove('show');
+  img.onload=()=>{setDot(parentDiv,'ok');resetRetry(cam.id);};
+  img.onerror=()=>{
+    if(camPaused[cam.id]||globalPaused)return;
+    setDot(parentDiv,'err');const err=wrap.querySelector('.cam-err');err.classList.add('show');
+    if(cfg.reconnect!==false){const d=nextDelay(cam.id);err.querySelector('.cam-err-msg').textContent=`Signal perdu - retry ${Math.round(d)}s`;retryTimers[cam.id]=setTimeout(()=>loadCamImg(img,cam,parentDiv,wrap),d*1000);}
+  };
+  img.src=mjpegUrl(cam.id);
+}
+function setDot(cell,state){const d=cell.querySelector('.dot');if(d)d.className=`dot ${state}`;}
+
+// SYS WIDGET
+function buildSys(){
+  const wrap=document.createElement('div');wrap.className='sys-widget';
+  wrap.innerHTML='<div class="widget-title">💻 SYSTEME</div><div class="sys-body" style="display:flex;flex-direction:column;gap:7px;flex:1;overflow:hidden;"><div style="font-size:11px;color:var(--dim)">Chargement...</div></div>';
+  return wrap;
+}
+function renderSysWidgets(metrics){
+  document.querySelectorAll('.sys-widget').forEach(w=>{
+    const b=w.querySelector('.sys-body');if(!b||!metrics)return;
+    const fmt=n=>isNaN(n)?'—':n;
+    let html=`
+      <div class="sys-row"><div class="sys-icon">🖥</div><div class="sys-info"><div class="sys-name">HOSTNAME / OS</div><div class="sys-val">${metrics.hostname||'—'} · ${metrics.platform||'—'}</div></div></div>
+      <div class="sys-div"></div>
+      <div class="sys-row"><div class="sys-icon">⚙</div><div class="sys-info"><div class="sys-name">CPU${metrics.cpuTemp?` · ${metrics.cpuTemp}°C`:''}</div><div class="sys-val">${fmt(metrics.cpuPercent)}% · ${metrics.cpuCount} cœurs</div><div class="sys-bar-wrap"><div class="sys-bar bar-cpu" style="width:${metrics.cpuPercent||0}%"></div></div></div></div>
+      <div class="sys-row"><div class="sys-icon">🧠</div><div class="sys-info"><div class="sys-name">RAM</div><div class="sys-val">${fmtBytes(metrics.ramUsed||0)} / ${fmtBytes(metrics.ramTotal||0)} · ${fmt(metrics.ramPercent)}%</div><div class="sys-bar-wrap"><div class="sys-bar bar-ram" style="width:${metrics.ramPercent||0}%"></div></div></div></div>`;
+    if(metrics.gpu)html+=`<div class="sys-div"></div><div class="sys-row"><div class="sys-icon">🎮</div><div class="sys-info"><div class="sys-name">GPU · ${metrics.gpu.name?.split(' ').slice(-2).join(' ')||'—'}</div><div class="sys-val">${fmt(metrics.gpu.utilPercent)}% · ${fmt(metrics.gpu.temp)}°C · VRAM ${fmt(metrics.gpu.memUsed)}/${fmt(metrics.gpu.memTotal)} Mo</div><div class="sys-bar-wrap"><div class="sys-bar bar-gpu" style="width:${metrics.gpu.utilPercent||0}%"></div></div></div></div>`;
+    if(metrics.disks?.length){html+=`<div class="sys-div"></div>`;metrics.disks.slice(0,2).forEach(d=>html+=`<div class="sys-row"><div class="sys-icon">💾</div><div class="sys-info"><div class="sys-name">DISQUE ${d.mount}</div><div class="sys-val">${d.used} / ${d.size} · ${d.percent}</div><div class="sys-bar-wrap"><div class="sys-bar bar-disk" style="width:${parseInt(d.percent)||0}%"></div></div></div></div>`);}
+    if(metrics.network?.length){html+=`<div class="sys-div"></div>`;metrics.network.slice(0,2).forEach(n=>html+=`<div class="sys-row"><div class="sys-icon">🌐</div><div class="sys-info"><div class="sys-name">${n.name.toUpperCase()}</div><div class="sys-val">${n.address}</div></div></div>`);}
+    html+=`<div class="sys-div"></div><div class="sys-row"><div class="sys-icon">⏱</div><div class="sys-info"><div class="sys-name">UPTIME</div><div class="sys-val">${fmtUptime(metrics.uptime||0)}</div></div></div>`;
+    b.innerHTML=html;
+  });
+}
+API.onMetrics&&API.onMetrics(m=>renderSysWidgets(m));
+
+// PROXMOX WIDGET
+function buildPx(cc){
+  const wrap=document.createElement('div');wrap.className='px-widget';
+  wrap.innerHTML='<div class="widget-title">🖥 PROXMOX</div><div class="px-node-row"><span style="color:var(--dim);font-size:10px">Chargement...</span></div><div class="px-list"></div>';
+  if(cfg.proxmox?.enabled)refreshPxWidget(wrap);
+  else wrap.querySelector('.px-node-row').innerHTML='<span style="color:var(--dim);font-size:10px">Non configuré</span>';
+  return wrap;
+}
+async function refreshPxWidget(wrap){
+  try{
+    const data=await API.getProxmox(cfg);
+    if(!data){wrap.querySelector('.px-node-row').innerHTML='<span style="color:var(--red);font-size:10px">Connexion impossible</span>';return;}
+    const nd=data.node||{};
+    const cpuPct=Math.round((nd.cpu||0)*100);
+    const ramPct=nd.memory?Math.round((nd.memory.used/nd.memory.total)*100):0;
+    wrap.querySelector('.px-node-row').innerHTML=`<span>CPU <span class="px-node-val">${cpuPct}%</span></span><span>RAM <span class="px-node-val">${ramPct}%</span></span><span>Uptime <span class="px-node-val">${fmtUptime(nd.uptime||0)}</span></span>`;
+    const list=wrap.querySelector('.px-list');
+    const all=[...(data.vms||[]),...(data.lxcs||[])].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    list.innerHTML=all.slice(0,14).map(v=>`<div class="px-item"><div class="px-item-dot ${v.status==='running'?'px-run':'px-stop'}"></div><div class="px-item-name">${v.name||`ID${v.id}`}</div><div class="px-item-type">${v.type.toUpperCase()}</div>${v.status==='running'?`<div class="px-item-cpu">${v.cpu}%</div>`:''}</div>`).join('');
+  }catch(e){wrap.querySelector('.px-node-row').innerHTML=`<span style="color:var(--red);font-size:10px">${e.message}</span>`;}
+}
+let pxTimer=null;
+function startPxPolling(){if(pxTimer)clearInterval(pxTimer);if(cfg.proxmox?.enabled){pxTimer=setInterval(()=>document.querySelectorAll('.px-widget').forEach(w=>refreshPxWidget(w)),30000);setTimeout(()=>document.querySelectorAll('.px-widget').forEach(w=>refreshPxWidget(w)),500);}}
+
+// CLOCK WIDGET
+function buildClock(){
+  const now=new Date();const p=n=>String(n).padStart(2,'0');
+  const wrap=document.createElement('div');wrap.className='clock-widget';
+  wrap.innerHTML=`<div class="clock-time">${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}</div><div class="clock-date">${now.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div><div class="clock-sub">${now.getFullYear()} - Semaine ${getWeek(now)}</div>`;
+  return wrap;
+}
+
+// EMPTY WIDGET
+function buildEmpty(cc){
+  const wrap=document.createElement('div');wrap.className='empty-widget';
+  if(cc.imageData||cc.image){const img=document.createElement('img');img.src=cc.imageData||cc.image;wrap.appendChild(img);}
+  else wrap.innerHTML='<div class="empty-ph"><div class="empty-ph-icon">⬛</div><div class="empty-ph-txt">CASE VIDE</div></div>';
+  return wrap;
+}
+
+// ZOOM
+function openZoom(cc,sourceCell){
+  const ov=document.getElementById('zoom-overlay');
+  const inner=document.getElementById('zoom-inner');
+  document.getElementById('zoom-lbl').textContent=cc.label||TYPE_LABELS[cc.type]||cc.type;
+  inner.innerHTML='';
+  const dummy=document.createElement('div');
+  const content=buildContent(cc,dummy);
+  if(content)inner.appendChild(content);
+  ov.classList.add('show');
+}
+function closeZoom(){document.getElementById('zoom-overlay').classList.remove('show');}
+document.getElementById('zoom-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeZoom();});
+document.getElementById('zoom-close').addEventListener('click',closeZoom);
+
+// PAUSE
 document.getElementById('btn-pause').addEventListener('click',()=>{
   globalPaused=!globalPaused;
   const btn=document.getElementById('btn-pause');
   btn.textContent=globalPaused?'▶ Reprendre':'⏸ Pause';btn.classList.toggle('on',globalPaused);
-  cfg.cameras.forEach(cam=>{
-    const cell=document.getElementById(`cell-${cam.id}`),img=cell&&cell.querySelector('img');if(!img)return;
-    if(globalPaused){clearTimeout(retryTimers[cam.id]);img.src='';setDot(cell,'off');}
-    else if(!camPaused[cam.id]){resetRetry(cam.id);loadCam(cam,cell,focusedCam===cam.id);}
-  });
+  document.querySelectorAll('.cam-img').forEach(img=>{if(globalPaused)img.src='';});
 });
 
-// ── Idle + Visibility ─────────────────────────────────────────
-let idleTimer=null;
-function resetIdle(){
-  if(idleTimer)clearTimeout(idleTimer);
-  if(cfg.idleMinutes>0)idleTimer=setTimeout(()=>{if(!globalPaused)document.getElementById('btn-pause').click();},cfg.idleMinutes*60000);
-}
-['mousemove','keydown','click'].forEach(e=>document.addEventListener(e,resetIdle));
-document.addEventListener('visibilitychange',()=>{
-  cfg.cameras.forEach(cam=>{
-    const cell=document.getElementById(`cell-${cam.id}`),img=cell&&cell.querySelector('img');if(!img)return;
-    if(document.hidden){clearTimeout(retryTimers[cam.id]);img.src='';}
-    else if(!camPaused[cam.id]&&!globalPaused)loadCam(cam,cell,focusedCam===cam.id);
-  });
-});
-
-// ── Panel & Tabs ──────────────────────────────────────────────
+// PANEL TABS
 const panelEl=document.getElementById('panel'),btnCfg=document.getElementById('btn-cfg');
 document.querySelectorAll('.p-tab').forEach(tab=>{
   tab.addEventListener('click',()=>{
     document.querySelectorAll('.p-tab,.p-pane').forEach(el=>el.classList.remove('active'));
     tab.classList.add('active');document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
-    if(tab.dataset.tab==='display')loadDisplays();
-    if(tab.dataset.tab==='sys')loadSysInfo();
+    if(tab.dataset.tab==='opts'){loadDisplays();loadOpts();}
+    if(tab.dataset.tab==='sys')loadSysPanel();
+    if(tab.dataset.tab==='grid')renderGridPreview();
+    if(tab.dataset.tab==='cams')renderCamPanel();
+    if(tab.dataset.tab==='proxmox')loadPxPanel();
   });
 });
-btnCfg.addEventListener('click',()=>{const open=panelEl.classList.toggle('open');btnCfg.classList.toggle('on',open);if(open)renderPanel();});
-document.getElementById('ph-close').addEventListener('click',()=>{panelEl.classList.remove('open');btnCfg.classList.remove('on');});
-document.getElementById('empty-btn').addEventListener('click',()=>{panelEl.classList.add('open');btnCfg.classList.add('on');renderPanel();});
+btnCfg.addEventListener('click',()=>{const open=panelEl.classList.toggle('open');btnCfg.classList.toggle('active',open);if(open){renderGridPreview();renderCamPanel();}});
+document.getElementById('ph-close').addEventListener('click',()=>{panelEl.classList.remove('open');btnCfg.classList.remove('active');});
 
-// ── Camera types ──────────────────────────────────────────────
-const CAM_TYPES=[
-  {value:'rtsp',    label:'RTSP (générique)'},
-  {value:'reolink', label:'Reolink (natif)'},
-  {value:'tapo',    label:'Tapo / TP-Link'},
-  {value:'onvif',   label:'ONVIF'},
-  {value:'mjpeg',   label:'HTTP MJPEG'},
-  {value:'hls',     label:'HLS'},
-];
-const URL_HINTS={
-  rtsp:    {main:'rtsp://user:pass@IP:554/stream',    sub:'rtsp://user:pass@IP:554/stream_sub',help:''},
-  reolink: {main:'rtsp://admin:pass@IP:554/h264Preview_01_sub', sub:'', help:'<strong>Reolink 4K (H265)</strong> : utilise le sub-stream H264 en URL principale pour un affichage fiable. Ex : <strong>h264Preview_01_sub</strong>'},
-  tapo:    {main:'tapo://user:pass@IP',sub:'',help:''},
-  onvif:   {main:'onvif://user:pass@IP',sub:'',help:''},
-  mjpeg:   {main:'http://IP/mjpeg',sub:'',help:''},
-  hls:     {main:'http://IP/stream.m3u8',sub:'',help:''},
-};
+// GRID PREVIEW
+function renderGridPreview(){
+  const preview=document.getElementById('grid-preview');
+  const {cols=2,rows=2,cells=[]}=cfg.grid||{};
+  document.getElementById('g-cols').value=cols;document.getElementById('g-rows').value=rows;
+  preview.style.gridTemplateColumns=`repeat(${cols},1fr)`;preview.style.gridTemplateRows=`repeat(${rows},1fr)`;
+  preview.innerHTML='';
+  for(let i=0;i<cols*rows;i++){
+    const cc=cells[i]||{type:'empty'};
+    const div=document.createElement('div');div.className='gp-cell';div.dataset.idx=i;
+    div.innerHTML=`<div class="gp-cell-icon">${TYPE_ICONS[cc.type]||'⬛'}</div><div class="gp-cell-type">${TYPE_LABELS[cc.type]||cc.type.toUpperCase()}</div>`;
+    div.addEventListener('dblclick',()=>openCellCfg(i));
+    preview.appendChild(div);
+  }
+}
 
-function renderPanel(){
-  const list=document.getElementById('camlist');list.innerHTML='';
-  cfg.cameras.forEach((cam,i)=>{
-    const h=URL_HINTS[cam.type||'rtsp']||URL_HINTS.rtsp;
-    const typeOpts=CAM_TYPES.map(t=>`<option value="${t.value}"${(cam.type||'rtsp')===t.value?' selected':''}>${t.label}</option>`).join('');
-    const e=document.createElement('div');e.className='ce';
-    e.innerHTML=`
-      <div class="ce-row">
-        <input class="pi" placeholder="ID (ex: exterieur)" value="${cam.id||''}" data-f="id" data-i="${i}" style="flex:0.5">
-        <input class="pi" placeholder="Label affiché" value="${cam.label||''}" data-f="label" data-i="${i}">
-        <div class="ce-del" data-i="${i}" title="Supprimer">×</div>
-      </div>
-      <div>
-        <div class="ce-label">Type de caméra</div>
-        <select class="pi-sel" data-f="type" data-i="${i}">${typeOpts}</select>
-      </div>
-      <div>
-        <div class="ce-label">URL principale (HD)</div>
-        <input class="pi" placeholder="${h.main}" value="${cam.mainUrl||''}" data-f="mainUrl" data-i="${i}">
-      </div>
-      <div>
-        <div class="ce-label">URL sub-stream (SD, optionnel — grille légère)</div>
-        <input class="pi" placeholder="Laisser vide si idem" value="${cam.subUrl||''}" data-f="subUrl" data-i="${i}">
-      </div>
-      ${h.help?`<div class="cam-help">${h.help}</div>`:''}
-    `;
+document.getElementById('btn-apply-grid').addEventListener('click',()=>{
+  const cols=Math.max(1,Math.min(8,+document.getElementById('g-cols').value||2));
+  const rows=Math.max(1,Math.min(8,+document.getElementById('g-rows').value||2));
+  const prev=cfg.grid?.cells||[];
+  cfg.grid={cols,rows,cells:Array.from({length:cols*rows},(_,i)=>prev[i]||{id:`cell-${i}`,type:'empty',image:'',imageData:'',label:''})};
+  API.saveConfig(cfg);renderGrid();renderGridPreview();
+});
+
+function openCellCfg(idx){
+  const cc=(cfg.grid?.cells||[])[idx]||{type:'empty'};
+  selectedCell=idx;
+  document.getElementById('cell-cfg').style.display='block';
+  document.getElementById('cell-cfg-title').textContent=`Case #${idx+1}`;
+  document.getElementById('cc-type').value=cc.type||'empty';
+  document.getElementById('cc-lbl').value=cc.label||'';
+  const sel=document.getElementById('cc-cam');sel.innerHTML='<option value="">- Selectionner -</option>';
+  (cfg.cameras||[]).forEach(cam=>{const o=document.createElement('option');o.value=cam.id;o.textContent=cam.label||cam.id;if(cam.id===cc.cameraId)o.selected=true;sel.appendChild(o);});
+  updateCellCfgUI(cc.type||'empty');
+  document.getElementById('cc-type').onchange=()=>updateCellCfgUI(document.getElementById('cc-type').value);
+  document.getElementById('cc-img-btn').onclick=async()=>{const p=await API.pickImage();if(p){const d=await API.imageToDataUrl(p);if(d){(cfg.grid.cells||[])[idx]={...((cfg.grid.cells||[])[idx]||{}),imageData:d,image:p};}}};
+  document.querySelectorAll('.gp-cell').forEach((el,i)=>el.classList.toggle('sel',i===idx));
+}
+function updateCellCfgUI(type){
+  document.getElementById('cc-cam-row').style.display=type==='camera'?'flex':'none';
+  document.getElementById('cc-img-row').style.display=type==='empty'?'flex':'none';
+}
+document.getElementById('cc-save').addEventListener('click',()=>{
+  if(selectedCell===null)return;
+  const cells=cfg.grid?.cells||[];
+  cells[selectedCell]={...cells[selectedCell],id:`cell-${selectedCell}`,type:document.getElementById('cc-type').value,cameraId:document.getElementById('cc-cam').value,label:document.getElementById('cc-lbl').value};
+  cfg.grid.cells=cells;API.saveConfig(cfg);renderGrid();renderGridPreview();
+  document.getElementById('cell-cfg').style.display='none';selectedCell=null;
+  document.querySelectorAll('.gp-cell').forEach(el=>el.classList.remove('sel'));
+});
+
+// CAM PANEL
+function renderCamPanel(){
+  const list=document.getElementById('cam-list');list.innerHTML='';
+  (cfg.cameras||[]).forEach((cam,i)=>{
+    const e=document.createElement('div');
+    e.style.cssText='background:rgba(99,102,241,.03);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px;';
+    e.innerHTML=`<div style="display:flex;gap:8px;align-items:center"><input class="pi-in" placeholder="ID" value="${cam.id||''}" data-f="id" data-i="${i}" style="flex:.4"><input class="pi-in" placeholder="Label" value="${cam.label||''}" data-f="label" data-i="${i}"><div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.15);border-radius:5px;cursor:pointer;color:var(--red);flex-shrink:0" data-del="${i}">×</div></div><div><div style="font-size:11px;color:var(--dim);margin-bottom:4px">URL principale (RTSP/main)</div><input class="pi-in" placeholder="rtsp://user:pass@IP:554/h264Preview_01_sub" value="${cam.mainUrl||''}" data-f="mainUrl" data-i="${i}" style="width:100%"></div><div><div style="font-size:11px;color:var(--dim);margin-bottom:4px">URL sub-stream (optionnel)</div><input class="pi-in" placeholder="Laisser vide si identique" value="${cam.subUrl||''}" data-f="subUrl" data-i="${i}" style="width:100%"></div>`;
     list.appendChild(e);
-    const sel=e.querySelector('select');
-    sel.addEventListener('change',()=>{
-      const nh=URL_HINTS[sel.value]||URL_HINTS.rtsp;
-      const inputs=e.querySelectorAll('input.pi');
-      inputs[0].placeholder=nh.main;if(inputs[1])inputs[1].placeholder=nh.sub||'';
-      const help=e.querySelector('.cam-help');if(help)help.innerHTML=nh.help||'';
-    });
   });
-  list.querySelectorAll('.pi').forEach(inp=>inp.addEventListener('input',()=>{cfg.cameras[+inp.dataset.i][inp.dataset.f]=inp.value;}));
-  list.querySelectorAll('select').forEach(sel=>sel.addEventListener('change',()=>{cfg.cameras[+sel.dataset.i][sel.dataset.f]=sel.value;}));
-  list.querySelectorAll('.ce-del').forEach(btn=>btn.addEventListener('click',()=>{
-    const i=+btn.dataset.i;clearTimeout(retryTimers[cfg.cameras[i].id]);
-    const cell=document.getElementById(`cell-${cfg.cameras[i].id}`);if(cell)cell.remove();
-    cfg.cameras.splice(i,1);renderPanel();renderGrid();
-  }));
-  // Opts
-  document.getElementById('s-server').value    =`http://localhost:${cfg.go2rtcPort||1984}`;
-  document.getElementById('s-reconnect').checked=cfg.reconnect!==false;
-  document.getElementById('s-delay').value     =cfg.reconnectDelay||5;
-  document.getElementById('s-maxdelay').value  =cfg.maxReconnectDelay||60;
-  document.getElementById('s-idle').value      =cfg.idleMinutes||0;
-  document.getElementById('s-clock').checked   =cfg.showClock!==false;
-  document.getElementById('s-labels').checked  =cfg.showLabels!==false;
-  document.getElementById('s-sub').checked     =cfg.useSubStream!==false;
-  document.getElementById('s-gap').value       =cfg.gridGap!==undefined?cfg.gridGap:3;
-  API.getAutostart().then(on=>{const el=document.getElementById('s-autostart');if(el)el.checked=on;});
+  list.querySelectorAll('.pi-in').forEach(inp=>inp.addEventListener('input',()=>{cfg.cameras[+inp.dataset.i][inp.dataset.f]=inp.value;}));
+  list.querySelectorAll('[data-del]').forEach(btn=>btn.addEventListener('click',()=>{cfg.cameras.splice(+btn.dataset.del,1);renderCamPanel();}));
 }
+document.getElementById('btn-add-cam').addEventListener('click',()=>{if(!cfg.cameras)cfg.cameras=[];cfg.cameras.push({id:`cam${cfg.cameras.length+1}`,label:'',type:'rtsp',mainUrl:'',subUrl:''});renderCamPanel();});
+document.getElementById('btn-save-cams').addEventListener('click',async()=>{await API.saveConfig(cfg);await API.go2rtcRestart(cfg);setTimeout(()=>renderGrid(),1800);showSaveOk('save-ok-cams');panelEl.classList.remove('open');btnCfg.classList.remove('active');});
 
-document.getElementById('btn-add-cam').addEventListener('click',()=>{
-  cfg.cameras.push({id:`cam${cfg.cameras.length+1}`,label:'',type:'rtsp',mainUrl:'',subUrl:''});renderPanel();
+// PROXMOX PANEL
+function loadPxPanel(){const px=cfg.proxmox||{};document.getElementById('px-enabled').checked=!!px.enabled;document.getElementById('px-url').value=px.url||'';document.getElementById('px-node').value=px.node||'pve';document.getElementById('px-token-id').value=px.tokenId||'';document.getElementById('px-token-secret').value=px.tokenSecret||'';}
+document.getElementById('btn-save-proxmox').addEventListener('click',async()=>{
+  cfg.proxmox={enabled:document.getElementById('px-enabled').checked,url:document.getElementById('px-url').value.replace(/\/+$/,''),node:document.getElementById('px-node').value||'pve',tokenId:document.getElementById('px-token-id').value,tokenSecret:document.getElementById('px-token-secret').value};
+  await API.saveConfig(cfg);showSaveOk('save-ok-px');startPxPolling();
 });
 
-async function saveCfg(okId){
-  const sv=document.getElementById('s-server').value.replace(/\/+$/,'');
-  cfg.go2rtcPort     =parseInt(sv.split(':').pop())||1984;
-  cfg.reconnect      =document.getElementById('s-reconnect').checked;
-  cfg.reconnectDelay =+document.getElementById('s-delay').value;
-  cfg.maxReconnectDelay=+document.getElementById('s-maxdelay').value;
-  cfg.idleMinutes    =+document.getElementById('s-idle').value;
-  cfg.showClock      =document.getElementById('s-clock').checked;
-  cfg.showLabels     =document.getElementById('s-labels').checked;
-  cfg.useSubStream   =document.getElementById('s-sub').checked;
-  cfg.gridGap        =+document.getElementById('s-gap').value;
-  await API.saveConfig(cfg);
-  await API.setAutostart(document.getElementById('s-autostart').checked);
-  await API.go2rtcRestart(cfg);
-  setTimeout(()=>{Object.keys(retryTimers).forEach(id=>clearTimeout(retryTimers[id]));cfg.cameras.forEach(cam=>{const cell=document.getElementById(`cell-${cam.id}`);if(cell)loadCam(cam,cell);});renderGrid();},1800);
-  applyLayout();resetIdle();
-  const ok=document.getElementById(okId||'save-ok');
-  if(ok){ok.textContent='✅ Configuration sauvegardée';setTimeout(()=>ok.textContent='',3000);}
-  panelEl.classList.remove('open');btnCfg.classList.remove('on');
-}
-document.getElementById('btn-save').addEventListener('click',()=>saveCfg('save-ok'));
-document.getElementById('btn-save2').addEventListener('click',()=>saveCfg('save-ok2'));
+// OPTIONS PANEL
+async function loadDisplays(){const displays=await API.getDisplays();const el=document.getElementById('displayer');el.innerHTML='';displays.forEach(d=>{const opt=document.createElement('div');opt.className='dopt'+(d.index===cfg.selectedDisplay?' active':'');opt.innerHTML=`<div><div class="dopt-name">${d.label}${d.primary?' *':''}</div><div class="dopt-info">${d.width}x${d.height}</div></div><div class="dopt-chk">v</div>`;opt.addEventListener('click',async()=>{await API.setDisplay(d.index);cfg.selectedDisplay=d.index;[...el.children].forEach(c=>c.classList.remove('active'));opt.classList.add('active');});el.appendChild(opt);});}
+function loadOpts(){document.getElementById('s-server').value=`http://localhost:${cfg.go2rtcPort||1984}`;document.getElementById('s-reconnect').checked=cfg.reconnect!==false;document.getElementById('s-delay').value=cfg.reconnectDelay||5;document.getElementById('s-gap').value=cfg.gridGap!==undefined?cfg.gridGap:3;document.getElementById('s-clock').checked=cfg.showClock!==false;API.getAutostart().then(on=>document.getElementById('s-autostart').checked=on);}
+document.getElementById('btn-save-opts').addEventListener('click',async()=>{cfg.go2rtcPort=parseInt(document.getElementById('s-server').value.split(':').pop())||1984;cfg.reconnect=document.getElementById('s-reconnect').checked;cfg.reconnectDelay=+document.getElementById('s-delay').value;cfg.gridGap=+document.getElementById('s-gap').value;cfg.showClock=document.getElementById('s-clock').checked;await API.saveConfig(cfg);await API.setAutostart(document.getElementById('s-autostart').checked);document.getElementById('grid').style.gap=`${cfg.gridGap}px`;showSaveOk('save-ok-opts');panelEl.classList.remove('open');btnCfg.classList.remove('active');});
 
-async function loadDisplays(){
-  const displays=await API.getDisplays();
-  const el=document.getElementById('displayer');el.innerHTML='';
-  displays.forEach(d=>{
-    const opt=document.createElement('div');opt.className='dopt'+(d.index===cfg.selectedDisplay?' active':'');
-    opt.innerHTML=`<div><div class="dopt-name">${d.label}${d.primary?' ★ Principal':''}</div><div class="dopt-info">${d.width} × ${d.height} px</div></div><div class="dopt-check">✓</div>`;
-    opt.addEventListener('click',async()=>{await API.setDisplay(d.index);cfg.selectedDisplay=d.index;[...el.children].forEach(c=>c.classList.remove('active'));opt.classList.add('active');});
-    el.appendChild(opt);
-  });
-}
-
-async function loadSysInfo(){
-  const[ver,autostart,go2rtcOk]=await Promise.all([API.getVersion(),API.getAutostart(),API.go2rtcStatus()]);
-  document.getElementById('sys-info').innerHTML=`
-    <div class="sys-row"><span>Version</span><strong>v${ver}</strong></div>
-    <div class="sys-row"><span>go2rtc</span><strong>${go2rtcOk?'✅ Actif':'❌ Inactif'}</strong></div>
-    <div class="sys-row"><span>Démarrage auto</span><strong>${autostart?'✅ Activé':'❌ Désactivé'}</strong></div>
-    <div class="sys-row"><span>Caméras</span><strong>${cfg.cameras.length} configurée${cfg.cameras.length>1?'s':''}</strong></div>
-    <div class="sys-row"><span>Sub-stream</span><strong>${cfg.useSubStream!==false?'✅ Activé':'❌ Désactivé'}</strong></div>
-    <div class="sys-row"><span>Architecture</span><strong>${navigator.platform}</strong></div>`;
-  if(updateInfo?.available){document.getElementById('upd-badge').classList.add('show');const dl=document.getElementById('upd-dl');if(dl)dl.onclick=()=>API.openUpdate(updateInfo.url);}
-}
-
-document.getElementById('btn-checkupd').addEventListener('click',async()=>{
-  const st=document.getElementById('upd-status');st.textContent='Vérification...';
-  const upd=await API.checkUpdate();updateInfo=upd;
-  if(upd.available){st.textContent=`v${upd.version} disponible !`;document.getElementById('upd-badge').classList.add('show');document.getElementById('upd-dl').onclick=()=>API.openUpdate(upd.url);}
-  else st.textContent=`À jour (v${upd.current})`;
-});
-
+// SYS PANEL
+async function loadSysPanel(){const[ver,autostart,m]=await Promise.all([API.getVersion(),API.getAutostart(),API.getMetrics()]);document.getElementById('sys-info-panel').innerHTML=`<div class="scr"><span>Version</span><strong>v${ver}</strong></div><div class="scr"><span>Autostart</span><strong>${autostart?'Actif':'Inactif'}</strong></div><div class="scr"><span>Cameras</span><strong>${cfg.cameras?.length||0}</strong></div>${m?.gpu?`<div class="scr"><span>GPU</span><strong>${m.gpu.name}</strong></div>`:''}<div class="scr"><span>CPU</span><strong>${m?.cpuModel?.split(' ').slice(-3).join(' ')||'—'}</strong></div>`;}
+document.getElementById('btn-checkupd').addEventListener('click',async()=>{const st=document.getElementById('upd-status');st.textContent='Verification...';const upd=await API.checkUpdate();st.textContent=upd.available?`v${upd.version} disponible !`:`A jour (v${upd.current})`;});
 document.getElementById('btn-opendir').addEventListener('click',()=>API.openConfigDir());
 document.getElementById('btn-openlog').addEventListener('click',()=>API.openLog());
 document.getElementById('btn-setup').addEventListener('click',()=>API.goToSetup());
 document.getElementById('btn-quit').addEventListener('click',()=>API.quit());
 
-API.onCmd&&API.onCmd((cmd)=>{
-  if(cmd==='pause-all'&&!globalPaused)document.getElementById('btn-pause').click();
-  if(cmd==='resume-all'&&globalPaused)document.getElementById('btn-pause').click();
-  if(cmd==='open-settings'){panelEl.classList.add('open');btnCfg.classList.add('on');renderPanel();}
-});
-API.onUpdate&&API.onUpdate(upd=>{
-  updateInfo=upd;const n=document.getElementById('upd-notif'),l=document.getElementById('upd-link');
-  if(n&&l){n.classList.add('show');l.onclick=()=>API.openUpdate(upd.url);}
-});
+API.onUpdate&&API.onUpdate(upd=>{const n=document.getElementById('upd-notif'),l=document.getElementById('upd-link');if(n&&l){n.classList.add('show');l.onclick=()=>API.openUpdate(upd.url);}});
 document.getElementById('upd-x').addEventListener('click',()=>document.getElementById('upd-notif').classList.remove('show'));
 
+// KEYBOARD
 document.addEventListener('keydown',e=>{
   if(e.target.matches('input,select'))return;
-  if(e.key==='Escape'){if(focusedCam)toggleFocus(focusedCam);else{panelEl.classList.remove('open');btnCfg.classList.remove('on');}}
+  if(e.key==='Escape'){if(document.getElementById('zoom-overlay').classList.contains('show'))closeZoom();else{panelEl.classList.remove('open');btnCfg.classList.remove('active');}}
   if(e.key==='p'||e.key==='P')document.getElementById('btn-pause').click();
   if(e.key==='s'||e.key==='S')btnCfg.click();
 });
 
+function showSaveOk(id){const el=document.getElementById(id);if(!el)return;el.textContent='Sauvegarde OK';setTimeout(()=>el.textContent='',3000);}
+
+API.onCmd&&API.onCmd(cmd=>{
+  if(cmd==='pause-all'&&!globalPaused)document.getElementById('btn-pause').click();
+  if(cmd==='resume-all'&&globalPaused)document.getElementById('btn-pause').click();
+  if(cmd==='open-settings'){panelEl.classList.add('open');btnCfg.classList.add('active');}
+});
+
+// INIT
 async function init(){
   cfg=await API.getConfig();
-  const ver=await API.getVersion();
-  const v=document.getElementById('hud-ver');if(v)v.textContent=`v${ver}`;
-  buildLP();startClock();renderGrid();resetIdle();
-  const h=document.getElementById('hint');
-  setTimeout(()=>h.classList.add('show'),1000);setTimeout(()=>h.classList.remove('show'),8000);
+  if(!cfg.grid){cfg.grid={cols:2,rows:2,cells:[{id:'cell-0',type:'camera',cameraId:cfg.cameras?.[0]?.id||'',label:''},{id:'cell-1',type:'empty',image:'',imageData:'',label:''},{id:'cell-2',type:'empty',image:'',imageData:'',label:''},{id:'cell-3',type:'empty',image:'',imageData:'',label:''}]};}
+  const ver=await API.getVersion();const hv=document.getElementById('hud-ver');if(hv)hv.textContent=`v${ver}`;
+  startClock();renderGrid();startPxPolling();
+  const h=document.getElementById('hint');setTimeout(()=>h.classList.add('show'),1000);setTimeout(()=>h.classList.remove('show'),8000);
 }
 init().catch(console.error);
 </script>
