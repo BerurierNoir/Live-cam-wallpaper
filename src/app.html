@@ -580,7 +580,9 @@ async function refreshKumaWidget(wrap,cc){
   const list=wrap.querySelector('.kuma-list');
   try{
     const url=`${cc.kumaUrl}/api/status-page/${cc.kumaSlug||'default'}`;
-    const resp=await fetch(url,{signal:AbortSignal.timeout(8000)});
+    const headers={};
+    if(cc.kumaToken)headers['Authorization']=`apikey ${cc.kumaToken}`;
+    const resp=await fetch(url,{signal:AbortSignal.timeout(8000),headers});
     if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
     const data=await resp.json();
     const monitors=[];
@@ -790,7 +792,8 @@ function updateCellCfgUI(type){
       ex.innerHTML=`
         <div class="cc-row"><span class="cc-lbl">URL Kuma</span><input class="pi-in" id="cc-kuma-url" type="text" value="${cur.kumaUrl||''}" placeholder="http://192.168.1.x:3001" style="width:190px"></div>
         <div class="cc-row"><span class="cc-lbl">Slug de la page</span><input class="pi-in" id="cc-kuma-slug" type="text" value="${cur.kumaSlug||'default'}" placeholder="default" style="width:120px"></div>
-        <div style="font-size:10px;color:var(--dim)">Page publique = pas d'auth requise</div>`;
+        <div class="cc-row"><span class="cc-lbl">API Token</span><input class="pi-in" id="cc-kuma-token" type="password" value="${cur.kumaToken||''}" placeholder="Optionnel (page privée)" style="width:190px"></div>
+        <div style="font-size:10px;color:var(--dim)">Token dans Uptime Kuma → Paramètres → Clés API</div>`;
       break;
     case 'beszel':
       ex.innerHTML=`
@@ -821,6 +824,7 @@ document.getElementById('cc-save').addEventListener('click',()=>{
     url:_g('cc-url'),
     kumaUrl:_g('cc-kuma-url'),
     kumaSlug:_g('cc-kuma-slug')||'default',
+    kumaToken:_g('cc-kuma-token'),
     bszUrl:_g('cc-bsz-url'),
     bszEmail:_g('cc-bsz-email'),
     bszPass:_g('cc-bsz-pass'),
