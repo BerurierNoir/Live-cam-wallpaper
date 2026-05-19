@@ -151,10 +151,13 @@ function buildGo2rtcStream(cam) {
   if (!cam.mainUrl) return null;
 
   // CRITIQUE: décoder l'URL avant écriture YAML
-  // go2rtc ne fait pas de décodage URL — il passe l'URL telle quelle à ffmpeg/rtsp
-  // Si le mot de passe contient %21 au lieu de !, la connexion échoue
   const url = decodeUrl(cam.mainUrl);
-  return [url];
+
+  // go2rtc ne peut pas servir MJPEG depuis H264/H265 sans FFmpeg.
+  // La solution : ajouter ffmpeg:CAM_ID#video=mjpeg comme 2ème source.
+  // go2rtc utilise alors FFmpeg pour décoder et encoder en JPEG.
+  // FFmpeg doit être dans PATH (vérifié : /usr/bin/ffmpeg sur Bazzite).
+  return [url, `ffmpeg:${cam.id}#video=mjpeg`];
 }
 
 function writeGo2rtcConfig(cfg) {
@@ -579,5 +582,6 @@ app.on('web-contents-created', (_, wc) => {
     if (!url.startsWith('file://')) e.preventDefault();
   });
 });
+
 
 
