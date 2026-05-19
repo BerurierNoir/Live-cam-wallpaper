@@ -578,30 +578,54 @@ function buildKuma(cc){
 
 async function refreshKumaWidget(wrap,cc){
   const list=wrap.querySelector('.kuma-list');
+  if(!cc.kumaUrl){list.innerHTML='<div style="font-size:10px;color:var(--dim)">Non configuré</div>';return;}
   try{
-    const url=`${cc.kumaUrl}/api/status-page/${cc.kumaSlug||'default'}`;
     const headers={};
     if(cc.kumaToken)headers['Authorization']=`apikey ${cc.kumaToken}`;
-    const resp=await fetch(url,{signal:AbortSignal.timeout(8000),headers});
-    if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
-    const data=await resp.json();
-    const monitors=[];
-    (data.publicGroupList||[]).forEach(group=>{
-      (group.monitorList||[]).forEach(m=>{
-        const hb=m.heartbeatList?.[m.heartbeatList.length-1];
-        const status=hb?.status??-1; // 0=down,1=up,2=pend,3=maint
-        const uptime=m.uptime?.day!=null?`${Math.round(m.uptime.day*10)/10}%`:'';
-        monitors.push({name:m.name,status,uptime});
-      });
+
+    // 1. Récupérer la liste des moniteurs depuis la page de statut
+    const pageResp=await fetch(`${cc.kumaUrl}/api/status-page/${cc.kumaSlug||'default'}`,{signal:AbortSignal.timeout(8000),headers});
+    if(!pageResp.ok)throw new Error(`Page HTTP ${pageResp.status}`);
+    const pageData=await pageResp.json();
+    const monitorIds={}; // id → name
+    (pageData.publicGroupList||[]).forEach(g=>{
+      (g.monitorList||[]).forEach(m=>{monitorIds[String(m.id)]=m.name;});
     });
-    if(!monitors.length){list.innerHTML='<div style="font-size:10px;color:var(--dim)">Aucun moniteur trouvé</div>';return;}
-    const cls={1:'kuma-up',0:'kuma-down',2:'kuma-pend',3:'kuma-maint'};
-    const tag={1:['UP','tag-up'],0:['DOWN','tag-down'],2:['PEND','tag-up'],3:['MAINT','tag-maint']};
-    list.innerHTML=monitors.map(m=>{
-      const c=cls[m.status]||'kuma-pend',t=tag[m.status]||['—','tag-up'];
-      return `<div class="kuma-monitor"><div class="kuma-dot ${c}"></div><div class="kuma-name">${m.name}</div>${m.uptime?`<div class="kuma-uptime">${m.uptime}</div>`:''}<div class="kuma-tag ${t[1]}">${t[0]}</div></div>`;
+    if(!Object.keys(monitorIds).length){list.innerHTML='<div style="font-size:10px;color:var(--dim)">Aucun moniteur</div>';return;}
+
+    // 2. Récupérer les statuts via /metrics (Prometheus)
+    const statuses={}; // id → {status, responseTime}
+    try{
+      const metResp=await fetch(`${cc.kumaUrl}/metrics`,{signal:AbortSignal.timeout(8000),headers});
+      if(metResp.ok){
+        const text=await metResp.text();
+        text.split('\n').forEach(line=>{
+          if(line.startsWith('monitor_status{')){
+            const idM=line.match(/monitor_id="(\d+)"/);
+            const valM=line.match(/}\s+([\d.]+)/);
+            if(idM&&valM)statuses[idM[1]]={status:parseFloat(valM[1])};
+          }
+          if(line.startsWith('monitor_response_time{')){
+            const idM=line.match(/monitor_id="(\d+)"/);
+            const valM=line.match(/}\s+([\d.]+)/);
+            if(idM&&valM){if(!statuses[idM[1]])statuses[idM[1]]={};statuses[idM[1]].rt=Math.round(parseFloat(valM[1]));}
+          }
+        });
+      }
+    }catch(_){/* metrics optionnels */}
+
+    // 3. Afficher
+    const cls={1:'kuma-up',0:'kuma-down'};
+    const tag={1:['UP','tag-up'],0:['DOWN','tag-down']};
+    list.innerHTML=Object.entries(monitorIds).map(([id,name])=>{
+      const s=statuses[id];
+      const status=s?.status??-1;
+      const rt=s?.rt?`<div class="kuma-uptime">${s.rt}ms</div>`:'';
+      const c=cls[status]||'kuma-pend';
+      const t=tag[status]||['—','tag-up'];
+      return `<div class="kuma-monitor"><div class="kuma-dot ${c}"></div><div class="kuma-name">${name}</div>${rt}<div class="kuma-tag ${t[1]}">${t[0]}</div></div>`;
     }).join('');
-  }catch(e){list.innerHTML=`<div style="font-size:10px;color:var(--red)">${e.message}</div>`;}
+  }catch(e){list.innerHTML=`<div style="font-size:10px;color:var(--red);padding:4px">${e.message}</div>`;}
 }
 
 // ─── BESZEL WIDGET ──────────────────────────────────────────
