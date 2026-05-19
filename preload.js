@@ -1,61 +1,38 @@
 'use strict';
-/**
- * CamWall v2.1 — preload.js
- * Fix: onCmd() utilisait || entre ipcRenderer.on() calls
- *      (ipcRenderer.on retourne ipcRenderer = truthy → court-circuit)
- *      → 3 appels séparés maintenant
- */
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('CamWall', {
-  // Config
   getConfig:  ()    => ipcRenderer.invoke('cfg:get'),
   saveConfig: (c)   => ipcRenderer.invoke('cfg:save', c),
-
-  // Écrans
   getDisplays: ()   => ipcRenderer.invoke('display:list'),
   setDisplay:  (i)  => ipcRenderer.invoke('display:set', i),
-
-  // go2rtc
   go2rtcCheck:    ()   => ipcRenderer.invoke('go2rtc:check'),
   go2rtcStart:    (c)  => ipcRenderer.invoke('go2rtc:start', c),
   go2rtcStop:     ()   => ipcRenderer.invoke('go2rtc:stop'),
   go2rtcRestart:  (c)  => ipcRenderer.invoke('go2rtc:restart', c),
   go2rtcDownload: ()   => ipcRenderer.invoke('go2rtc:download'),
   go2rtcStatus:   ()   => ipcRenderer.invoke('go2rtc:status'),
-  go2rtcWriteCfg: (c)  => ipcRenderer.invoke('go2rtc:write-cfg', c),
   onDownloadProgress: (cb) => ipcRenderer.on('go2rtc-dl-progress', (_, d) => cb(d)),
-
-  // Navigation
   goToApp:   () => ipcRenderer.invoke('nav:app'),
   goToSetup: () => ipcRenderer.invoke('nav:setup'),
-
-  // Mouse
-  setMouseInteractive: (on) => ipcRenderer.send('mouse:interactive', on),
-
-  // Click-through
-  setClickThrough: (on) => ipcRenderer.invoke('clickthrough:set', on),
-
-  // Autostart
-  getAutostart: ()    => ipcRenderer.invoke('autostart:get'),
-  setAutostart: (on)  => ipcRenderer.invoke('autostart:set', on),
-
-  // Updates
-  checkUpdate: ()      => ipcRenderer.invoke('update:check'),
-  openUpdate:  (url)   => ipcRenderer.invoke('update:open', url),
-  onUpdate:    (cb)    => ipcRenderer.on('update:available', (_, d) => cb(d)),
-
-  // Commandes tray → renderer
-  // Fix v2.1: 3 appels séparés (pas ||) pour enregistrer tous les listeners
+  getMetrics:    ()    => ipcRenderer.invoke('metrics:get'),
+  onMetrics:     (cb)  => ipcRenderer.on('metrics:update', (_, d) => cb(d)),
+  getProxmox:    (c)   => ipcRenderer.invoke('proxmox:get', c),
+  getAutostart: ()   => ipcRenderer.invoke('autostart:get'),
+  setAutostart: (on) => ipcRenderer.invoke('autostart:set', on),
+  checkUpdate:  ()   => ipcRenderer.invoke('update:check'),
+  openUpdate:   (u)  => ipcRenderer.invoke('update:open', u),
+  onUpdate:     (cb) => ipcRenderer.on('update:available', (_, d) => cb(d)),
   onCmd: (cb) => {
-    ipcRenderer.on('cmd:pause-all',     (_, d) => cb('pause-all', d));
-    ipcRenderer.on('cmd:resume-all',    (_, d) => cb('resume-all', d));
-    ipcRenderer.on('cmd:open-settings', (_, d) => cb('open-settings', d));
+    ipcRenderer.on('cmd:pause-all',     () => cb('pause-all'));
+    ipcRenderer.on('cmd:resume-all',    () => cb('resume-all'));
+    ipcRenderer.on('cmd:open-settings', () => cb('open-settings'));
   },
-
-  // Utilitaires
   openConfigDir: () => ipcRenderer.invoke('open:config-dir'),
   openLog:       () => ipcRenderer.invoke('open:log'),
   getVersion:    () => ipcRenderer.invoke('app:version'),
   quit:          () => ipcRenderer.invoke('app:quit'),
+  setClickThrough: (on) => ipcRenderer.invoke('clickthrough:set', on),
+  pickImage:     ()    => ipcRenderer.invoke('image:pick'),
+  imageToDataUrl:(p)   => ipcRenderer.invoke('image:toDataUrl', p),
 });
