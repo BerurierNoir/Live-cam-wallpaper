@@ -204,6 +204,11 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 #upd-notif.show{display:flex;}
 #upd-link{color:var(--indigo);cursor:pointer;text-decoration:underline;}
 .px-info{font-size:10px;color:var(--dim);line-height:1.8;background:rgba(99,102,241,.04);border:1px solid var(--border);border-radius:6px;padding:10px;}
+/* IFRAME WIDGET */
+.iframe-widget{position:absolute;inset:0;background:#000;}
+.iframe-widget iframe{width:100%;height:100%;border:none;display:block;}
+.iframe-widget webview{width:100%;height:100%;border:none;display:block;}
+
 .px-info span{color:var(--indigo);font-family:var(--mono);}
 </style>
 </head>
@@ -269,11 +274,13 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
           <option value="proxmox">&#x1F5A5; Proxmox</option>
           <option value="clock">&#x1F550; Horloge</option>
           <option value="empty">&#x2B1B; Vide / Image</option>
+          <option value="webpage">&#x1F310; Page Web (iframe)</option>
         </select>
       </div>
       <div class="cc-row" id="cc-cam-row"><span class="cc-lbl">Cam&#xE9;ra</span><select class="pi-sel" id="cc-cam" style="width:180px"></select></div>
       <div class="cc-row"><span class="cc-lbl">Label</span><input class="pi-in" id="cc-lbl" type="text" placeholder="Optionnel" style="width:160px"></div>
       <div class="cc-row" id="cc-img-row" style="display:none"><span class="cc-lbl">Image de fond</span><button class="btn-ghost" id="cc-img-btn">&#x1F4C2; Choisir</button></div>
+      <div class="cc-row" id="cc-url-row" style="display:none"><span class="cc-lbl" style="white-space:nowrap">URL de la page</span><input class="pi-in" id="cc-url" type="text" placeholder="http://192.168.1.x:3001/status/default" style="width:210px"></div>
       <button class="btn-primary" id="cc-save">Appliquer cette case</button>
     </div>
   </div>
@@ -382,8 +389,8 @@ function renderGrid(){
   }
 }
 
-const TYPE_ICONS={camera:'📷',sysinfo:'💻',proxmox:'🖥️',clock:'🕐',empty:'⬛'};
-const TYPE_LABELS={camera:'CAM',sysinfo:'SYSTEM',proxmox:'PROXMOX',clock:'CLOCK',empty:'EMPTY'};
+const TYPE_ICONS={camera:'📷',sysinfo:'💻',proxmox:'🖥️',clock:'🕐',empty:'⬛',webpage:'🌐'};
+const TYPE_LABELS={camera:'CAM',sysinfo:'SYSTEM',proxmox:'PROXMOX',clock:'CLOCK',empty:'EMPTY',webpage:'WEB'};
 
 function createCell(cc,idx){
   const div=document.createElement('div');
@@ -402,6 +409,7 @@ function buildContent(cc,parentDiv){
     case'proxmox':return buildPx(cc);
     case'clock':return buildClock();
     case'empty':return buildEmpty(cc);
+    case'webpage':return buildWebpage(cc);
     default:return null;
   }
 }
@@ -477,8 +485,12 @@ async function refreshPxWidget(wrap){
     if(!data){wrap.querySelector('.px-node-row').innerHTML='<span style="color:var(--red);font-size:10px">Connexion impossible</span>';return;}
     const nd=data.node||{};
     const cpuPct=Math.round((nd.cpu||0)*100);
-    const ramPct=nd.memory?Math.round((nd.memory.used/nd.memory.total)*100):0;
-    wrap.querySelector('.px-node-row').innerHTML=`<span>CPU <span class="px-node-val">${cpuPct}%</span></span><span>RAM <span class="px-node-val">${ramPct}%</span></span><span>Uptime <span class="px-node-val">${fmtUptime(nd.uptime||0)}</span></span>`;
+    const memUsed=nd.memory?.used||0;
+    const memTotal=nd.memory?.total||1;
+    const ramPct=Math.round((memUsed/memTotal)*100);
+    const memUsedGb=(memUsed/1073741824).toFixed(1);
+    const memTotalGb=(memTotal/1073741824).toFixed(1);
+    wrap.querySelector('.px-node-row').innerHTML=`<span>CPU <span class="px-node-val">${cpuPct}%</span></span><span>RAM <span class="px-node-val">${memUsedGb}/${memTotalGb}Go</span></span><span>Up <span class="px-node-val">${fmtUptime(nd.uptime||0)}</span></span>`;
     const list=wrap.querySelector('.px-list');
     const all=[...(data.vms||[]),...(data.lxcs||[])].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
     list.innerHTML=all.slice(0,14).map(v=>`<div class="px-item"><div class="px-item-dot ${v.status==='running'?'px-run':'px-stop'}"></div><div class="px-item-name">${v.name||`ID${v.id}`}</div><div class="px-item-type">${v.type.toUpperCase()}</div>${v.status==='running'?`<div class="px-item-cpu">${v.cpu}%</div>`:''}</div>`).join('');
@@ -486,6 +498,23 @@ async function refreshPxWidget(wrap){
 }
 let pxTimer=null;
 function startPxPolling(){if(pxTimer)clearInterval(pxTimer);if(cfg.proxmox?.enabled){pxTimer=setInterval(()=>document.querySelectorAll('.px-widget').forEach(w=>refreshPxWidget(w)),30000);setTimeout(()=>document.querySelectorAll('.px-widget').forEach(w=>refreshPxWidget(w)),500);}}
+
+
+// WEBPAGE WIDGET (iframe)
+function buildWebpage(cc){
+  const wrap=document.createElement('div');wrap.className='iframe-widget';
+  if(!cc.url){
+    wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;opacity:.3"><div style="font-size:28px">🌐</div><div style="font-size:10px;letter-spacing:1px;color:var(--muted)">URL NON CONFIGURÉE</div><div style="font-size:9px;color:var(--dim)">Double-clic → configurer la case</div></div>';
+    return wrap;
+  }
+  const iframe=document.createElement('iframe');
+  iframe.src=cc.url;
+  iframe.setAttribute('allowfullscreen','');
+  iframe.setAttribute('allow','autoplay');
+  // Pas de sandbox pour accès aux apps locales
+  wrap.appendChild(iframe);
+  return wrap;
+}
 
 // CLOCK WIDGET
 function buildClock(){
@@ -578,6 +607,7 @@ function openCellCfg(idx){
   updateCellCfgUI(cc.type||'empty');
   document.getElementById('cc-type').onchange=()=>updateCellCfgUI(document.getElementById('cc-type').value);
   document.getElementById('cc-img-btn').onclick=async()=>{const p=await API.pickImage();if(p){const d=await API.imageToDataUrl(p);if(d){(cfg.grid.cells||[])[idx]={...((cfg.grid.cells||[])[idx]||{}),imageData:d,image:p};}}};
+  document.getElementById('cc-url').value=cc.url||'';
   document.querySelectorAll('.gp-cell').forEach((el,i)=>el.classList.toggle('sel',i===idx));
 }
 function updateCellCfgUI(type){
@@ -587,7 +617,7 @@ function updateCellCfgUI(type){
 document.getElementById('cc-save').addEventListener('click',()=>{
   if(selectedCell===null)return;
   const cells=cfg.grid?.cells||[];
-  cells[selectedCell]={...cells[selectedCell],id:`cell-${selectedCell}`,type:document.getElementById('cc-type').value,cameraId:document.getElementById('cc-cam').value,label:document.getElementById('cc-lbl').value};
+  cells[selectedCell]={...cells[selectedCell],id:`cell-${selectedCell}`,type:document.getElementById('cc-type').value,cameraId:document.getElementById('cc-cam').value,label:document.getElementById('cc-lbl').value,url:document.getElementById('cc-url').value};
   cfg.grid.cells=cells;API.saveConfig(cfg);renderGrid();renderGridPreview();
   document.getElementById('cell-cfg').style.display='none';selectedCell=null;
   document.querySelectorAll('.gp-cell').forEach(el=>el.classList.remove('sel'));
@@ -650,7 +680,7 @@ API.onCmd&&API.onCmd(cmd=>{
 // INIT
 async function init(){
   cfg=await API.getConfig();
-  if(!cfg.grid){cfg.grid={cols:2,rows:2,cells:[{id:'cell-0',type:'camera',cameraId:cfg.cameras?.[0]?.id||'',label:''},{id:'cell-1',type:'empty',image:'',imageData:'',label:''},{id:'cell-2',type:'empty',image:'',imageData:'',label:''},{id:'cell-3',type:'empty',image:'',imageData:'',label:''}]};}
+  if(!cfg.grid){cfg.grid={cols:2,rows:2,cells:[{id:'cell-0',type:'camera',cameraId:cfg.cameras?.[0]?.id||'',label:'Outdoor'},{id:'cell-1',type:'empty',image:'',imageData:'',label:''},{id:'cell-2',type:'empty',image:'',imageData:'',label:''},{id:'cell-3',type:'empty',image:'',imageData:'',label:''}]};}
   const ver=await API.getVersion();const hv=document.getElementById('hud-ver');if(hv)hv.textContent=`v${ver}`;
   startClock();renderGrid();startPxPolling();
   const h=document.getElementById('hint');setTimeout(()=>h.classList.add('show'),1000);setTimeout(()=>h.classList.remove('show'),8000);
