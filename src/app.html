@@ -582,80 +582,62 @@ async function refreshKumaWidget(wrap,cc){
   try{
     const headers={};
     if(cc.kumaToken)headers['Authorization']=`apikey ${cc.kumaToken}`;
+    const slug=cc.kumaSlug||'default';
 
-    // 1. Récupérer la liste des moniteurs depuis la page de statut
-    const pageResp=await fetch(`${cc.kumaUrl}/api/status-page/${cc.kumaSlug||'default'}`,{signal:AbortSignal.timeout(8000),headers});
-    if(!pageResp.ok)throw new Error(`Page HTTP ${pageResp.status}`);
+    // 1. Liste des moniteurs (noms + ids)
+    const pageResp=await fetch(`${cc.kumaUrl}/api/status-page/${slug}`,
+      {signal:AbortSignal.timeout(8000),headers});
+    if(!pageResp.ok)throw new Error(`Kuma: HTTP ${pageResp.status}`);
     const pageData=await pageResp.json();
-    const monitorIds={}; // id → name
+    const monitors={}; // id → name
     (pageData.publicGroupList||[]).forEach(g=>{
-      (g.monitorList||[]).forEach(m=>{monitorIds[String(m.id)]=m.name;});
+      (g.monitorList||[]).forEach(m=>{monitors[String(m.id)]=m.name;});
     });
-    if(!Object.keys(monitorIds).length){list.innerHTML='<div style="font-size:10px;color:var(--dim)">Aucun moniteur</div>';return;}
+    if(!Object.keys(monitors).length){
+      list.innerHTML='<div style="font-size:10px;color:var(--dim)">Aucun moniteur sur cette page</div>';return;
+    }
 
-    // 2. Récupérer les statuts via /metrics (Prometheus)
-    const statuses={}; // id → {status, responseTime}
+    // 2. Statuts temps réel via heartbeat endpoint
+    const statuses={}; // id → {status, ping, uptime}
     try{
-      const metResp=await fetch(`${cc.kumaUrl}/metrics`,{signal:AbortSignal.timeout(8000),headers});
-      if(metResp.ok){
-        const text=await metResp.text();
-        text.split('\n').forEach(line=>{
-          if(line.startsWith('monitor_status{')){
-            const idM=line.match(/monitor_id="(\d+)"/);
-            const valM=line.match(/}\s+([\d.]+)/);
-            if(idM&&valM)statuses[idM[1]]={status:parseFloat(valM[1])};
-          }
-          if(line.startsWith('monitor_response_time{')){
-            const idM=line.match(/monitor_id="(\d+)"/);
-            const valM=line.match(/}\s+([\d.]+)/);
-            if(idM&&valM){if(!statuses[idM[1]])statuses[idM[1]]={};statuses[idM[1]].rt=Math.round(parseFloat(valM[1]));}
-          }
+      const hbResp=await fetch(`${cc.kumaUrl}/api/status-page/heartbeat/${slug}`,
+        {signal:AbortSignal.timeout(8000),headers});
+      if(hbResp.ok){
+        const hbData=await hbResp.json();
+        // heartbeatList: { "2": [{status,ping,...}], ... }
+        Object.entries(hbData.heartbeatList||{}).forEach(([id,beats])=>{
+          const last=Array.isArray(beats)?beats[beats.length-1]:null;
+          const uptime=hbData.uptimeList?.[`${id}_24`];
+          statuses[id]={
+            status: last?.status??-1,
+            ping:   last?.ping??null,
+            uptime: uptime!=null?`${Math.round(uptime*1000)/10}%`:null,
+          };
         });
       }
-    }catch(_){/* metrics optionnels */}
+    }catch(_){/* heartbeat optionnel */}
 
-    // 3. Afficher
-    const cls={1:'kuma-up',0:'kuma-down'};
-    const tag={1:['UP','tag-up'],0:['DOWN','tag-down']};
-    list.innerHTML=Object.entries(monitorIds).map(([id,name])=>{
+    // 3. Rendu
+    const dotCls={1:'kuma-up',0:'kuma-down',2:'kuma-pend',3:'kuma-maint'};
+    const tagInfo={1:['UP','tag-up'],0:['DOWN','tag-down'],2:['PEND','tag-up'],3:['MAINT','tag-maint']};
+    list.innerHTML=Object.entries(monitors).map(([id,name])=>{
       const s=statuses[id];
-      const status=s?.status??-1;
-      const rt=s?.rt?`<div class="kuma-uptime">${s.rt}ms</div>`:'';
-      const c=cls[status]||'kuma-pend';
-      const t=tag[status]||['—','tag-up'];
-      return `<div class="kuma-monitor"><div class="kuma-dot ${c}"></div><div class="kuma-name">${name}</div>${rt}<div class="kuma-tag ${t[1]}">${t[0]}</div></div>`;
+      const st=s?.status??-1;
+      const c=dotCls[st]||'kuma-pend';
+      const t=tagInfo[st]||['—','tag-up'];
+      const rt=s?.ping?`<div class="kuma-uptime">${s.ping}ms</div>`:'';
+      const up=s?.uptime?`<div class="kuma-uptime" style="color:var(--green)">${s.uptime}</div>`:'';
+      return `<div class="kuma-monitor">
+        <div class="kuma-dot ${c}"></div>
+        <div class="kuma-name">${name}</div>
+        ${rt}${up}
+        <div class="kuma-tag ${t[1]}">${t[0]}</div>
+      </div>`;
     }).join('');
-  }catch(e){list.innerHTML=`<div style="font-size:10px;color:var(--red);padding:4px">${e.message}</div>`;}
+  }catch(e){
+    list.innerHTML=`<div style="font-size:10px;color:var(--red);padding:4px">${e.message}</div>`;
+  }
 }
-
-// ─── BESZEL WIDGET ──────────────────────────────────────────
-const bszTokens={};
-
-async function bszAuth(cc){
-  const key=cc.bszUrl+cc.bszEmail;
-  if(bszTokens[key])return bszTokens[key];
-  const resp=await fetch(`${cc.bszUrl}/api/collections/users/auth-with-password`,{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({identity:cc.bszEmail,password:cc.bszPass}),
-    signal:AbortSignal.timeout(8000)
-  });
-  if(!resp.ok)throw new Error(`Auth échouée HTTP ${resp.status}`);
-  const data=await resp.json();
-  bszTokens[key]=data.token;
-  // Token valide 14j, on le renouvelle après 12h
-  setTimeout(()=>delete bszTokens[key],12*3600*1000);
-  return data.token;
-}
-
-function buildBeszel(cc){
-  const wrap=document.createElement('div');wrap.className='bsz-widget';
-  wrap.innerHTML='<div class="widget-title">📊 BESZEL</div><div class="bsz-list" style="display:flex;flex-direction:column;gap:4px;overflow:hidden;flex:1"></div>';
-  wrap.dataset.bszCfg=JSON.stringify(cc);
-  if(cc.bszUrl&&cc.bszEmail) refreshBszWidget(wrap,cc);
-  else wrap.querySelector('.bsz-list').innerHTML='<div style="font-size:10px;color:var(--dim);padding:8px 0">Non configuré — double-clic pour configurer</div>';
-  return wrap;
-}
-
 async function refreshBszWidget(wrap,cc){
   const list=wrap.querySelector('.bsz-list');
   try{
