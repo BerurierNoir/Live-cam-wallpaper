@@ -2,7 +2,8 @@
 
 const {
   app, BrowserWindow, ipcMain, screen,
-  shell, nativeTheme, Tray, Menu, nativeImage, session, dialog
+  shell, nativeTheme, Tray, Menu, nativeImage, session, dialog,
+  globalShortcut, Notification
 } = require('electron');
 const path   = require('path');
 const fs     = require('fs');
@@ -530,19 +531,11 @@ function registerIPC() {
   });
   ipcMain.handle('display:set', async (_, idx) => {
     const displays = screen.getAllDisplays();
-    const d = displays[idx] || displays[0];
+    if (idx < 0 || idx >= displays.length) return false;
     config.selectedDisplay = idx;
     saveConfig(config);
-    if (mainWin && !mainWin.isDestroyed()) {
-      // Wayland: setBounds ne peut pas déplacer une fenêtre entre écrans
-      // Solution: détruire et recréer la fenêtre sur le bon écran
-      const wasSetup = mainWin.webContents.getURL().includes('setup');
-      const wasLoading = mainWin.webContents.getURL().includes('loading');
-      mainWin.destroy();
-      mainWin = null;
-      // Recréer sur le bon écran (x/y dans le constructeur = seule méthode fiable Wayland)
-      createWindow();
-    }
+    L.info(`Changement écran → ${idx} (Wayland: destroy+recreate)`);
+    createWindow();
     return true;
   });
 
@@ -565,6 +558,28 @@ function registerIPC() {
   ipcMain.handle('update:open',     (_, u)  => shell.openExternal(u));
   ipcMain.handle('open:config-dir', ()      => shell.openPath(USER_DATA));
   ipcMain.handle('open:log',        ()      => shell.openPath(LOG_PATH));
+  // ── NOUVEAUX IPC v5 ─────────────────────────────────────
+  ipcMain.on('metrics:start', () => startMetricsPolling());
+  ipcMain.on('metrics:stop',  () => stopMetricsPolling());
+
+  ipcMain.handle('speedtest:run', () => new Promise(resolve => {
+    exec('speedtest-cli --json --timeout 30 2>/dev/null', {timeout:35000}, (err, out) => {
+      if (err || !out?.trim()) return resolve(null);
+      try { resolve(JSON.parse(out)); } catch (_) { resolve(null); }
+    });
+  }));
+
+  ipcMain.on('notify:desktop', (_, d) => {
+    try {
+      if (Notification.isSupported()) new Notification({title:d?.title||'CamWall',body:d?.body||''}).show();
+      else exec(`notify-send '${(d?.title||'CamWall').replace(/'/g,'')}' '${(d?.body||'').replace(/'/g,'')}' 2>/dev/null`);
+    } catch (_) {}
+  });
+
+  ipcMain.handle('config:export-path', () => CONFIG_PATH);
+  ipcMain.handle('webhook:status', () => ({running: !!webhookServer, port: 1985}));
+  ipcMain.handle('webhook:start',  () => { startWebhook(); return true; });
+
   ipcMain.handle('app:version',     ()      => VERSION);
   ipcMain.handle('app:quit',        ()      => { app.isQuitting = true; app.quit(); });
 
@@ -627,11 +642,32 @@ app.whenReady().then(async () => {
   // KDE Plasma: identifier l'app pour le tray et le launcher
   app.setAppUserModelId('io.github.camwall');
   config = loadConfig();
+
+  // CORS: file:// → ws://localhost (MSE WebSocket go2rtc)
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    const port = config.go2rtcPort || GO2RTC_PORT;
+    if (details.url.includes(`localhost:${port}`) || details.url.includes(`127.0.0.1:${port}`)) {
+      callback({responseHeaders:{...details.responseHeaders,'access-control-allow-origin':['*'],'access-control-allow-headers':['*']}});
+    } else callback({responseHeaders: details.responseHeaders});
+  });
+
   registerIPC();
   createWindow();
   createTray();
   startMetricsPolling();
   startWebhook(); // Port 1985 pour HA/domotique
+  // Raccourci global Super+C → ramener CamWall au premier plan
+  try {
+    globalShortcut.register('Super+C', () => showWindow());
+    L.info('globalShortcut Super+C enregistré');
+  } catch (e) { L.warn('globalShortcut:', e.message); }
+
+  // Mode nuit automatique (22h-7h)
+  setInterval(() => {
+    const h = new Date().getHours();
+    if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('time:nightmode', h >= 22 || h < 7);
+  }, 60000);
+
   setTimeout(async () => {
     try {
       const upd = await checkForUpdates();
@@ -655,7 +691,13 @@ app.on('certificate-error', (event, webContents, url, error, certificate, callba
   }
 });
 
-app.on('before-quit',       () => { app.isQuitting = true; stopGo2rtc(); if (metricsInterval) clearInterval(metricsInterval); });
+app.on('before-quit', () => {
+  app.isQuitting = true;
+  stopGo2rtc();
+  stopMetricsPolling();
+  try { globalShortcut.unregisterAll(); } catch (_) {}
+  try { if (webhookServer) webhookServer.close(); } catch (_) {}
+});
 app.on('window-all-closed', () => { /* tray */ });
 app.on('web-contents-created', (_, wc) => {
   wc.setWindowOpenHandler(() => ({ action: 'deny' }));
