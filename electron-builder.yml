@@ -1,6 +1,6 @@
 appId: io.github.camwall
 productName: CamWall
-copyright: "Copyright © 2025 — MIT License"
+copyright: "MIT License"
 
 directories:
   output: dist
@@ -21,23 +21,21 @@ extraResources:
 
 linux:
   target:
-    - AppImage
-    - deb
-  category: Utility
-  # icon.png généré par scripts/generate-icon.js (SVG → PNG 512x512)
-  # Si absent, electron-builder utilise son icône par défaut
+    - type: AppImage
+    - type: deb
+    - type: rpm
   icon: assets/icon.png
-  synopsis: "Live camera wallpaper for Linux"
+  category: Utility
+  synopsis: "Live camera wallpaper — RTSP, Reolink, Tapo, ONVIF"
   description: |
-    CamWall turns any monitor into a live surveillance display.
-    Supports RTSP, Reolink, Tapo, ONVIF, MJPEG and HLS cameras
-    via go2rtc with hardware-accelerated H265 transcoding.
-  maintainer: "Your Name <your@email.com>"
+    CamWall transforms any monitor into a live surveillance display.
+    Supports RTSP, Reolink, Tapo, ONVIF cameras via go2rtc.
+    Widgets: cameras, system metrics, Proxmox, Uptime Kuma, Beszel, clock.
   desktop:
     Name: CamWall
-    Comment: Live camera wallpaper — RTSP, Reolink, Tapo, ONVIF
-    Categories: Utility;Video;
-    StartupNotify: false
+    Comment: Live camera wallpaper — RTSP, Reolink, Proxmox, Kuma
+    Categories: Utility;Video;Monitor;
+    Keywords: camera;surveillance;rtsp;wallpaper;reolink;proxmox;
 
 appImage:
   license: LICENSE
@@ -53,3 +51,12 @@ deb:
     - libatspi2.0-0
     - libuuid1
     - libsecret-1-0
+
+rpm:
+  depends:
+    - gtk3
+    - libnotify
+    - nss
+    - libXScrnSaver
+    - xdg-utils
+    - libsecret
