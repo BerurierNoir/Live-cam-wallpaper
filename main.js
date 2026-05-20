@@ -95,18 +95,20 @@ function decodeUrl(url) {
   try { return decodeURIComponent(url); } catch (_) { return url; }
 }
 
-function buildGo2rtcStream(cam) {
+function buildGo2rtcStream(cam, cfg) {
   if (!cam.mainUrl) return null;
   const url = decodeUrl(cam.mainUrl);
-  // FFmpeg source pour MJPEG (H264/H265 → JPEG)
-  return [url, `ffmpeg:${cam.id}#video=mjpeg`];
+  const fps = cfg?.go2rtcFps || 15;
+  // FFmpeg: H264/H265 → MJPEG avec framerate configurable
+  // fps limité = moins de CPU sur le renderer Electron
+  return [url, `ffmpeg:${cam.id}#video=mjpeg#fps=${fps}`];
 }
 
 function writeGo2rtcConfig(cfg) {
   const streams = {};
   (cfg.cameras || []).forEach(cam => {
     if (!cam.id) return;
-    const src = buildGo2rtcStream(cam);
+    const src = buildGo2rtcStream(cam, cfg);
     if (src) streams[cam.id] = src;
     if (cam.subUrl && cam.subUrl !== cam.mainUrl)
       streams[`${cam.id}_sub`] = [decodeUrl(cam.subUrl), `ffmpeg:${cam.id}_sub#video=mjpeg`];
