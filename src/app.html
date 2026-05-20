@@ -203,6 +203,10 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 #upd-notif{position:fixed;top:14px;right:14px;display:none;align-items:center;gap:10px;background:rgba(7,10,20,.95);backdrop-filter:blur(12px);border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--muted);z-index:400;}
 #upd-notif.show{display:flex;}
 #upd-link{color:var(--indigo);cursor:pointer;text-decoration:underline;}
+
+/* MSE VIDEO PLAYER */
+.cam-video{width:100%;height:100%;object-fit:cover;display:block;background:#000;}
+.cam-video::-webkit-media-controls{display:none;}
 .px-info{font-size:10px;color:var(--dim);line-height:1.8;background:rgba(99,102,241,.04);border:1px solid var(--border);border-radius:6px;padding:10px;}
 /* SLIDER FPS */
 .fps-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04);}
@@ -400,6 +404,11 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 
 <script>
 const API=window.CamWall;
+const L={
+  info:(...a)=>console.log('[CamWall]',...a),
+  warn:(...a)=>console.warn('[CamWall]',...a),
+  err: (...a)=>console.error('[CamWall]',...a),
+};
 let cfg={},camPaused={},camRetries={},retryTimers={};
 let globalPaused=false,selectedCell=null,updateInfo=null;
 
@@ -466,37 +475,168 @@ function buildContent(cc,parentDiv){
   }
 }
 
-// CAM WIDGET
-function buildCam(cc,parentDiv){
+// CAM WIDGET — MSE (Media Source Extensions) via WebSocket go2rtc
+// Meilleure option: H264 natif sans FFmpeg, moins de CPU, meilleure qualité
+const camConnections = {}; // id → {ws, ms, url}
+
+function buildCam(cc, parentDiv){
   const wrap=document.createElement('div');
   wrap.style.cssText='position:absolute;inset:0;';
   const cam=cfg.cameras?.find(c=>c.id===cc.cameraId);
-  const img=document.createElement('img');img.className='cam-img';img.alt=cc.label||'cam';
-  wrap.appendChild(img);
+
+  const video=document.createElement('video');
+  video.className='cam-video';
+  video.autoplay=true;video.muted=true;video.playsInline=true;
+  wrap.appendChild(video);
   wrap.insertAdjacentHTML('beforeend','<div class="cam-overlay"></div><div class="cam-err"><div class="cam-err-icon">📡</div><div class="cam-err-msg">Signal perdu</div><div class="cam-err-btn">↺ Reconnecter</div></div>');
+
   const snap=Object.assign(document.createElement('div'),{className:'cam-snap',title:'Snapshot',textContent:'📸'});
   const tog=Object.assign(document.createElement('div'),{className:'cam-tog',title:'Pause',textContent:'⏸'});
   wrap.append(snap,tog);
+
   if(cam){
-    loadCamImg(img,cam,parentDiv,wrap);
-    snap.onclick=async e=>{e.stopPropagation();try{const r=await fetch(`${go2rtcBase()}/api/frame.jpeg?src=${encodeURIComponent(cam.id)}&_=${Date.now()}`);const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`${cam.id}_${Date.now()}.jpg`;a.click();}catch(_){}};
-    tog.onclick=e=>{e.stopPropagation();camPaused[cam.id]=!camPaused[cam.id];if(camPaused[cam.id]){clearTimeout(retryTimers[cam.id]);img.src='';setDot(parentDiv,'off');tog.textContent='▶';}else{tog.textContent='⏸';loadCamImg(img,cam,parentDiv,wrap);}};
-    wrap.querySelector('.cam-err-btn').onclick=e=>{e.stopPropagation();clearTimeout(retryTimers[cam.id]);resetRetry(cam.id);loadCamImg(img,cam,parentDiv,wrap);};
-  } else {
-    const err=wrap.querySelector('.cam-err');err.classList.add('show');err.querySelector('.cam-err-msg').textContent='Cam non configurée';setDot(parentDiv,'err');
+    startCamMSE(video,cam,parentDiv,wrap);
+    snap.onclick=async e=>{
+      e.stopPropagation();
+      try{
+        const r=await fetch(`${go2rtcBase()}/api/frame.jpeg?src=${encodeURIComponent(cam.id)}&_=${Date.now()}`);
+        const b=await r.blob();
+        const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`${cam.id}_${Date.now()}.jpg`;a.click();
+      }catch(_){}
+    };
+    tog.onclick=e=>{
+      e.stopPropagation();
+      camPaused[cam.id]=!camPaused[cam.id];
+      if(camPaused[cam.id]){
+        stopCamMSE(cam.id);video.src='';setDot(parentDiv,'off');tog.textContent='▶';
+      }else{tog.textContent='⏸';startCamMSE(video,cam,parentDiv,wrap);}
+    };
+    wrap.querySelector('.cam-err-btn').onclick=e=>{
+      e.stopPropagation();clearTimeout(retryTimers[cam.id]);resetRetry(cam.id);
+      startCamMSE(video,cam,parentDiv,wrap);
+    };
+  }else{
+    const err=wrap.querySelector('.cam-err');err.classList.add('show');
+    err.querySelector('.cam-err-msg').textContent='Cam non configurée';setDot(parentDiv,'err');
   }
   return wrap;
+}
+
+function stopCamMSE(camId){
+  const conn=camConnections[camId];
+  if(conn){
+    try{conn.ws.close();}catch(_){}
+    try{if(conn.ms.readyState==='open')conn.ms.endOfStream();}catch(_){}
+    if(conn.url)URL.revokeObjectURL(conn.url);
+    delete camConnections[camId];
+  }
+}
+
+function startCamMSE(video,cam,parentDiv,wrap){
+  if(camPaused[cam.id]||globalPaused)return;
+  stopCamMSE(cam.id);
+  setDot(parentDiv,'conn');
+  wrap.querySelector('.cam-err').classList.remove('show');
+
+  const ms=new MediaSource();
+  const objUrl=URL.createObjectURL(ms);
+  video.src=objUrl;
+
+  let sb=null;
+  const queue=[];
+  let closed=false;
+
+  function appendNext(){
+    if(!sb||sb.updating||queue.length===0)return;
+    try{sb.appendBuffer(queue.shift());}
+    catch(e){
+      if(e.name==='QuotaExceededError'&&sb.buffered.length>0&&!sb.updating){
+        try{sb.remove(0,sb.buffered.end(0)-10);}catch(_){}
+      }
+      queue.length=0;
+    }
+  }
+
+  function initSourceBuffer(codecs){
+    const mime=`video/mp4; codecs="${codecs}"`;
+    if(!MediaSource.isTypeSupported(mime)){
+      // Fallback MJPEG si MSE pas supporté pour ce codec
+      L.warn('MSE non supporté pour',mime,'→ fallback MJPEG');
+      fallbackMJPEG(video,cam,parentDiv,wrap);
+      return;
+    }
+    try{
+      sb=ms.addSourceBuffer(mime);
+      sb.mode='segments';
+      sb.addEventListener('updateend',appendNext);
+      appendNext();
+      setDot(parentDiv,'ok');resetRetry(cam.id);
+    }catch(e){L.err('addSourceBuffer:',e.message);}
+  }
+
+  ms.addEventListener('sourceopen',()=>{
+    // Source ouverte, prête à recevoir des données
+    const wsUrl=`ws://localhost:${cfg.go2rtcPort||1984}/api/ws?src=${encodeURIComponent(cam.id)}`;
+    const ws=new WebSocket(wsUrl);
+    ws.binaryType='arraybuffer';
+    camConnections[cam.id]={ws,ms,url:objUrl};
+
+    ws.onmessage=e=>{
+      if(typeof e.data==='string'){
+        try{
+          const msg=JSON.parse(e.data);
+          if(msg.type==='mse'||msg.type==='mse+'){
+            if(!sb)initSourceBuffer(msg.value);
+          }
+        }catch(_){}
+      }else{
+        // Fragment fMP4 binaire
+        queue.push(e.data);
+        appendNext();
+      }
+    };
+
+    ws.onclose=ws.onerror=()=>{
+      if(closed||camPaused[cam.id]||globalPaused)return;
+      setDot(parentDiv,'err');
+      wrap.querySelector('.cam-err').classList.add('show');
+      if(cfg.reconnect!==false){
+        const d=nextDelay(cam.id);
+        wrap.querySelector('.cam-err-msg').textContent=`Signal perdu — retry ${Math.round(d)}s`;
+        retryTimers[cam.id]=setTimeout(()=>startCamMSE(video,cam,parentDiv,wrap),d*1000);
+      }
+    };
+  });
+
+  ms.addEventListener('sourceended',()=>{closed=true;});
+  ms.addEventListener('sourceclosed',()=>{closed=true;});
+}
+
+function fallbackMJPEG(video,cam,parentDiv,wrap){
+  // Fallback: remplacer le <video> par un <img> MJPEG
+  const img=document.createElement('img');
+  img.className='cam-img';
+  img.alt=cam.label||cam.id;
+  img.style.cssText='width:100%;height:100%;object-fit:cover;';
+  video.parentNode.insertBefore(img,video);
+  video.remove();
+  loadCamImg(img,cam,parentDiv,wrap);
 }
 function loadCamImg(img,cam,parentDiv,wrap){
   setDot(parentDiv,'conn');wrap.querySelector('.cam-err').classList.remove('show');
   img.onload=()=>{setDot(parentDiv,'ok');resetRetry(cam.id);};
   img.onerror=()=>{
     if(camPaused[cam.id]||globalPaused)return;
-    setDot(parentDiv,'err');const err=wrap.querySelector('.cam-err');err.classList.add('show');
-    if(cfg.reconnect!==false){const d=nextDelay(cam.id);err.querySelector('.cam-err-msg').textContent=`Signal perdu - retry ${Math.round(d)}s`;retryTimers[cam.id]=setTimeout(()=>loadCamImg(img,cam,parentDiv,wrap),d*1000);}
+    setDot(parentDiv,'err');wrap.querySelector('.cam-err').classList.add('show');
+    if(cfg.reconnect!==false){
+      const d=nextDelay(cam.id);
+      wrap.querySelector('.cam-err-msg').textContent=`Signal perdu — retry ${Math.round(d)}s`;
+      retryTimers[cam.id]=setTimeout(()=>loadCamImg(img,cam,parentDiv,wrap),d*1000);
+    }
   };
-  img.src=mjpegUrl(cam.id);
+  img.src=`${go2rtcBase()}/api/stream.mjpeg?src=${encodeURIComponent(cam.id)}&_=${Date.now()}`;
 }
+
 function setDot(cell,state){const d=cell.querySelector('.dot');if(d)d.className=`dot ${state}`;}
 
 // SYS WIDGET
@@ -733,7 +873,9 @@ document.getElementById('btn-pause').addEventListener('click',()=>{
   globalPaused=!globalPaused;
   const btn=document.getElementById('btn-pause');
   btn.textContent=globalPaused?'▶ Reprendre':'⏸ Pause';btn.classList.toggle('on',globalPaused);
-  document.querySelectorAll('.cam-img').forEach(img=>{if(globalPaused)img.src='';});
+  // Pause MSE: fermer les WebSocket
+if(globalPaused)Object.keys(camConnections).forEach(id=>stopCamMSE(id));
+else{document.querySelectorAll('.cam-video').forEach(v=>{const cam=cfg.cameras?.find(c=>c.id===v.closest('.cell')?.dataset?.camId);});renderGrid();}
 });
 
 // PANEL TABS
