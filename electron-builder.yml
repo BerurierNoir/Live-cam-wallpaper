@@ -21,9 +21,9 @@ extraResources:
 
 linux:
   target:
-    - type: AppImage
-    - type: deb
-    - type: rpm
+    - AppImage
+    - deb
+    - rpm
   icon: assets/icon.png
   category: Utility
   synopsis: "Live camera wallpaper — RTSP, Reolink, Tapo, ONVIF"
@@ -37,9 +37,6 @@ linux:
     Categories: Utility;Video;Monitor;
     Keywords: camera;surveillance;rtsp;wallpaper;reolink;proxmox;
 
-appImage:
-  license: LICENSE
-
 deb:
   depends:
     - libgtk-3-0
@@ -48,8 +45,6 @@ deb:
     - libxss1
     - libxtst6
     - xdg-utils
-    - libatspi2.0-0
-    - libuuid1
     - libsecret-1-0
 
 rpm:
