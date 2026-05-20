@@ -4,7 +4,10 @@
   "version": "3.0.0",
   "description": "Live camera wallpaper for Linux — RTSP, Reolink, Tapo, ONVIF via go2rtc",
   "main": "main.js",
-  "author": "CamWall",
+  "author": {
+    "name": "CamWall",
+    "email": "camwall@localhost"
+  },
   "license": "MIT",
   "keywords": ["camera", "rtsp", "wallpaper", "linux", "surveillance", "reolink", "go2rtc"],
   "scripts": {
