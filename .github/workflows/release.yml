@@ -23,39 +23,58 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download go2rtc
+      - name: Download go2rtc amd64
         run: bash scripts/download-go2rtc.sh amd64
 
-      - name: Install ImageMagick (pour génération icône)
-        run: sudo apt-get install -y imagemagick
-
-      - name: Generate PNG icon from SVG
-        run: node scripts/generate-icon.js
-
-      - name: Build AppImage & deb
+      - name: Build AppImage + deb + rpm
         run: npm run build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload AppImage
+      - name: Upload AppImage artifact
         uses: actions/upload-artifact@v4
         with:
           name: CamWall-AppImage
           path: dist/*.AppImage
 
-      - name: Upload deb
+      - name: Upload deb artifact
         uses: actions/upload-artifact@v4
         with:
           name: CamWall-deb
           path: dist/*.deb
 
-      - name: Release
+      - name: Upload rpm artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CamWall-rpm
+          path: dist/*.rpm
+
+      - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2.1.0
         with:
           files: |
             dist/*.AppImage
             dist/*.deb
+            dist/*.rpm
           generate_release_notes: true
+          body: |
+            ## Installation
+
+            ### AppImage (recommandé — toutes distributions)
+            ```bash
+            chmod +x CamWall-*.AppImage
+            ./CamWall-*.AppImage
+            ```
+
+            ### Fedora / Bazzite (RPM)
+            ```bash
+            sudo rpm -i CamWall-*.rpm
+            ```
+
+            ### Debian / Ubuntu
+            ```bash
+            sudo dpkg -i CamWall-*.deb
+            ```
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
