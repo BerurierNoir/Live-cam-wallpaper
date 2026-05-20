@@ -483,18 +483,34 @@ function registerIPC() {
   ipcMain.handle('cfg:get',   ()      => loadConfig());
   ipcMain.handle('cfg:save',  (_, c)  => { config = { ...config, ...c }; saveConfig(config); tray?.setContextMenu(buildTrayMenu()); return true; });
 
-  ipcMain.handle('display:list', () =>
-    screen.getAllDisplays().map((d, i) => ({
-      index: i, label: `Écran ${i+1}`,
-      primary: d === screen.getPrimaryDisplay(),
-      width: d.bounds.width, height: d.bounds.height,
+  ipcMain.handle('display:list', () => {
+    const primary = screen.getPrimaryDisplay();
+    return screen.getAllDisplays().map((d, i) => ({
+      index:   i,
+      label:   `Écran ${i+1}${d.id === primary.id ? ' (Principal)' : ''}`,
+      primary: d.id === primary.id,
+      width:   d.bounds.width,
+      height:  d.bounds.height,
       x: d.bounds.x, y: d.bounds.y,
-    }))
-  );
-  ipcMain.handle('display:set', (_, idx) => {
-    const d = screen.getAllDisplays()[idx] || screen.getAllDisplays()[0];
-    config.selectedDisplay = idx; saveConfig(config);
-    if (mainWin) { mainWin.setFullScreen(false); mainWin.setBounds(d.bounds); mainWin.setFullScreen(true); }
+      scaleFactor: d.scaleFactor,
+      selected: i === (config.selectedDisplay || 0),
+    }));
+  });
+  ipcMain.handle('display:set', async (_, idx) => {
+    const displays = screen.getAllDisplays();
+    const d = displays[idx] || displays[0];
+    config.selectedDisplay = idx;
+    saveConfig(config);
+    if (mainWin && !mainWin.isDestroyed()) {
+      // Wayland: setBounds ne peut pas déplacer une fenêtre entre écrans
+      // Solution: détruire et recréer la fenêtre sur le bon écran
+      const wasSetup = mainWin.webContents.getURL().includes('setup');
+      const wasLoading = mainWin.webContents.getURL().includes('loading');
+      mainWin.destroy();
+      mainWin = null;
+      // Recréer sur le bon écran (x/y dans le constructeur = seule méthode fiable Wayland)
+      createWindow();
+    }
     return true;
   });
 
@@ -576,6 +592,8 @@ app.on('second-instance', () => {
 });
 
 app.whenReady().then(async () => {
+  // KDE Plasma: identifier l'app pour le tray et le launcher
+  app.setAppUserModelId('io.github.camwall');
   config = loadConfig();
   registerIPC();
   createWindow();
