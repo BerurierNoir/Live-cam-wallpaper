@@ -250,10 +250,168 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .iframe-widget webview{width:100%;height:100%;border:none;display:block;}
 
 .px-info span{color:var(--indigo);font-family:var(--mono);}
+
+/* ── MÉTÉO ───────────────────────────────────────────────── */
+.weather-widget{position:absolute;inset:0;padding:14px;display:flex;flex-direction:column;gap:6px;overflow:hidden;background:linear-gradient(135deg,rgba(7,10,20,.96),rgba(12,15,31,.98));}
+.wx-main{display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.wx-icon{font-size:clamp(28px,5vw,56px);line-height:1;}
+.wx-temp{font-size:clamp(24px,5vw,52px);font-weight:300;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,var(--text),var(--muted));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.wx-feels{font-size:10px;color:var(--dim);font-family:var(--mono);}
+.wx-desc{font-size:11px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;}
+.wx-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;}
+.wx-stat{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:4px;padding:5px 8px;}
+.wx-stat-lbl{font-size:8px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;}
+.wx-stat-val{font-size:12px;font-family:var(--mono);color:var(--text);}
+.wx-forecast{display:flex;gap:4px;flex-shrink:0;overflow:hidden;}
+.wx-day{flex:1;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);border-radius:4px;padding:5px;text-align:center;}
+.wx-day-name{font-size:8px;color:var(--dim);letter-spacing:1px;}
+.wx-day-icon{font-size:16px;margin:2px 0;}
+.wx-day-temp{font-size:9px;color:var(--muted);font-family:var(--mono);}
+.wx-sunrise{font-size:9px;color:var(--amber);letter-spacing:.5px;}
+
+/* ── HOME ASSISTANT ──────────────────────────────────────── */
+.ha-widget{position:absolute;inset:0;padding:12px;display:flex;flex-direction:column;gap:5px;overflow:hidden;background:linear-gradient(135deg,rgba(7,10,20,.96),rgba(12,15,31,.98));}
+.ha-entity{display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);border-radius:5px;cursor:pointer;transition:all .15s;flex-shrink:0;}
+.ha-entity:hover{border-color:rgba(99,102,241,.3);background:rgba(99,102,241,.06);}
+.ha-entity-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0;}
+.ha-entity-name{font-size:11px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ha-entity-state{font-size:11px;font-family:var(--mono);color:var(--muted);flex-shrink:0;}
+.ha-on{color:var(--amber);}
+.ha-off{color:var(--dim);}
+.ha-alert{color:var(--red);}
+.ha-ok{color:var(--green);}
+
+/* ── JELLYFIN ────────────────────────────────────────────── */
+.jf-widget{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;background:linear-gradient(135deg,rgba(7,10,20,.96),rgba(12,15,31,.98));}
+.jf-playing{position:relative;flex:1;overflow:hidden;}
+.jf-poster{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.4);}
+.jf-overlay{position:absolute;inset:0;background:linear-gradient(0deg,rgba(7,10,20,.95) 0%,transparent 60%);}
+.jf-info{position:absolute;bottom:0;left:0;right:0;padding:12px;}
+.jf-title{font-size:clamp(12px,2vw,18px);font-weight:700;color:var(--text);text-shadow:0 2px 8px rgba(0,0,0,.9);}
+.jf-subtitle{font-size:10px;color:var(--muted);margin-top:3px;}
+.jf-progress-bar{height:3px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:8px;overflow:hidden;}
+.jf-progress-fill{height:100%;background:var(--indigo);border-radius:2px;transition:width .5s ease;}
+.jf-user{font-size:9px;color:var(--dim);letter-spacing:1px;margin-top:4px;}
+.jf-idle{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;opacity:.4;}
+.jf-idle-icon{font-size:32px;}
+.jf-recent{padding:10px;display:flex;flex-direction:column;gap:4px;flex-shrink:0;border-top:1px solid var(--border);}
+.jf-recent-item{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--muted);}
+.jf-recent-thumb{width:24px;height:14px;background:rgba(255,255,255,.1);border-radius:2px;flex-shrink:0;background-size:cover;background-position:center;}
+
+/* ── IMMICH SLIDESHOW ────────────────────────────────────── */
+.immich-widget{position:absolute;inset:0;overflow:hidden;background:#000;}
+.immich-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 1.5s ease;}
+.immich-img.fade-out{opacity:0;}
+.immich-overlay{position:absolute;bottom:0;left:0;right:0;padding:10px 12px;background:linear-gradient(0deg,rgba(7,10,20,.85) 0%,transparent 100%);opacity:0;transition:opacity .2s;}
+.immich-widget:hover .immich-overlay{opacity:1;}
+.immich-exif{font-size:9px;color:rgba(255,255,255,.6);letter-spacing:.5px;}
+.immich-date{font-size:10px;color:var(--muted);font-family:var(--mono);}
+.immich-prog{display:flex;gap:3px;margin-top:6px;}
+.immich-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2);transition:all .3s;}
+.immich-dot.active{background:var(--indigo);box-shadow:0 0 4px var(--indigo);}
+
+/* ── PI-HOLE ─────────────────────────────────────────────── */
+.pihole-widget{position:absolute;inset:0;padding:14px;display:flex;flex-direction:column;gap:8px;overflow:hidden;background:linear-gradient(135deg,rgba(7,10,20,.96),rgba(12,15,31,.98));}
+.ph-big{display:flex;align-items:baseline;gap:8px;}
+.ph-num{font-size:clamp(20px,4vw,40px);font-weight:700;background:linear-gradient(135deg,var(--red),var(--amber));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-family:var(--mono);}
+.ph-pct{font-size:clamp(12px,2vw,20px);color:var(--muted);font-family:var(--mono);}
+.ph-bar{height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;}
+.ph-bar-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--amber));border-radius:4px;transition:width .5s ease;}
+.ph-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+.ph-stat{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:4px;padding:5px 8px;}
+.ph-stat-v{font-size:13px;font-weight:700;font-family:var(--mono);color:var(--text);}
+.ph-stat-l{font-size:8px;color:var(--dim);letter-spacing:1px;}
+.ph-top-lbl{font-size:9px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
+.ph-top-item{display:flex;justify-content:space-between;font-size:9px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.ph-top-item span{color:var(--dim);font-family:var(--mono);}
+
+/* ── MOONRAKER/KLIPPER ───────────────────────────────────── */
+.moon-widget{position:absolute;inset:0;padding:14px;display:flex;flex-direction:column;gap:8px;overflow:hidden;background:linear-gradient(135deg,rgba(7,10,20,.96),rgba(12,15,31,.98));}
+.moon-status{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:12px;font-size:10px;letter-spacing:1px;font-weight:600;text-transform:uppercase;flex-shrink:0;}
+.moon-printing{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:var(--green);}
+.moon-idle{background:rgba(71,85,105,.15);border:1px solid rgba(71,85,105,.3);color:var(--dim);}
+.moon-error{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:var(--red);}
+.moon-temps{display:flex;gap:8px;flex-shrink:0;}
+.moon-temp{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:5px;padding:6px 8px;}
+.moon-temp-val{font-size:16px;font-weight:700;font-family:var(--mono);color:var(--amber);}
+.moon-temp-lbl{font-size:8px;color:var(--dim);letter-spacing:1px;}
+.moon-progress{flex-shrink:0;}
+.moon-pct{font-size:clamp(20px,4vw,36px);font-weight:300;font-family:var(--mono);background:linear-gradient(135deg,var(--indigo),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.moon-bar{height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;margin-top:6px;}
+.moon-bar-fill{height:100%;background:linear-gradient(90deg,var(--indigo),var(--cyan));border-radius:3px;transition:width .5s ease;}
+.moon-file{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.moon-eta{font-size:9px;color:var(--dim);font-family:var(--mono);}
+
+/* ── SPEEDTEST ───────────────────────────────────────────── */
+.speed-widget{position:absolute;inset:0;padding:14px;display:flex;flex-direction:column;gap:8px;overflow:hidden;background:linear-gradient(135deg,rgba(7,10,20,.96),rgba(12,15,31,.98));}
+.speed-gauges{display:flex;gap:8px;flex:1;}
+.speed-gauge{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:10px;}
+.speed-val{font-size:clamp(18px,3.5vw,32px);font-weight:700;font-family:var(--mono);}
+.speed-unit{font-size:9px;color:var(--dim);letter-spacing:1px;margin-top:2px;}
+.speed-lbl{font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:6px;}
+.speed-dl{color:var(--cyan);}
+.speed-ul{color:var(--indigo);}
+.speed-ping-val{font-size:clamp(14px,2.5vw,24px);font-weight:700;font-family:var(--mono);color:var(--green);}
+.speed-run-btn{padding:8px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:6px;color:var(--indigo);font-size:11px;cursor:pointer;transition:all .2s;text-align:center;flex-shrink:0;}
+.speed-run-btn:hover{background:rgba(99,102,241,.2);}
+.speed-running{animation:blink .5s infinite;}
+
+/* ── THÈMES ──────────────────────────────────────────────── */
+[data-theme="matrix"]{
+  --bg:#001100;--surface:#001a00;--panel:#002200;
+  --indigo:#00ff41;--cyan:#00cc33;--purple:#00aa22;
+  --green:#00ff41;--red:#ff0040;--amber:#ffcc00;
+  --text:#00ff41;--muted:#00aa22;--dim:#006600;
+  --border:rgba(0,255,65,.12);
+}
+[data-theme="matrix"] body::before{background:radial-gradient(ellipse 80% 60% at 15% 25%,rgba(0,255,65,.07) 0%,transparent 60%),radial-gradient(ellipse 60% 50% at 85% 75%,rgba(0,204,51,.05) 0%,transparent 60%);}
+[data-theme="light"]{
+  --bg:#f0f4f8;--surface:#ffffff;--panel:#f8fafc;
+  --indigo:#4f46e5;--cyan:#0891b2;--purple:#7c3aed;
+  --green:#059669;--red:#dc2626;--amber:#d97706;
+  --text:#1e293b;--muted:#64748b;--dim:#94a3b8;
+  --border:rgba(79,70,229,.15);
+}
+[data-theme="light"] body{color:var(--text);}
+[data-theme="light"] #hud{background:rgba(240,244,248,.97);}
+[data-theme="light"] #panel{background:var(--panel);}
+[data-theme="light"] .cell{background:#fff;border-color:rgba(79,70,229,.1);}
+
+/* ── MODE NUIT ───────────────────────────────────────────── */
+.night-mode{filter:brightness(.4) saturate(.7);}
+.night-mode #hud{filter:brightness(1) saturate(1);}
+#night-banner{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:rgba(7,10,20,.9);border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:6px 16px;font-size:10px;color:var(--amber);letter-spacing:1px;z-index:400;display:none;}
+#night-banner.show{display:block;}
+
+/* ── SNAKE EASTER EGG ────────────────────────────────────── */
+#snake-overlay{position:fixed;inset:0;z-index:999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.9);}
+#snake-overlay.show{display:flex;}
+#snake-canvas{border:2px solid var(--indigo);border-radius:4px;}
+#snake-score{position:absolute;top:20px;left:50%;transform:translateX(-50%);font-size:14px;color:var(--indigo);letter-spacing:2px;font-family:var(--mono);}
+#snake-close{position:absolute;top:14px;right:14px;width:32px;height:32px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--red);font-size:16px;}
+
+/* ── MODE PRÉSENTATION ───────────────────────────────────── */
+#pres-indicator{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:rgba(7,10,20,.85);border:1px solid var(--border);border-radius:20px;padding:5px 16px;font-size:10px;color:var(--indigo);letter-spacing:1px;display:none;z-index:200;}
+#pres-indicator.show{display:block;}
+
 </style>
 </head>
 <body>
 <div id="grid"></div>
+
+
+<!-- NIGHT MODE BANNER -->
+<div id="night-banner">🌙 MODE NUIT</div>
+
+<!-- SNAKE EASTER EGG -->
+<div id="snake-overlay">
+  <div id="snake-score">SCORE: 0</div>
+  <div id="snake-close">×</div>
+  <canvas id="snake-canvas" width="400" height="400"></canvas>
+</div>
+
+<!-- PRÉSENTATION INDICATOR -->
+<div id="pres-indicator">▶ PRÉSENTATION</div>
 
 <div id="zoom-overlay">
   <div id="zoom-box">
@@ -317,6 +475,13 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
           <option value="webpage">&#x1F310; Page Web (iframe)</option>
           <option value="kuma">&#x1F7E2; Uptime Kuma</option>
           <option value="beszel">&#x1F4CA; Beszel</option>
+          <option value="weather">&#x1F324; Météo (Open-Meteo)</option>
+          <option value="homeassistant">&#x1F3E0; Home Assistant</option>
+          <option value="jellyfin">&#x1F3AC; Jellyfin</option>
+          <option value="immich">&#x1F4F8; Immich Photos</option>
+          <option value="pihole">&#x1F6E1; Pi-hole</option>
+          <option value="moonraker">&#x1F5A8; Klipper/Moonraker</option>
+          <option value="speedtest">&#x26A1; Speedtest</option>
         </select>
       </div>
       <div class="cc-row" id="cc-cam-row"><span class="cc-lbl">Cam&#xE9;ra</span><select class="pi-sel" id="cc-cam" style="width:180px"></select></div>
@@ -448,8 +613,8 @@ function renderGrid(){
   }
 }
 
-const TYPE_ICONS={camera:'📷',sysinfo:'💻',proxmox:'🖥️',clock:'🕐',empty:'⬛',webpage:'🌐',kuma:'🟢',beszel:'📊'};
-const TYPE_LABELS={camera:'CAM',sysinfo:'SYSTEM',proxmox:'PROXMOX',clock:'CLOCK',empty:'EMPTY',webpage:'WEB',kuma:'KUMA',beszel:'BESZEL'};
+const TYPE_ICONS={camera:'📷',sysinfo:'💻',proxmox:'🖥️',clock:'🕐',empty:'⬛',webpage:'🌐',kuma:'🟢',beszel:'📊',weather:'🌤',homeassistant:'🏠',jellyfin:'🎬',immich:'📸',pihole:'🛡',moonraker:'🖨',speedtest:'⚡'};
+const TYPE_LABELS={camera:'CAM',sysinfo:'SYSTEM',proxmox:'PROXMOX',clock:'CLOCK',empty:'EMPTY',webpage:'WEB',kuma:'KUMA',beszel:'BESZEL',weather:'MÉTÉO',homeassistant:'HOME ASSISTANT',jellyfin:'JELLYFIN',immich:'IMMICH',pihole:'PI-HOLE',moonraker:'KLIPPER',speedtest:'SPEEDTEST'};
 
 function createCell(cc,idx){
   const div=document.createElement('div');
@@ -471,6 +636,13 @@ function buildContent(cc,parentDiv){
     case'webpage':return buildWebpage(cc);
     case'kuma':return buildKuma(cc);
     case'beszel':return buildBeszel(cc);
+    case'weather':return buildWeather(cc);
+    case'homeassistant':return buildHA(cc);
+    case'jellyfin':return buildJellyfin(cc);
+    case'immich':return buildImmich(cc);
+    case'pihole':return buildPihole(cc);
+    case'moonraker':return buildMoonraker(cc);
+    case'speedtest':return buildSpeedtest(cc);
     default:return null;
   }
 }
@@ -940,7 +1112,6 @@ function openCellCfg(idx){
 }
 function updateCellCfgUI(type){
   document.getElementById('cc-cam-row').style.display=type==='camera'?'flex':'none';
-  // Champs dynamiques selon le type
   const old=document.getElementById('cc-extra');
   if(old)old.remove();
   const ex=document.createElement('div');
@@ -950,6 +1121,52 @@ function updateCellCfgUI(type){
   switch(type){
     case 'empty':
       ex.innerHTML=`<div class="cc-row"><span class="cc-lbl">Image de fond</span><button class="btn-ghost" id="cc-img-btn">📂 Choisir</button></div>`;
+      break;
+    case 'weather':
+      ex.innerHTML=`
+        <div class="cc-row"><span class="cc-lbl">Latitude</span><input class="pi-in" id="cc-wx-lat" type="text" value="${cur.wxLat||'45.36'}" style="width:120px" placeholder="45.36"></div>
+        <div class="cc-row"><span class="cc-lbl">Longitude</span><input class="pi-in" id="cc-wx-lon" type="text" value="${cur.wxLon||'4.13'}" style="width:120px" placeholder="4.13"></div>
+        <div style="font-size:10px;color:var(--dim)">Open-Meteo — gratuit, sans clé API</div>`;
+      break;
+    case 'homeassistant':
+      ex.innerHTML=`
+        <div class="cc-row"><span class="cc-lbl">URL Home Assistant</span><input class="pi-in" id="cc-ha-url" type="text" value="${cur.haUrl||''}" placeholder="http://192.168.1.x:8123" style="width:200px"></div>
+        <div class="cc-row"><span class="cc-lbl">Token long-lived</span><input class="pi-in" id="cc-ha-token" type="password" value="${cur.haToken||''}" placeholder="HA → Profil → Token" style="width:200px"></div>
+        <div class="cc-row"><span class="cc-lbl">Entités (une par ligne)</span></div>
+        <textarea class="pi-in" id="cc-ha-entities" style="width:100%;height:60px;resize:none;font-size:10px" placeholder="sensor.temperature_salon
+binary_sensor.garage_contact
+light.led_strip">${(cur.haEntities||[]).join('
+')}</textarea>`;
+      break;
+    case 'jellyfin':
+      ex.innerHTML=`
+        <div class="cc-row"><span class="cc-lbl">URL Jellyfin</span><input class="pi-in" id="cc-jf-url" type="text" value="${cur.jfUrl||''}" placeholder="http://192.168.1.x:8096" style="width:200px"></div>
+        <div class="cc-row"><span class="cc-lbl">Clé API</span><input class="pi-in" id="cc-jf-key" type="password" value="${cur.jfKey||''}" placeholder="Administration → API Keys" style="width:200px"></div>`;
+      break;
+    case 'immich':
+      ex.innerHTML=`
+        <div class="cc-row"><span class="cc-lbl">URL Immich</span><input class="pi-in" id="cc-im-url" type="text" value="${cur.imUrl||''}" placeholder="http://192.168.1.x:2283" style="width:200px"></div>
+        <div class="cc-row"><span class="cc-lbl">Clé API</span><input class="pi-in" id="cc-im-key" type="password" value="${cur.imKey||''}" placeholder="Profil → API Keys" style="width:200px"></div>
+        <div class="cc-row"><span class="cc-lbl">Mode</span><select class="pi-sel" id="cc-im-mode"><option value="random"${cur.imMode==='random'?' selected':''}>🎲 Aléatoire</option><option value="onthisday"${cur.imMode==='onthisday'?' selected':''}>📅 Ce jour-là</option><option value="favorites"${cur.imMode==='favorites'?' selected':''}>❤️ Favoris</option><option value="album"${cur.imMode==='album'?' selected':''}>📁 Album</option></select></div>
+        <div class="cc-row" id="cc-im-album-row" style="${cur.imMode==='album'?'':'display:none'}"><span class="cc-lbl">ID Album</span><input class="pi-in" id="cc-im-album" type="text" value="${cur.imAlbum||''}" style="width:200px" placeholder="UUID de l'album"></div>
+        <div class="cc-row"><span class="cc-lbl">Intervalle (sec)</span><input class="pi-sm" id="cc-im-interval" type="number" value="${cur.imInterval||30}" min="5" max="300"></div>`;
+      setTimeout(()=>{
+        const modeEl=document.getElementById('cc-im-mode');
+        if(modeEl)modeEl.onchange=()=>{document.getElementById('cc-im-album-row').style.display=modeEl.value==='album'?'flex':'none';};
+      },50);
+      break;
+    case 'pihole':
+      ex.innerHTML=`
+        <div class="cc-row"><span class="cc-lbl">URL Pi-hole</span><input class="pi-in" id="cc-ph-url" type="text" value="${cur.phUrl||''}" placeholder="http://192.168.1.x" style="width:200px"></div>
+        <div class="cc-row"><span class="cc-lbl">Token API</span><input class="pi-in" id="cc-ph-token" type="password" value="${cur.phToken||''}" placeholder="Settings → API → Token" style="width:200px"></div>`;
+      break;
+    case 'moonraker':
+      ex.innerHTML=`
+        <div class="cc-row"><span class="cc-lbl">URL Moonraker</span><input class="pi-in" id="cc-mr-url" type="text" value="${cur.mrUrl||''}" placeholder="http://192.168.1.x:7125" style="width:200px"></div>
+        <div style="font-size:10px;color:var(--dim)">Pas d'auth requise par défaut</div>`;
+      break;
+    case 'speedtest':
+      ex.innerHTML=`<div style="font-size:10px;color:var(--dim)">Speedtest via speedtest-cli. Auto-rafraîchi toutes les heures ou sur demande.</div>`;
       break;
     case 'webpage':
       ex.innerHTML=`<div class="cc-row"><span class="cc-lbl">URL</span><input class="pi-in" id="cc-url" type="text" value="${cur.url||''}" placeholder="http://192.168.1.x:port" style="width:210px"></div>`;
@@ -982,20 +1199,23 @@ document.getElementById('cc-save').addEventListener('click',()=>{
   const cells=cfg.grid?.cells||[];
   const _type=document.getElementById('cc-type').value;
   const _g=id=>{const el=document.getElementById(id);return el?el.value:'';};
+  const _el=id=>document.getElementById(id);
   cells[selectedCell]={...cells[selectedCell],
-    id:`cell-${selectedCell}`,
-    type:_type,
-    cameraId:_g('cc-cam'),
-    label:_g('cc-lbl'),
-    url:_g('cc-url'),
-    kumaUrl:_g('cc-kuma-url'),
-    kumaSlug:_g('cc-kuma-slug')||'default',
-    kumaToken:_g('cc-kuma-token'),
-    bszUrl:_g('cc-bsz-url'),
-    bszEmail:_g('cc-bsz-email'),
-    bszPass:_g('cc-bsz-pass'),
+    id:`cell-${selectedCell}`,type:_type,
+    cameraId:_g('cc-cam'),label:_g('cc-lbl'),url:_g('cc-url'),
+    kumaUrl:_g('cc-kuma-url'),kumaSlug:_g('cc-kuma-slug')||'default',kumaToken:_g('cc-kuma-token'),
+    bszUrl:_g('cc-bsz-url'),bszEmail:_g('cc-bsz-email'),bszPass:_g('cc-bsz-pass'),
+    wxLat:_g('cc-wx-lat'),wxLon:_g('cc-wx-lon'),
+    haUrl:_g('cc-ha-url'),haToken:_g('cc-ha-token'),
+    haEntities:(_el('cc-ha-entities')?.value||'').split('
+').map(s=>s.trim()).filter(Boolean),
+    jfUrl:_g('cc-jf-url'),jfKey:_g('cc-jf-key'),
+    imUrl:_g('cc-im-url'),imKey:_g('cc-im-key'),
+    imMode:_g('cc-im-mode')||'random',imAlbum:_g('cc-im-album'),
+    imInterval:+(_g('cc-im-interval')||30),
+    phUrl:_g('cc-ph-url'),phToken:_g('cc-ph-token'),
+    mrUrl:_g('cc-mr-url'),
   };
-  // Supprimer les champs dynamiques
   const ex=document.getElementById('cc-extra');if(ex)ex.remove();
   cfg.grid.cells=cells;API.saveConfig(cfg);renderGrid();renderGridPreview();
   document.getElementById('cell-cfg').style.display='none';selectedCell=null;
