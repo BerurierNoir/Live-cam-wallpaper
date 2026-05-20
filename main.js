@@ -361,7 +361,18 @@ function buildTrayMenu() {
   return Menu.buildFromTemplate([
     { label: `CamWall v${VERSION}`, enabled: false },
     { type: 'separator' },
-    { label: 'Afficher / Masquer', click: () => { if (mainWin) mainWin.isVisible() ? mainWin.hide() : mainWin.show(); } },
+    { label: 'Afficher / Masquer', click: () => {
+      if (mainWin) {
+        if (mainWin.isVisible()) {
+          mainWin.hide();
+        } else {
+          mainWin.show();
+          mainWin.focus();
+          mainWin.setAlwaysOnTop(true);
+          setTimeout(() => mainWin?.setAlwaysOnTop(false), 200);
+        }
+      }
+    } },
     { type: 'separator' },
     { label: '⏸ Pause streams',     click: () => mainWin?.webContents.send('cmd:pause-all') },
     { label: '▶ Reprendre streams',  click: () => mainWin?.webContents.send('cmd:resume-all') },
@@ -392,7 +403,14 @@ function createTray() {
     tray = new Tray(icon);
     tray.setToolTip('CamWall');
     tray.setContextMenu(buildTrayMenu());
-    tray.on('double-click', () => { if (mainWin) mainWin.isVisible() ? mainWin.focus() : mainWin.show(); });
+    tray.on('double-click', () => {
+      if (mainWin) {
+        mainWin.show();
+        mainWin.focus();
+        mainWin.setAlwaysOnTop(true);
+        setTimeout(() => mainWin?.setAlwaysOnTop(false), 200);
+      }
+    });
     L.info('Tray créé');
   } catch (e) { L.err('Tray:', e.message); }
 }
@@ -418,7 +436,18 @@ function createWindow() {
   mainWin.webContents.on('before-input-event', (_, input) => {
     if (input.key === 'F12' && input.type === 'keyDown') mainWin.webContents.toggleDevTools();
   });
-  mainWin.on('close', e => { if (!app.isQuitting) { e.preventDefault(); mainWin.hide(); } });
+  mainWin.on('close', e => {
+    if (!app.isQuitting) {
+      e.preventDefault();
+      mainWin.hide();
+      // Notifier l'utilisateur la première fois
+      if (!global.hiddenNotified) {
+        global.hiddenNotified = true;
+        tray?.setToolTip('CamWall — Réduit dans le tray. Clic droit → Afficher');
+        setTimeout(() => tray?.setToolTip('CamWall'), 4000);
+      }
+    }
+  });
   mainWin.on('closed', () => { mainWin = null; });
 
   if (config.firstRun || !config.cameras?.length) {
@@ -535,7 +564,16 @@ function downloadGo2rtc(event) {
 // ── LIFECYCLE ─────────────────────────────────────────────────
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) { app.quit(); process.exit(0); }
-app.on('second-instance', () => { if (mainWin) { mainWin.show(); mainWin.focus(); } });
+app.on('second-instance', () => {
+  if (mainWin) {
+    if (mainWin.isMinimized()) mainWin.restore();
+    mainWin.show();
+    mainWin.focus();
+    // Wayland: forcer la fenêtre au premier plan
+    mainWin.setAlwaysOnTop(true);
+    setTimeout(() => mainWin?.setAlwaysOnTop(false), 200);
+  }
+});
 
 app.whenReady().then(async () => {
   config = loadConfig();
