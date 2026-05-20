@@ -95,13 +95,12 @@ function decodeUrl(url) {
   try { return decodeURIComponent(url); } catch (_) { return url; }
 }
 
-function buildGo2rtcStream(cam, cfg) {
+function buildGo2rtcStream(cam) {
   if (!cam.mainUrl) return null;
-  const url = decodeUrl(cam.mainUrl);
-  const fps = cfg?.go2rtcFps || 15;
-  // FFmpeg: H264/H265 → MJPEG avec framerate configurable
-  // fps limité = moins de CPU sur le renderer Electron
-  return [url, `ffmpeg:${cam.id}#video=mjpeg#fps=${fps}`];
+  // MSE (Media Source Extensions) = meilleure option pour Electron/Chromium
+  // go2rtc sert H264 en MSE SANS FFmpeg → moins de CPU, meilleure qualité
+  // Aucune source FFmpeg MJPEG nécessaire ici
+  return [decodeUrl(cam.mainUrl)];
 }
 
 function writeGo2rtcConfig(cfg) {
@@ -417,6 +416,7 @@ function createTray() {
 
 // ── FENÊTRE ───────────────────────────────────────────────────
 let mainWin = null;
+let currentUrl = null; // URL courante pour recréer la fenêtre après changement d'écran
 function showMain() { if (mainWin) { mainWin.show(); mainWin.focus(); } }
 
 function createWindow() {
@@ -462,7 +462,10 @@ async function loadApp() {
   mainWin.loadFile(path.join(__dirname, 'src', 'loading.html'));
   startGo2rtc(config);
   await waitForGo2rtc(config.go2rtcPort || GO2RTC_PORT);
-  if (mainWin) mainWin.loadFile(path.join(__dirname, 'src', 'app.html'));
+  if (mainWin && !mainWin.isDestroyed()) {
+    mainWin.loadFile(path.join(__dirname, 'src', 'app.html'));
+    currentUrl = `file://${path.join(__dirname, 'src', 'app.html')}`;
+  }
 }
 
 // ── IPC ───────────────────────────────────────────────────────
