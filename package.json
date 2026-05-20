@@ -1,1 +1,24 @@
-{"name":"camwall","productName":"CamWall","version":"2.2.0","description":"Live camera wallpaper for Linux — RTSP, Reolink, Tapo, ONVIF, MJPEG, HLS","main":"main.js","author":"Your Name","license":"MIT","keywords":["camera","rtsp","wallpaper","linux","surveillance","reolink","go2rtc","mjpeg"],"scripts":{"start":"electron .","dev":"NODE_ENV=development electron .","build":"npm run fetch-go2rtc && npm run generate-icon && electron-builder","build:appimage":"npm run fetch-go2rtc && npm run generate-icon && electron-builder --linux AppImage","build:deb":"npm run fetch-go2rtc && npm run generate-icon && electron-builder --linux deb","fetch-go2rtc":"bash scripts/download-go2rtc.sh","generate-icon":"node scripts/generate-icon.js"},"dependencies":{"js-yaml":"^4.1.0"},"devDependencies":{"electron":"^33.0.0","electron-builder":"^25.0.0"}}
+{
+  "name": "camwall",
+  "productName": "CamWall",
+  "version": "3.0.0",
+  "description": "Live camera wallpaper for Linux — RTSP, Reolink, Tapo, ONVIF via go2rtc",
+  "main": "main.js",
+  "author": "CamWall",
+  "license": "MIT",
+  "keywords": ["camera", "rtsp", "wallpaper", "linux", "surveillance", "reolink", "go2rtc"],
+  "scripts": {
+    "start":          "electron .",
+    "build":          "bash scripts/download-go2rtc.sh && electron-builder",
+    "build:appimage": "bash scripts/download-go2rtc.sh && electron-builder --linux AppImage",
+    "build:rpm":      "bash scripts/download-go2rtc.sh && electron-builder --linux rpm",
+    "build:deb":      "bash scripts/download-go2rtc.sh && electron-builder --linux deb"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "electron":         "^33.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}
