@@ -1310,6 +1310,580 @@ async function init(){
   const h=document.getElementById('hint');setTimeout(()=>h.classList.add('show'),1000);setTimeout(()=>h.classList.remove('show'),8000);
 }
 init().catch(console.error);
+
+
+// ══════════════════════════════════════════════════════════════
+// GRAPHES TEMPS RÉEL — stockage mémoire circulaire
+// ══════════════════════════════════════════════════════════════
+const metricsHistory={cpu:[],ram:[]};
+const HIST_MAX=60;
+function pushHistory(key,val){
+  if(!metricsHistory[key])metricsHistory[key]=[];
+  metricsHistory[key].push(+val||0);
+  if(metricsHistory[key].length>HIST_MAX)metricsHistory[key].shift();
+}
+function drawSparkline(canvas,data,color='#6366f1'){
+  if(!canvas||!data||data.length<2)return;
+  const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
+  ctx.clearRect(0,0,w,h);
+  const max=Math.max(100,...data),min=0;
+  const pts=data.map((v,i)=>({x:(i/(data.length-1))*w,y:h-((v-min)/(max-min||1))*(h*.85)+h*.07}));
+  ctx.beginPath();ctx.moveTo(pts[0].x,h);
+  pts.forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.lineTo(pts[pts.length-1].x,h);ctx.closePath();
+  const g=ctx.createLinearGradient(0,0,0,h);
+  g.addColorStop(0,color+'55');g.addColorStop(1,color+'00');
+  ctx.fillStyle=g;ctx.fill();
+  ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+  ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.stroke();
+}
+
+// ══════════════════════════════════════════════════════════════
+// ALERTES VISUELLES
+// ══════════════════════════════════════════════════════════════
+const alertStates={};
+function flashAlert(msg,color='red'){
+  const div=document.createElement('div');
+  const col=color==='red'?'var(--red)':'var(--amber)';
+  div.style.cssText=`position:fixed;top:64px;right:16px;z-index:300;background:rgba(7,10,20,.95);border:1px solid ${col};border-radius:8px;padding:10px 16px;font-size:12px;color:${col};letter-spacing:.5px;max-width:260px;`;
+  div.textContent='⚠ '+msg;
+  document.body.appendChild(div);
+  setTimeout(()=>{div.style.transition='opacity .5s';div.style.opacity='0';setTimeout(()=>div.remove(),500);},5000);
+}
+function checkAlerts(metrics){
+  const cpuThr=cfg.alertCpuThreshold||85;
+  const ramThr=cfg.alertRamThreshold||90;
+  if((metrics.cpuPercent||0)>=cpuThr&&!alertStates.cpu){
+    alertStates.cpu=true;
+    flashAlert('CPU élevé: '+metrics.cpuPercent+'%','orange');
+    API.notifyDesktop({title:'⚠ CamWall',body:`CPU à ${metrics.cpuPercent}%`});
+  }else if((metrics.cpuPercent||0)<cpuThr) alertStates.cpu=false;
+  if((metrics.ramPercent||0)>=ramThr&&!alertStates.ram){
+    alertStates.ram=true;
+    flashAlert('RAM critique: '+metrics.ramPercent+'%','red');
+  }else if((metrics.ramPercent||0)<ramThr) alertStates.ram=false;
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÉTÉO — Open-Meteo (gratuit, sans clé)
+// ══════════════════════════════════════════════════════════════
+const WX_CODES={0:'☀️',1:'🌤',2:'⛅',3:'🌥',45:'🌫',48:'🌫',51:'🌦',53:'🌦',55:'🌧',61:'🌧',63:'🌧',65:'🌧',71:'❄️',73:'❄️',75:'❄️',80:'🌦',81:'🌦',82:'⛈',95:'⛈',96:'⛈',99:'⛈'};
+const WX_DESC={0:'Ciel dégagé',1:'Peu nuageux',2:'Partiellement nuageux',3:'Couvert',45:'Brouillard',48:'Brouillard givrant',51:'Bruine légère',53:'Bruine',55:'Bruine forte',61:'Pluie légère',63:'Pluie',65:'Pluie forte',71:'Neige légère',73:'Neige',75:'Neige forte',80:'Averses légères',81:'Averses',82:'Averses fortes',95:'Orage',96:'Orage+grêle',99:'Orage fort'};
+const DAYS_FR=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+function buildWeather(cc){
+  const wrap=document.createElement('div');
+  wrap.className='weather-widget';
+  wrap.innerHTML='<div style="color:var(--dim);font-size:11px;padding:20px">⏳ Chargement météo...</div>';
+  refreshWeather(wrap,cc);
+  return wrap;
+}
+async function refreshWeather(wrap,cc){
+  if(!wrap.isConnected)return;
+  const lat=parseFloat(cc.wxLat)||45.36,lon=parseFloat(cc.wxLon)||4.13;
+  try{
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,precipitation,weathercode,windspeed_10m,relativehumidity_2m&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_probability_max,sunrise,sunset&timezone=Europe%2FParis&forecast_days=4`,{signal:AbortSignal.timeout(12000)});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    const c=d.current,dy=d.daily,code=c.weathercode;
+    const sunrise=(dy.sunrise?.[0]||'').slice(11,16),sunset=(dy.sunset?.[0]||'').slice(11,16);
+    const fc=dy.time?.slice(1,4)||[];
+    wrap.innerHTML=`
+      <div class="wx-main">
+        <div class="wx-icon">${WX_CODES[code]||'🌡'}</div>
+        <div>
+          <div class="wx-temp">${Math.round(c.temperature_2m)}°</div>
+          <div class="wx-feels">Ressenti ${Math.round(c.apparent_temperature)}°</div>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          <div class="wx-desc">${WX_DESC[code]||''}</div>
+          <div class="wx-sunrise">🌅${sunrise} 🌇${sunset}</div>
+        </div>
+      </div>
+      <div class="wx-grid">
+        <div class="wx-stat"><div class="wx-stat-lbl">VENT</div><div class="wx-stat-val">${Math.round(c.windspeed_10m)} km/h</div></div>
+        <div class="wx-stat"><div class="wx-stat-lbl">HUMIDITÉ</div><div class="wx-stat-val">${c.relativehumidity_2m}%</div></div>
+        <div class="wx-stat"><div class="wx-stat-lbl">PRÉCIP.</div><div class="wx-stat-val">${c.precipitation}mm</div></div>
+        <div class="wx-stat"><div class="wx-stat-lbl">DEMAIN</div><div class="wx-stat-val">${dy.precipitation_probability_max?.[1]||0}%💧</div></div>
+      </div>
+      <div class="wx-forecast">${fc.map((t,i)=>`<div class="wx-day"><div class="wx-day-name">${DAYS_FR[new Date(t+'T12:00').getDay()]}</div><div class="wx-day-icon">${WX_CODES[dy.weathercode?.[i+1]]||'🌡'}</div><div class="wx-day-temp">${Math.round(dy.temperature_2m_min?.[i+1]||0)}°–${Math.round(dy.temperature_2m_max?.[i+1]||0)}°</div></div>`).join('')}</div>`;
+  }catch(e){
+    wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🌫</div><div style="font-size:11px">Météo indisponible</div></div>';
+  }
+  setTimeout(()=>{if(wrap.isConnected)refreshWeather(wrap,cc);},15*60*1000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// HOME ASSISTANT
+// ══════════════════════════════════════════════════════════════
+const HA_DOMAIN_ICONS={'binary_sensor':'🔵','sensor':'🌡','switch':'⚡','light':'💡','media_player':'📺','climate':'🌡','input_boolean':'🔘','lock':'🔒','cover':'🪟','fan':'💨'};
+function haIcon(eid){
+  const domain=eid.split('.')[0];
+  if(eid.includes('door')||eid.includes('porte'))return'🚪';
+  if(eid.includes('window')||eid.includes('fenetre')||eid.includes('fenêtre'))return'🪟';
+  if(eid.includes('motion')||eid.includes('mouvement'))return'🚶';
+  if(eid.includes('temperature')||eid.includes('temp'))return'🌡';
+  if(eid.includes('humidity')||eid.includes('humidite'))return'💧';
+  if(eid.includes('smoke')||eid.includes('fumee'))return'🔥';
+  if(eid.includes('garage'))return'🏠';
+  if(eid.includes('media_player'))return'📺';
+  return HA_DOMAIN_ICONS[domain]||'⚪';
+}
+function haStateClass(domain,state){
+  if(['on','home','open','unlocked','playing','heating'].includes(state))return domain==='binary_sensor'&&state==='open'?'ha-alert':'ha-on';
+  if(['off','away','closed','locked','idle','paused'].includes(state))return'ha-off';
+  if(['unavailable','unknown'].includes(state))return'';
+  return'';
+}
+function haStateLabel(domain,state,attr){
+  if(attr?.unit_of_measurement)return`${parseFloat(state).toFixed(1)}${attr.unit_of_measurement}`;
+  const map={on:'ON',off:'OFF',open:'OUVERT',closed:'FERMÉ',home:'Présent',away:'Absent',playing:'▶ Lecture',idle:'Veille',paused:'⏸',unavailable:'—',unknown:'—',locked:'Fermé',unlocked:'Ouvert'};
+  return map[state]||state;
+}
+function buildHA(cc){
+  const wrap=document.createElement('div');
+  wrap.className='ha-widget';
+  if(!cc.haUrl||!cc.haToken){wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🏠</div><div style="font-size:11px">Configurer Home Assistant</div></div>';return wrap;}
+  const hdr=document.createElement('div');
+  hdr.style.cssText='font-size:9px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;flex-shrink:0;padding:2px 0';
+  hdr.innerHTML='<span>🏠 HOME ASSISTANT</span><span class="ha-ts"></span>';
+  wrap.appendChild(hdr);
+  refreshHA(wrap,cc);
+  return wrap;
+}
+async function refreshHA(wrap,cc){
+  if(!wrap.isConnected)return;
+  const entities=(cc.haEntities||[]).filter(Boolean);
+  const tsEl=wrap.querySelector('.ha-ts');
+  if(!entities.length){
+    const p=wrap.querySelector('.ha-empty')||document.createElement('div');
+    p.className='ha-empty';p.style.cssText='font-size:10px;color:var(--dim);text-align:center;padding:20px';
+    p.textContent='Aucune entité configurée';
+    if(!wrap.contains(p))wrap.appendChild(p);
+    return;
+  }
+  try{
+    const hdrs={'Authorization':`Bearer ${cc.haToken}`,'Content-Type':'application/json'};
+    const results=await Promise.all(entities.map(id=>
+      fetch(`${cc.haUrl}/api/states/${id}`,{headers:hdrs,signal:AbortSignal.timeout(8000)})
+        .then(r=>r.ok?r.json():null).catch(()=>null)
+    ));
+    wrap.querySelectorAll('.ha-entity').forEach(e=>e.remove());
+    results.forEach(ent=>{
+      if(!ent||ent.message)return;
+      const domain=ent.entity_id.split('.')[0];
+      const icon=haIcon(ent.entity_id);
+      const cls=haStateClass(domain,ent.state);
+      const lbl=haStateLabel(domain,ent.state,ent.attributes);
+      const div=document.createElement('div');
+      div.className='ha-entity';
+      div.innerHTML=`<span class="ha-entity-icon">${icon}</span><span class="ha-entity-name">${ent.attributes?.friendly_name||ent.entity_id.split('.')[1].replace(/_/g,' ')}</span><span class="ha-entity-state ${cls}">${lbl}</span>`;
+      if(['switch','light','input_boolean','fan'].includes(domain)){
+        div.style.cursor='pointer';div.title='Cliquer pour basculer';
+        div.onclick=async()=>{
+          try{await fetch(`${cc.haUrl}/api/services/${domain}/toggle`,{method:'POST',headers:hdrs,body:JSON.stringify({entity_id:ent.entity_id}),signal:AbortSignal.timeout(5000)});}catch(_){}
+          setTimeout(()=>{if(wrap.isConnected)refreshHA(wrap,cc);},800);
+        };
+      }
+      wrap.appendChild(div);
+    });
+    if(tsEl)tsEl.textContent=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){console.error('HA:',e.message);}
+  setTimeout(()=>{if(wrap.isConnected)refreshHA(wrap,cc);},15000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// JELLYFIN
+// ══════════════════════════════════════════════════════════════
+function buildJellyfin(cc){
+  const wrap=document.createElement('div');
+  wrap.className='jf-widget';
+  if(!cc.jfUrl||!cc.jfKey){wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🎬</div><div style="font-size:11px">Configurer Jellyfin</div></div>';return wrap;}
+  refreshJellyfin(wrap,cc);
+  return wrap;
+}
+async function refreshJellyfin(wrap,cc){
+  if(!wrap.isConnected)return;
+  try{
+    const hdrs={'Authorization':`MediaBrowser Token="${cc.jfKey}"`,'Content-Type':'application/json'};
+    const [sessR,recR]=await Promise.all([
+      fetch(`${cc.jfUrl}/Sessions`,{headers:hdrs,signal:AbortSignal.timeout(8000)}),
+      fetch(`${cc.jfUrl}/Items/Latest?Limit=3&IncludeItemTypes=Movie,Series&fields=Overview`,{headers:hdrs,signal:AbortSignal.timeout(8000)})
+    ]);
+    const sessions=sessR.ok?await sessR.json():[];
+    const recent=recR.ok?await recR.json():[];
+    const playing=(Array.isArray(sessions)?sessions:[]).filter(s=>s.NowPlayingItem);
+    if(playing.length>0){
+      const s=playing[0],item=s.NowPlayingItem;
+      const pos=s.PlayState?.PositionTicks||0,dur=item.RunTimeTicks||1;
+      const pct=Math.min(100,Math.round(pos/dur*100));
+      const remaining=Math.round((dur-pos)/600000000);
+      const poster=`${cc.jfUrl}/Items/${item.Id}/Images/Primary?Height=200&quality=80&api_key=${cc.jfKey}`;
+      const sub=item.SeriesName?`${item.SeriesName} · S${item.ParentIndexNumber||1}E${item.IndexNumber||1}`:item.ProductionYear||'';
+      wrap.innerHTML=`
+        <div class="jf-playing">
+          <div class="jf-poster" style="background-image:url('${poster}')"></div>
+          <div class="jf-overlay"></div>
+          <div class="jf-info">
+            <div class="jf-title">${item.Name||'?'}</div>
+            <div class="jf-subtitle">${sub}</div>
+            <div class="jf-progress-bar"><div class="jf-progress-fill" style="width:${pct}%"></div></div>
+            <div class="jf-user">${s.UserName||''} · ${pct}%${remaining>0?` · ~${remaining}min`:''}</div>
+          </div>
+        </div>`;
+    }else{
+      const items=Array.isArray(recent)?recent:[];
+      wrap.innerHTML=`<div class="jf-idle"><div class="jf-idle-icon">🎬</div><div style="font-size:10px;color:var(--dim)">Rien en lecture</div></div>
+        ${items.length?`<div class="jf-recent"><div style="font-size:9px;color:var(--dim);letter-spacing:1px;padding-bottom:4px">RÉCEMMENT AJOUTÉ</div>${items.map(i=>`<div class="jf-recent-item"><div class="jf-recent-thumb" style="background-image:url('${cc.jfUrl}/Items/${i.Id}/Images/Primary?Height=30&api_key=${cc.jfKey}')"></div><span>${i.Name}</span><span style="margin-left:auto;color:var(--dim)">${i.ProductionYear||''}</span></div>`).join('')}</div>`:''}`
+    }
+  }catch(e){
+    if(wrap.isConnected)wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🎬</div><div style="font-size:11px">Jellyfin indisponible</div></div>';
+  }
+  setTimeout(()=>{if(wrap.isConnected)refreshJellyfin(wrap,cc);},20000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// IMMICH SLIDESHOW
+// ══════════════════════════════════════════════════════════════
+const immichState={};
+function buildImmich(cc){
+  const wrap=document.createElement('div');
+  wrap.className='immich-widget';
+  if(!cc.imUrl||!cc.imKey){wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">📸</div><div style="font-size:11px">Configurer Immich</div></div>';return wrap;}
+  const img=document.createElement('img');
+  img.className='immich-img';img.alt='';
+  wrap.appendChild(img);
+  wrap.insertAdjacentHTML('beforeend','<div class="immich-overlay"><div class="immich-date"></div><div class="immich-exif"></div></div>');
+  const sid='im_'+Date.now();
+  immichState[sid]={shuffle:[],idx:0,timer:null,wrap};
+  loadNextImmich(wrap,cc,img,sid);
+  // Cleanup quand la case est reconstruite
+  const obs=new MutationObserver(()=>{if(!document.body.contains(wrap)){clearTimeout(immichState[sid]?.timer);delete immichState[sid];obs.disconnect();}});
+  obs.observe(document.body,{childList:true,subtree:true});
+  return wrap;
+}
+async function loadNextImmich(wrap,cc,img,sid){
+  const st=immichState[sid];
+  if(!st||!wrap.isConnected){delete immichState[sid];return;}
+  clearTimeout(st.timer);
+  try{
+    const hdrs={'x-api-key':cc.imKey,'Accept':'application/json'};
+    let assetId=null,assetDate=null,exifInfo=null;
+    if(cc.imMode==='onthisday'){
+      const r=await fetch(`${cc.imUrl}/api/memories`,{headers:hdrs,signal:AbortSignal.timeout(12000)});
+      const d=r.ok?await r.json():[];
+      const assets=d[0]?.assets||[];
+      const a=assets[Math.floor(Math.random()*assets.length)];
+      if(a){assetId=a.id;assetDate=a.fileCreatedAt;exifInfo=a.exifInfo;}
+    }else if(cc.imMode==='favorites'){
+      if(!st.shuffle.length){
+        const r=await fetch(`${cc.imUrl}/api/assets?isFavorite=true&size=50`,{headers:hdrs,signal:AbortSignal.timeout(12000)});
+        const d=r.ok?await r.json():{};
+        const arr=d.assets||d;
+        if(Array.isArray(arr)){st.shuffle=arr.map(a=>a.id).sort(()=>Math.random()-.5);}
+      }
+      if(st.shuffle.length){assetId=st.shuffle[st.idx%st.shuffle.length];st.idx++;}
+    }else if(cc.imMode==='album'&&cc.imAlbum){
+      if(!st.shuffle.length){
+        const r=await fetch(`${cc.imUrl}/api/albums/${cc.imAlbum}`,{headers:hdrs,signal:AbortSignal.timeout(12000)});
+        const d=r.ok?await r.json():{};
+        if(d.assets)st.shuffle=d.assets.map(a=>a.id).sort(()=>Math.random()-.5);
+      }
+      if(st.shuffle.length){assetId=st.shuffle[st.idx%st.shuffle.length];st.idx++;}
+    }else{
+      const r=await fetch(`${cc.imUrl}/api/assets/random?count=1`,{headers:hdrs,signal:AbortSignal.timeout(12000)});
+      const d=r.ok?await r.json():[];
+      const a=d[0];
+      if(a){assetId=a.id;assetDate=a.fileCreatedAt;exifInfo=a.exifInfo;}
+    }
+    if(assetId){
+      const newImg=new Image();
+      newImg.onload=()=>{
+        if(!wrap.isConnected)return;
+        img.classList.add('fade-out');
+        setTimeout(()=>{img.src=newImg.src;img.classList.remove('fade-out');},1500);
+        const dateEl=wrap.querySelector('.immich-date');
+        const exifEl=wrap.querySelector('.immich-exif');
+        if(dateEl&&assetDate)dateEl.textContent=new Date(assetDate).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+        if(exifEl&&exifInfo)exifEl.textContent=[exifInfo.make,exifInfo.model,exifInfo.city].filter(Boolean).join(' · ');
+      };
+      newImg.src=`${cc.imUrl}/api/assets/${assetId}/thumbnail?format=WEBP`;
+    }
+  }catch(e){console.error('Immich:',e.message);}
+  if(immichState[sid])immichState[sid].timer=setTimeout(()=>loadNextImmich(wrap,cc,img,sid),(cc.imInterval||30)*1000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// PI-HOLE
+// ══════════════════════════════════════════════════════════════
+function buildPihole(cc){
+  const wrap=document.createElement('div');
+  wrap.className='pihole-widget';
+  if(!cc.phUrl){wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🛡</div><div style="font-size:11px">Configurer Pi-hole</div></div>';return wrap;}
+  refreshPihole(wrap,cc);
+  return wrap;
+}
+async function refreshPihole(wrap,cc){
+  if(!wrap.isConnected)return;
+  try{
+    let d=null;
+    // Essayer Pi-hole v6 d'abord
+    try{
+      const auth=cc.phToken?`?auth=${cc.phToken}`:'';
+      const r=await fetch(`${cc.phUrl}/api/stats/summary${auth}`,{signal:AbortSignal.timeout(8000)});
+      const raw=r.ok?await r.json():null;
+      if(raw&&(raw.queries||raw.blocked_today!==undefined)){
+        d={
+          ads_blocked_today:raw.blocked_today??raw.queries?.blocked_today??0,
+          ads_percentage_today:raw.percent_blocked??raw.queries?.percent_blocked??0,
+          dns_queries_today:raw.queries_today??raw.queries?.total_today??0,
+          unique_clients:raw.unique_clients??raw.clients?.unique_clients??'?'
+        };
+      }
+    }catch(_){}
+    // Fallback Pi-hole v5
+    if(!d){
+      const token=cc.phToken?`&auth=${cc.phToken}`:'';
+      const r=await fetch(`${cc.phUrl}/admin/api.php?summary${token}`,{signal:AbortSignal.timeout(8000)});
+      d=r.ok?await r.json():null;
+    }
+    if(!d)throw new Error('no data');
+    const pct=parseFloat(d.ads_percentage_today||0).toFixed(1);
+    const blocked=parseInt(d.ads_blocked_today||0).toLocaleString('fr-FR');
+    const total=parseInt(d.dns_queries_today||0).toLocaleString('fr-FR');
+    wrap.innerHTML=`
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-size:20px">🛡</span><div><div style="font-size:10px;color:var(--green);letter-spacing:1px;font-weight:600">PI-HOLE ACTIF</div><div style="font-size:9px;color:var(--dim)">${d.unique_clients} clients</div></div></div>
+      <div class="ph-big"><div class="ph-num">${blocked}</div><div><div class="ph-pct">${pct}%</div><div style="font-size:9px;color:var(--dim)">bloqué</div></div></div>
+      <div class="ph-bar"><div class="ph-bar-fill" style="width:${Math.min(100,pct)}%"></div></div>
+      <div class="ph-stats-grid">
+        <div class="ph-stat"><div class="ph-stat-v">${total}</div><div class="ph-stat-l">REQUÊTES</div></div>
+        <div class="ph-stat"><div class="ph-stat-v">${blocked}</div><div class="ph-stat-l">BLOQUÉES</div></div>
+      </div>`;
+  }catch(e){
+    wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🛡</div><div style="font-size:11px">Pi-hole indisponible</div></div>';
+  }
+  setTimeout(()=>{if(wrap.isConnected)refreshPihole(wrap,cc);},30000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// MOONRAKER / KLIPPER
+// ══════════════════════════════════════════════════════════════
+function buildMoonraker(cc){
+  const wrap=document.createElement('div');
+  wrap.className='moon-widget';
+  if(!cc.mrUrl){wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🖨</div><div style="font-size:11px">Configurer Moonraker</div></div>';return wrap;}
+  refreshMoonraker(wrap,cc);
+  return wrap;
+}
+async function refreshMoonraker(wrap,cc){
+  if(!wrap.isConnected)return;
+  try{
+    const r=await fetch(`${cc.mrUrl}/printer/objects/query?heater_bed&extruder&print_stats&display_status&virtual_sdcard`,{signal:AbortSignal.timeout(8000)});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    const s=d.result.status;
+    const st=s.print_stats?.state||'standby';
+    const hotend=Math.round(s.extruder?.temperature||0);
+    const hotTarget=Math.round(s.extruder?.target||0);
+    const bed=Math.round(s.heater_bed?.temperature||0);
+    const bedTarget=Math.round(s.heater_bed?.target||0);
+    const pct=Math.round((s.display_status?.progress||0)*100);
+    const file=(s.print_stats?.filename||'').replace(/\.gcode$/i,'')||'—';
+    const dur=s.print_stats?.print_duration||0;
+    const progress=s.display_status?.progress||0;
+    const eta=progress>0.01?Math.round(dur/progress-dur):0;
+    const fmtT=s=>{const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h?`${h}h${String(m).padStart(2,'0')}m`:`${m}m`;};
+    const stClass={printing:'moon-printing',paused:'moon-printing',error:'moon-error',standby:'moon-idle',idle:'moon-idle',complete:'moon-idle'}[st]||'moon-idle';
+    const stLabel={printing:'⏵ Impression',paused:'⏸ Pause',error:'⚠ Erreur',standby:'En veille',idle:'En veille',complete:'✓ Terminé'}[st]||st;
+    const isPrinting=st==='printing'||st==='paused';
+    wrap.innerHTML=`
+      <div class="moon-status ${stClass}">${stLabel}</div>
+      <div class="moon-temps">
+        <div class="moon-temp"><div class="moon-temp-val">${hotend}°</div><div class="moon-temp-lbl">HOTEND${hotTarget?` → ${hotTarget}°`:''}</div></div>
+        <div class="moon-temp"><div class="moon-temp-val">${bed}°</div><div class="moon-temp-lbl">BED${bedTarget?` → ${bedTarget}°`:''}</div></div>
+      </div>
+      ${isPrinting?`<div class="moon-progress"><div class="moon-pct">${pct}%</div><div class="moon-bar"><div class="moon-bar-fill" style="width:${pct}%"></div></div></div><div class="moon-file" title="${file}">📄 ${file}</div><div class="moon-eta">⏱ ${fmtT(dur)}${eta>60?` · ETA ~${fmtT(eta)}`:''}</div>`:'<div class="moon-file" style="opacity:.4">Aucune impression en cours</div>'}`;
+  }catch(e){
+    wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🖨</div><div style="font-size:11px">Moonraker indisponible</div></div>';
+  }
+  setTimeout(()=>{if(wrap.isConnected)refreshMoonraker(wrap,cc);},5000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// SPEEDTEST
+// ══════════════════════════════════════════════════════════════
+let _speedResult=null,_speedRunning=false;
+function buildSpeedtest(){
+  const wrap=document.createElement('div');
+  wrap.className='speed-widget';
+  renderSpeedtest(wrap);
+  if(!_speedResult)runSpeedtest(wrap);
+  return wrap;
+}
+function renderSpeedtest(wrap){
+  const r=_speedResult;
+  const dl=r?Math.round((r.download||r.download_speed||0)/1e6*10)/10:'—';
+  const ul=r?Math.round((r.upload||r.upload_speed||0)/1e6*10)/10:'—';
+  const ping=r?Math.round(r.ping||r.latency||0):'—';
+  const ts=r?new Date(r.timestamp||Date.now()).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';
+  wrap.innerHTML=`
+    <div style="font-size:9px;color:var(--dim);letter-spacing:1px;flex-shrink:0">⚡ SPEEDTEST ${ts?'· '+ts:''}</div>
+    <div class="speed-gauges">
+      <div class="speed-gauge"><div class="speed-val speed-dl">${dl}</div><div class="speed-unit">Mbps</div><div class="speed-lbl">⬇ Download</div></div>
+      <div class="speed-gauge"><div class="speed-val speed-ul">${ul}</div><div class="speed-unit">Mbps</div><div class="speed-lbl">⬆ Upload</div></div>
+      <div class="speed-gauge"><div class="speed-ping-val">${ping}</div><div class="speed-unit">ms</div><div class="speed-lbl">⏱ Ping</div></div>
+    </div>
+    ${r?`<div style="font-size:9px;color:var(--dim);flex-shrink:0">${r.server?.name||r.server?.sponsor||''}</div>`:''}
+    <div class="speed-run-btn${_speedRunning?' speed-running':''}" id="spd-btn" style="cursor:pointer">
+      ${_speedRunning?'⏳ Test en cours (30-60s)...':'▶ Lancer un test'}
+    </div>`;
+  wrap.querySelector('#spd-btn')?.addEventListener('click',()=>runSpeedtest(wrap));
+}
+async function runSpeedtest(wrap){
+  if(_speedRunning)return;
+  _speedRunning=true;renderSpeedtest(wrap);
+  try{const r=await API.runSpeedtest();_speedResult=r||_speedResult;}catch(_){}
+  _speedRunning=false;renderSpeedtest(wrap);
+  setTimeout(()=>runSpeedtest(wrap),60*60*1000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// THÈMES
+// ══════════════════════════════════════════════════════════════
+function applyTheme(theme){
+  document.documentElement.dataset.theme=theme||'dark';
+  document.querySelectorAll('[data-theme-btn]').forEach(b=>{
+    b.classList.toggle('active',b.dataset.themeBtn===theme);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODE PRÉSENTATION
+// ══════════════════════════════════════════════════════════════
+let presTimer=null,presActive=false;
+function startPresentation(){
+  if(presActive)stopPresentation();
+  presActive=true;
+  document.getElementById('pres-indicator')?.classList.add('show');
+  const layouts=[
+    ()=>renderGrid(),
+    ()=>{const g=document.getElementById('grid');g.style.gridTemplateColumns='1fr';g.style.gridTemplateRows='1fr';},
+    ()=>renderGrid(),
+  ];
+  let li=0;
+  presTimer=setInterval(()=>{li=(li+1)%layouts.length;try{layouts[li]();}catch(_){}},((cfg.presInterval||30)*1000));
+}
+function stopPresentation(){
+  presActive=false;clearInterval(presTimer);presTimer=null;
+  document.getElementById('pres-indicator')?.classList.remove('show');
+  renderGrid();
+}
+
+// ══════════════════════════════════════════════════════════════
+// EXPORT / IMPORT CONFIG
+// ══════════════════════════════════════════════════════════════
+function exportConfig(){
+  const blob=new Blob([JSON.stringify(cfg,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`camwall-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();URL.revokeObjectURL(a.href);
+}
+function importConfig(){
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='.json';
+  inp.onchange=async e=>{
+    const f=e.target.files[0];if(!f)return;
+    try{const t=await f.text();const imported=JSON.parse(t);cfg={...cfg,...imported};await API.saveConfig(cfg);location.reload();}
+    catch(_){alert('Fichier invalide.');}
+  };
+  inp.click();
+}
+
+// ══════════════════════════════════════════════════════════════
+// WEBHOOK HA → CamWall
+// ══════════════════════════════════════════════════════════════
+API.onWebhook(data=>{
+  console.log('[CamWall] Webhook:',data);
+  if(data.action==='flash'){
+    const col=data.color||'red';
+    const ov=Object.assign(document.createElement('div'),{style:`position:fixed;inset:0;background:${col};opacity:.4;z-index:998;pointer-events:none`});
+    document.body.appendChild(ov);
+    let n=0;const flash=setInterval(()=>{ov.style.opacity=n%2?'.4':'0';if(++n>5){clearInterval(flash);ov.remove();}},300);
+  }
+  if(data.action==='alert'&&data.msg)API.notifyDesktop({title:'🏠 HA Alerte',body:data.msg});
+  if(data.action==='refresh')renderGrid();
+  if(data.action==='nightmode')document.body.classList.toggle('night-mode',!!data.value);
+});
+
+// ══════════════════════════════════════════════════════════════
+// MODE NUIT — listener IPC
+// ══════════════════════════════════════════════════════════════
+API.onNightMode(on=>{
+  document.body.classList.toggle('night-mode',on);
+  document.getElementById('night-banner')?.classList.toggle('show',on);
+});
+// Vérifier au démarrage
+{const h=new Date().getHours();if(h>=22||h<7){document.body.classList.add('night-mode');document.getElementById('night-banner')?.classList.add('show');}}
+
+// ══════════════════════════════════════════════════════════════
+// SNAKE 🐍 EASTER EGG — triple-clic sur logo HUD
+// ══════════════════════════════════════════════════════════════
+(()=>{
+  let clicks=0,ct;
+  const addTrigger=el=>{if(!el)return;el.addEventListener('click',()=>{clicks++;clearTimeout(ct);ct=setTimeout(()=>clicks=0,700);if(clicks>=3){clicks=0;launchSnake();}});};
+  setTimeout(()=>{addTrigger(document.querySelector('.hud-logo')||document.querySelector('#hud'));},1000);
+})();
+function launchSnake(){
+  const ov=document.getElementById('snake-overlay'),cv=document.getElementById('snake-canvas'),sc=document.getElementById('snake-score');
+  if(!ov||!cv)return;
+  ov.classList.add('show');
+  const ctx=cv.getContext('2d'),C=20,N=20;
+  let sn=[{x:10,y:10}],dir={x:1,y:0},food={x:5,y:5},score=0,over=false,loop;
+  const rf=()=>({x:Math.floor(Math.random()*N),y:Math.floor(Math.random()*N)});
+  const draw=()=>{
+    ctx.fillStyle='#0a0a0a';ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.fillStyle='#ff2d55';ctx.fillRect(food.x*C+2,food.y*C+2,C-4,C-4);
+    sn.forEach((s,i)=>{ctx.fillStyle=i===0?'#00ff41':'#00bb30';ctx.fillRect(s.x*C+1,s.y*C+1,C-2,C-2);});
+    if(sc)sc.textContent='SCORE: '+score;
+    if(over){ctx.fillStyle='rgba(0,0,0,.8)';ctx.fillRect(0,0,cv.width,cv.height);ctx.fillStyle='#00ff41';ctx.font='bold 22px monospace';ctx.textAlign='center';ctx.fillText('GAME OVER',cv.width/2,cv.height/2-8);ctx.font='13px monospace';ctx.fillText('Score: '+score,cv.width/2,cv.height/2+18);ctx.fillText('Cliquer pour rejouer',cv.width/2,cv.height/2+42);}
+  };
+  const step=()=>{const h={(x:(sn[0].x+dir.x+N)%N),(y:(sn[0].y+dir.y+N)%N)};if(sn.some(s=>s.x===h.x&&s.y===h.y)){over=true;clearInterval(loop);draw();return;}sn.unshift(h);if(h.x===food.x&&h.y===food.y){score++;food=rf();}else sn.pop();draw();};
+  const start=()=>{sn=[{x:10,y:10}];dir={x:1,y:0};food=rf();score=0;over=false;clearInterval(loop);loop=setInterval(step,120);draw();};
+  start();
+  cv.onclick=()=>{if(over)start();};
+  const kh=e=>{const m={ArrowUp:{x:0,y:-1},ArrowDown:{x:0,y:1},ArrowLeft:{x:-1,y:0},ArrowRight:{x:1,y:0},KeyW:{x:0,y:-1},KeyS:{x:0,y:1},KeyA:{x:-1,y:0},KeyD:{x:1,y:0}};if(m[e.code]){e.preventDefault();const nd=m[e.code];if(nd.x!==-dir.x||nd.y!==-dir.y)dir=nd;}if(e.key==='Escape'){clearInterval(loop);ov.classList.remove('show');document.removeEventListener('keydown',kh);}};
+  document.addEventListener('keydown',kh,{capture:true});
+  document.getElementById('snake-close')?.addEventListener('click',()=>{clearInterval(loop);ov.classList.remove('show');document.removeEventListener('keydown',kh);},{once:true});
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT MÉTRIQUES → HISTORY + ALERTES
+// ══════════════════════════════════════════════════════════════
+API.onMetrics(m=>{
+  pushHistory('cpu',m.cpuPercent||0);
+  pushHistory('ram',m.ramPercent||0);
+  checkAlerts(m);
+  // Mettre à jour les sparklines visibles
+  document.querySelectorAll('.spark-cpu').forEach(c=>drawSparkline(c,metricsHistory.cpu,'#6366f1'));
+  document.querySelectorAll('.spark-ram').forEach(c=>drawSparkline(c,metricsHistory.ram,'#06b6d4'));
+});
+
+// Boutons thème / export / import / présentation (injectés après init)
+setTimeout(()=>{
+  document.querySelectorAll('[data-theme-btn]').forEach(b=>{
+    b.addEventListener('click',()=>{applyTheme(b.dataset.themeBtn);if(cfg){cfg.theme=b.dataset.themeBtn;API.saveConfig(cfg);}});
+  });
+  document.getElementById('btn-pres')?.addEventListener('click',()=>{presActive?stopPresentation():startPresentation();});
+  document.getElementById('btn-export')?.addEventListener('click',exportConfig);
+  document.getElementById('btn-import')?.addEventListener('click',importConfig);
+  if(cfg?.theme)applyTheme(cfg.theme);
+  // Récupérer infos webhook
+  API.webhookStatus?.().then(st=>{
+    const el=document.getElementById('webhook-info');
+    if(el&&st?.running)el.innerHTML=`✅ Webhook actif sur le port <strong>${st.port}</strong><br>Envoyez <code>POST http://[IP]:${st.port}/webhook</code> depuis HA`;
+  }).catch(()=>{});
+},500);
+
 </script>
 </body>
 </html>
