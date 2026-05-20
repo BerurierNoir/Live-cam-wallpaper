@@ -1,98 +1,99 @@
-#!/usr/bin/env bash
-# ═══════════════════════════════════════════════════════════
-#  CamWall — Script d'installation / mise à jour
-#  Usage : bash install.sh [--update]
-# ═══════════════════════════════════════════════════════════
-set -euo pipefail
+#!/bin/bash
+# ─────────────────────────────────────────────────────────
+#  CamWall — Script d'installation
+#  Crée un vrai lanceur KDE/GNOME sans fenêtre terminal
+# ─────────────────────────────────────────────────────────
+set -e
 
-GREEN='\033[0;32m'; AMBER='\033[0;33m'; RED='\033[0;31m'; BOLD='\033[1m'; NC='\033[0m'
-say()  { echo -e "${GREEN}●${NC} $*"; }
-warn() { echo -e "${AMBER}⚠${NC} $*"; }
-die()  { echo -e "${RED}✗${NC} $*"; exit 1; }
-
-REPO="BerurierNoir/Live-cam-wallpaper"
-INSTALL_DIR="$HOME/.local/bin"
-DESKTOP_DIR="$HOME/.local/share/applications"
-APP_NAME="CamWall"
-BIN_NAME="camwall"
-CURRENT_BIN="$INSTALL_DIR/$BIN_NAME"
-UPDATE_MODE=${1:-""}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ELECTRON="$SCRIPT_DIR/node_modules/.bin/electron"
+ICON="$SCRIPT_DIR/assets/icon.svg"
+LAUNCHER="$HOME/.local/bin/camwall"
+DESKTOP="$HOME/.local/share/applications/camwall.desktop"
+AUTOSTART="$HOME/.config/autostart/camwall.desktop"
 
 echo ""
-echo -e "${BOLD}╔══════════════════════════════════════╗${NC}"
-echo -e "${BOLD}║        CamWall Installer v2.0        ║${NC}"
-echo -e "${BOLD}╚══════════════════════════════════════╝${NC}"
+echo "  ██████╗ █████╗ ███╗   ███╗██╗    ██╗ █████╗ ██╗     ██╗"
+echo "  ██╔════╝██╔══██╗████╗ ████║██║    ██║██╔══██╗██║     ██║"
+echo "  ██║     ███████║██╔████╔██║██║ █╗ ██║███████║██║     ██║"
+echo "  ██║     ██╔══██║██║╚██╔╝██║██║███╗██║██╔══██║██║     ██║"
+echo "  ╚██████╗██║  ██║██║ ╚═╝ ██║╚███╔███╔╝██║  ██║███████╗███████╗"
+echo "   ╚═════╝╚═╝  ╚═╝╚═╝     ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝╚══════╝"
+echo ""
+echo "  Installation v$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo '?')"
 echo ""
 
-# ── Dépendances ────────────────────────────────────────────
-check_dep() { command -v "$1" &>/dev/null || die "Dépendance manquante : $1. Installe-la et relance."; }
-check_dep curl
-check_dep jq
-
-mkdir -p "$INSTALL_DIR" "$DESKTOP_DIR"
-
-# ── Version installée ──────────────────────────────────────
-current_version=""
-if [ -f "$CURRENT_BIN" ]; then
-  current_version=$("$CURRENT_BIN" --version 2>/dev/null | grep -oP '\d+\.\d+\.\d+' | head -1 || echo "")
-  say "Version actuelle : ${current_version:-inconnue}"
+# ── 1. Dépendances npm ────────────────────────────────────
+if [ ! -f "$ELECTRON" ]; then
+  echo "→ Installation des dépendances npm..."
+  cd "$SCRIPT_DIR" && npm install --silent
+  echo "✓ npm install OK"
+else
+  echo "✓ Dépendances npm déjà installées"
 fi
 
-# ── Dernière release GitHub ────────────────────────────────
-say "Récupération de la dernière release..."
-release=$(curl -s "https://api.github.com/repos/$REPO/releases/latest")
-latest_version=$(echo "$release" | jq -r '.tag_name' | tr -d 'v')
-appimage_url=$(echo "$release" | jq -r '.assets[] | select(.name | endswith(".AppImage")) | .browser_download_url' | head -1)
+# ── 2. Lanceur shell (sans terminal) ─────────────────────
+mkdir -p "$HOME/.local/bin"
+cat > "$LAUNCHER" << LAUNCHEREOF
+#!/bin/bash
+# Lanceur CamWall — généré par install.sh
+cd "$SCRIPT_DIR"
+exec "$ELECTRON" . "\$@" 2>/dev/null
+LAUNCHEREOF
+chmod +x "$LAUNCHER"
+echo "✓ Lanceur créé : $LAUNCHER"
 
-if [ -z "$appimage_url" ]; then
-  die "Aucun AppImage trouvé dans la dernière release. Build local nécessaire."
-fi
-
-say "Dernière version : $latest_version"
-
-# ── Déjà à jour ? ─────────────────────────────────────────
-if [ "$current_version" = "$latest_version" ] && [ "$UPDATE_MODE" != "--force" ]; then
-  say "CamWall est déjà à jour !"
-  echo ""
-  echo -e "  Lance avec : ${BOLD}$BIN_NAME${NC}"
-  exit 0
-fi
-
-# ── Téléchargement ─────────────────────────────────────────
-TMP=$(mktemp)
-say "Téléchargement de CamWall v$latest_version..."
-curl -L --progress-bar "$appimage_url" -o "$TMP"
-chmod +x "$TMP"
-
-# ── Installation ───────────────────────────────────────────
-mv "$TMP" "$CURRENT_BIN"
-say "Installé dans $CURRENT_BIN"
-
-# ── Entrée .desktop ────────────────────────────────────────
-cat > "$DESKTOP_DIR/$BIN_NAME.desktop" << DESKTOP
+# ── 3. Entrée .desktop (menu applications) ───────────────
+mkdir -p "$HOME/.local/share/applications"
+cat > "$DESKTOP" << DESKTOPEOF
 [Desktop Entry]
 Type=Application
-Name=$APP_NAME
-Comment=Live camera wallpaper — RTSP, Reolink, Tapo, ONVIF
-Exec=$CURRENT_BIN
-Icon=camwall
-Categories=Utility;Video;
+Name=CamWall
+GenericName=Live Camera Wallpaper
+Comment=Transforme un écran en mur de caméras live
+Exec=$LAUNCHER
+Icon=$ICON
+Categories=Utility;Video;Monitor;
 StartupNotify=false
-DESKTOP
-chmod +x "$DESKTOP_DIR/$BIN_NAME.desktop"
+Terminal=false
+Keywords=camera;surveillance;rtsp;reolink;wallpaper;
+DESKTOPEOF
+update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+echo "✓ Entrée .desktop créée (visible dans le lanceur KDE/GNOME)"
 
-# Refresh du menu des apps
-command -v update-desktop-database &>/dev/null && update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
-say "Entrée .desktop créée"
+# ── 4. Démarrage automatique au login ────────────────────
+mkdir -p "$HOME/.config/autostart"
+cat > "$AUTOSTART" << AUTOSTARTEOF
+[Desktop Entry]
+Type=Application
+Name=CamWall
+Comment=Live camera wallpaper — démarrage automatique
+Exec=$LAUNCHER
+Icon=$ICON
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Terminal=false
+AUTOSTARTEOF
+echo "✓ Démarrage automatique activé au login"
 
+# ── 5. Résumé ─────────────────────────────────────────────
 echo ""
-echo -e "${GREEN}══════════════════════════════════════════${NC}"
-echo -e "${GREEN}  ✅ CamWall v$latest_version installé !${NC}"
-echo -e "${GREEN}══════════════════════════════════════════${NC}"
+echo "  ✅ Installation terminée !"
 echo ""
-echo -e "  Lancer : ${BOLD}$BIN_NAME${NC}"
-echo -e "  Ou depuis le menu des applications : ${BOLD}$APP_NAME${NC}"
+echo "  Lancer CamWall :"
+echo "    • Menu des applications KDE → CamWall"
+echo "    • Ou en ligne de commande : camwall"
 echo ""
-echo -e "  Mise à jour future : ${BOLD}bash install.sh --update${NC}"
-echo -e "  Forcer réinstall  : ${BOLD}bash install.sh --force${NC}"
+echo "  Pour désinstaller :"
+echo "    bash $SCRIPT_DIR/uninstall.sh"
 echo ""
+
+# Proposer de lancer maintenant
+read -p "  Lancer CamWall maintenant ? [o/N] " -n 1 -r
+echo ""
+if [[ $REPLY =~ ^[OoYy]$ ]]; then
+  echo "  Démarrage..."
+  nohup "$LAUNCHER" >/dev/null 2>&1 &
+  echo "  ✓ CamWall lancé en arrière-plan"
+fi
