@@ -457,6 +457,35 @@ function createWindow() {
   }
 }
 
+
+// ── WEBHOOK ENTRANT (port 1985) ─────────────────────────────
+// HA peut envoyer des commandes à CamWall via POST http://IP:1985/webhook
+// Exemples: {"action":"flash","color":"red"} / {"action":"alert","msg":"Intrusion!"}
+let webhookServer = null;
+function startWebhook() {
+  if (webhookServer) return;
+  webhookServer = http.createServer((req, res) => {
+    if (req.method !== 'POST') { res.writeHead(404); res.end(); return; }
+    let body = '';
+    req.on('data', d => body += d);
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body);
+        L.info('[webhook]', JSON.stringify(data));
+        mainWin?.webContents.send('webhook:event', data);
+        // Notification desktop si "alert"
+        if (data.action === 'alert' && Notification.isSupported()) {
+          new Notification({ title: 'CamWall Alerte', body: data.msg || 'Événement HA' }).show();
+        }
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:true}));
+      } catch(e) { res.writeHead(400); res.end(JSON.stringify({error:e.message})); }
+    });
+  });
+  webhookServer.listen(1985, '0.0.0.0', () => L.info('Webhook server: http://0.0.0.0:1985/webhook'));
+  webhookServer.on('error', e => L.err('Webhook:', e.message));
+}
+
 async function loadApp() {
   if (!mainWin) return;
   mainWin.loadFile(path.join(__dirname, 'src', 'loading.html'));
@@ -602,6 +631,7 @@ app.whenReady().then(async () => {
   createWindow();
   createTray();
   startMetricsPolling();
+  startWebhook(); // Port 1985 pour HA/domotique
   setTimeout(async () => {
     try {
       const upd = await checkForUpdates();
