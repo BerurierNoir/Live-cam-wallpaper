@@ -2,7 +2,7 @@
 
 const {
   app, BrowserWindow, ipcMain, screen,
-  shell, nativeTheme, Tray, Menu, nativeImage, session
+  shell, nativeTheme, Tray, Menu, nativeImage, session, dialog
 } = require('electron');
 const path   = require('path');
 const fs     = require('fs');
@@ -527,7 +527,7 @@ function registerIPC() {
 
   // Image custom pour cases vides
   ipcMain.handle('image:pick', async () => {
-    const { dialog } = require('electron');
+    // dialog importé globalement
     const result = await dialog.showOpenDialog(mainWin, {
       properties: ['openFile'],
       filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'] }]
@@ -590,6 +590,18 @@ app.whenReady().then(async () => {
       }
     } catch (_) {}
   }, 5000);
+});
+
+// Accepter les certificats self-signed (Proxmox, services locaux HTTPS)
+app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
+  // Uniquement pour les IPs locales / réseau privé
+  const isLocal = url.match(/https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|localhost)/);
+  if (isLocal) {
+    event.preventDefault();
+    callback(true);
+  } else {
+    callback(false);
+  }
 });
 
 app.on('before-quit',       () => { app.isQuitting = true; stopGo2rtc(); if (metricsInterval) clearInterval(metricsInterval); });
