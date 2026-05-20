@@ -1,7 +1,7 @@
 {
   "name": "camwall",
   "productName": "CamWall",
-  "version": "3.0.3",
+  "version": "3.0.4",
   "description": "Live camera wallpaper for Linux \u2014 RTSP, Reolink, Tapo, ONVIF via go2rtc",
   "main": "main.js",
   "author": {
