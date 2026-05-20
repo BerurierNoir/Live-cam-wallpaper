@@ -1,16 +1,19 @@
 #!/bin/bash
-# ─────────────────────────────────────────────────────────
-#  CamWall — Script d'installation
-#  Crée un vrai lanceur KDE/GNOME sans fenêtre terminal
-# ─────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+#  CamWall — Installateur v2
+#  Compatible KDE Plasma 6 / Wayland / Bazzite
+# ─────────────────────────────────────────────────────────────
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ELECTRON="$SCRIPT_DIR/node_modules/.bin/electron"
-ICON="$SCRIPT_DIR/assets/icon.svg"
-LAUNCHER="$HOME/.local/bin/camwall"
-DESKTOP="$HOME/.local/share/applications/camwall.desktop"
-AUTOSTART="$HOME/.config/autostart/camwall.desktop"
+ELECTRON_BIN="$SCRIPT_DIR/node_modules/electron/dist/electron"
+ELECTRON_WRAPPER="$SCRIPT_DIR/node_modules/.bin/electron"
+ICON="$SCRIPT_DIR/assets/icon.png"
+[ ! -f "$ICON" ] && ICON="$SCRIPT_DIR/assets/icon.svg"
+DESKTOP_DIR="$HOME/.local/share/applications"
+DESKTOP_FILE="$DESKTOP_DIR/camwall.desktop"
+AUTOSTART_FILE="$HOME/.config/autostart/camwall.desktop"
+WRAPPER="$HOME/.local/bin/camwall"
 
 echo ""
 echo "  ██████╗ █████╗ ███╗   ███╗██╗    ██╗ █████╗ ██╗     ██╗"
@@ -20,80 +23,86 @@ echo "  ██║     ██╔══██║██║╚██╔╝██║�
 echo "  ╚██████╗██║  ██║██║ ╚═╝ ██║╚███╔███╔╝██║  ██║███████╗███████╗"
 echo "   ╚═════╝╚═╝  ╚═╝╚═╝     ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝╚══════╝"
 echo ""
-echo "  Installation v$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo '?')"
+echo "  Installation KDE Plasma / Bazzite"
 echo ""
 
-# ── 1. Dépendances npm ────────────────────────────────────
-if [ ! -f "$ELECTRON" ]; then
-  echo "→ Installation des dépendances npm..."
-  cd "$SCRIPT_DIR" && npm install --silent
-  echo "✓ npm install OK"
-else
-  echo "✓ Dépendances npm déjà installées"
+# ── 1. npm install ────────────────────────────────────────────
+if [ ! -f "$ELECTRON_BIN" ]; then
+    echo "→ Installation des dépendances npm..."
+    cd "$SCRIPT_DIR" && npm install --silent
 fi
+echo "✓ Electron: $ELECTRON_BIN"
 
-# ── 2. Lanceur shell (sans terminal) ─────────────────────
+# ── 2. Wrapper shell (pour lancement en ligne de commande) ────
 mkdir -p "$HOME/.local/bin"
-cat > "$LAUNCHER" << LAUNCHEREOF
+cat > "$WRAPPER" << WRAPEOF
 #!/bin/bash
-# Lanceur CamWall — généré par install.sh
+export ELECTRON_OZONE_PLATFORM_HINT=auto
 cd "$SCRIPT_DIR"
-exec "$ELECTRON" . "\$@" 2>/dev/null
-LAUNCHEREOF
-chmod +x "$LAUNCHER"
-echo "✓ Lanceur créé : $LAUNCHER"
+exec "$ELECTRON_BIN" "$SCRIPT_DIR" "\$@"
+WRAPEOF
+chmod +x "$WRAPPER"
+echo "✓ Wrapper: $WRAPPER"
 
-# ── 3. Entrée .desktop (menu applications) ───────────────
-mkdir -p "$HOME/.local/share/applications"
-cat > "$DESKTOP" << DESKTOPEOF
+# ── 3. .desktop pour KDE Plasma 6 ────────────────────────────
+# IMPORTANT: Exec pointe DIRECTEMENT vers le binaire electron
+# (pas vers un script shell — KDE 6 gère mal les wrappers shell)
+mkdir -p "$DESKTOP_DIR"
+cat > "$DESKTOP_FILE" << DESKTOPEOF
 [Desktop Entry]
 Type=Application
 Name=CamWall
 GenericName=Live Camera Wallpaper
-Comment=Transforme un écran en mur de caméras live
-Exec=$LAUNCHER
+Comment=Mur de caméras live — RTSP, Reolink, Proxmox, Kuma
+Exec=env ELECTRON_OZONE_PLATFORM_HINT=auto "$ELECTRON_BIN" "$SCRIPT_DIR"
 Icon=$ICON
 Categories=Utility;Video;Monitor;
-StartupNotify=false
+StartupNotify=true
+StartupWMClass=camwall
 Terminal=false
-Keywords=camera;surveillance;rtsp;reolink;wallpaper;
+Keywords=camera;surveillance;rtsp;reolink;wallpaper;proxmox;
+X-KDE-SubstituteUID=false
 DESKTOPEOF
-update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
-echo "✓ Entrée .desktop créée (visible dans le lanceur KDE/GNOME)"
 
-# ── 4. Démarrage automatique au login ────────────────────
+# Indispensable sur KDE Plasma 6 : marquer comme exécutable ET de confiance
+chmod +x "$DESKTOP_FILE"
+gio set "$DESKTOP_FILE" metadata::trusted true 2>/dev/null || \
+  xattr -w com.apple.quarantine "" "$DESKTOP_FILE" 2>/dev/null || true
+
+update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
+kbuildsycoca6 --noincremental 2>/dev/null || \
+  kbuildsycoca5 --noincremental 2>/dev/null || true
+
+echo "✓ .desktop KDE: $DESKTOP_FILE (marqué de confiance)"
+
+# ── 4. Autostart au login ─────────────────────────────────────
 mkdir -p "$HOME/.config/autostart"
-cat > "$AUTOSTART" << AUTOSTARTEOF
-[Desktop Entry]
-Type=Application
-Name=CamWall
-Comment=Live camera wallpaper — démarrage automatique
-Exec=$LAUNCHER
-Icon=$ICON
-Hidden=false
-NoDisplay=false
-X-GNOME-Autostart-enabled=true
-Terminal=false
-AUTOSTARTEOF
-echo "✓ Démarrage automatique activé au login"
+cp "$DESKTOP_FILE" "$AUTOSTART_FILE"
+chmod +x "$AUTOSTART_FILE"
+gio set "$AUTOSTART_FILE" metadata::trusted true 2>/dev/null || true
+echo "✓ Autostart: $AUTOSTART_FILE"
 
-# ── 5. Résumé ─────────────────────────────────────────────
+# ── 5. Résumé ─────────────────────────────────────────────────
 echo ""
 echo "  ✅ Installation terminée !"
 echo ""
-echo "  Lancer CamWall :"
-echo "    • Menu des applications KDE → CamWall"
-echo "    • Ou en ligne de commande : camwall"
+echo "  → Recherche 'CamWall' dans le menu des applications KDE"
+echo "  → Commande: camwall"
+echo "  → Démarre automatiquement au login"
 echo ""
-echo "  Pour désinstaller :"
-echo "    bash $SCRIPT_DIR/uninstall.sh"
+echo "  Si l'icône ne s'affiche pas encore dans le menu :"
+echo "  Déconnectez-vous et reconnectez-vous (KDE recharge les apps)"
 echo ""
 
-# Proposer de lancer maintenant
-read -p "  Lancer CamWall maintenant ? [o/N] " -n 1 -r
+read -p "  Lancer CamWall maintenant ? [o/N] " -n 1 -r REPLY
 echo ""
 if [[ $REPLY =~ ^[OoYy]$ ]]; then
-  echo "  Démarrage..."
-  nohup "$LAUNCHER" >/dev/null 2>&1 &
-  echo "  ✓ CamWall lancé en arrière-plan"
+    nohup "$WRAPPER" >/tmp/camwall-launch.log 2>&1 &
+    sleep 2
+    if pgrep -f "electron.*$SCRIPT_DIR" > /dev/null; then
+        echo "  ✓ CamWall lancé (PID: $(pgrep -f "electron.*$SCRIPT_DIR" | head -1))"
+    else
+        echo "  ✗ Erreur de lancement. Log: /tmp/camwall-launch.log"
+        cat /tmp/camwall-launch.log
+    fi
 fi
