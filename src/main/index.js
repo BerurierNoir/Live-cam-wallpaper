@@ -24,8 +24,8 @@ const ipc     = require('./ipc');
 const webhook = require('./webhook');
 
 // Mode Wayland
-app.commandLine.appendSwitch('enable-features', 'UseOzonePlatform');
-app.commandLine.appendSwitch('ozone-platform', 'auto');
+// Wayland: utiliser ozone-platform-hint (pas ozone-platform qui est invalide)
+app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
 app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling');
 
 // ── SINGLE INSTANCE ────────────────────────────────────────
