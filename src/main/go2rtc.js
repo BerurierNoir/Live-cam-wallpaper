@@ -9,7 +9,6 @@ const config = require('./config');
 
 let _proc = null;
 
-// Cherche le binaire go2rtc dans plusieurs endroits
 function findBin() {
   const candidates = [
     path.join(process.resourcesPath || '', 'bin', 'go2rtc'),
@@ -24,87 +23,85 @@ function findBin() {
   return null;
 }
 
-// Décode l'URL (le ! dans les mots de passe peut être encodé %21)
 function decodeUrl(url) {
   try { return decodeURIComponent(url); } catch (_) { return url; }
 }
 
-// Génère le yaml go2rtc à partir du config
 function writeYaml(cfg) {
   const streams = {};
   const fps = cfg.go2rtcFps || 15;
-
   for (const cam of (cfg.cameras || [])) {
     if (!cam.id || !cam.mainUrl) continue;
     const url = decodeUrl(cam.mainUrl);
-    // Deux sources pour chaque caméra:
-    // 1. RTSP brut → go2rtc sert en MSE (WebSocket H264, moins de CPU)
-    // 2. FFmpeg → go2rtc sert en MJPEG (fallback si MSE échoue)
     streams[cam.id] = [url, `ffmpeg:${cam.id}#video=mjpeg#fps=${fps}`];
-    // Sub-stream optionnel
     if (cam.subUrl && cam.subUrl !== cam.mainUrl) {
-      const subUrl = decodeUrl(cam.subUrl);
-      streams[`${cam.id}_sub`] = [subUrl, `ffmpeg:${cam.id}_sub#video=mjpeg#fps=${fps}`];
+      streams[`${cam.id}_sub`] = [decodeUrl(cam.subUrl), `ffmpeg:${cam.id}_sub#video=mjpeg#fps=${fps}`];
     }
   }
-
   const cfgPath = path.join(config.getDataDir(), 'go2rtc.yaml');
   fs.mkdirSync(config.getDataDir(), { recursive: true });
   fs.writeFileSync(cfgPath, yaml.dump({
-    api:     { listen: `:${cfg.go2rtcPort || 1984}` },
-    rtsp:    { listen: ':8554' },
-    log:     { level: 'warn' },
+    api:  { listen: `:${cfg.go2rtcPort || 1984}` },
+    rtsp: { listen: ':8554' },
+    log:  { level: 'warn' },
     streams,
   }));
   return cfgPath;
 }
 
-// Démarre go2rtc
 function start(cfg) {
   stop();
   const bin = findBin();
   if (!bin) { console.warn('[go2rtc] binaire introuvable'); return false; }
-
   const cfgPath = writeYaml(cfg || config.get());
   _proc = spawn(bin, ['-config', cfgPath], { stdio: ['ignore', 'pipe', 'pipe'] });
 
-  _proc.stdout.on('data', d => console.log('[go2rtc]', String(d).trim()));
-  _proc.stderr.on('data', d => console.log('[go2rtc]', String(d).trim()));
-  _proc.on('error', e  => console.error('[go2rtc] error:', e.message));
-  _proc.on('exit',  (code) => { console.log('[go2rtc] exit code=' + code); _proc = null; });
+  // Protéger contre EIO (pipe cassée quand on kill le process)
+  function safeListen(stream, label) {
+    if (!stream) return;
+    stream.on('error', () => {}); // ignorer les erreurs de pipe
+    stream.on('data', d => {
+      try { console.log(label, String(d).trim()); } catch (_) {}
+    });
+  }
+  safeListen(_proc.stdout, '[go2rtc]');
+  safeListen(_proc.stderr, '[go2rtc]');
 
+  _proc.on('error', e  => { try { console.error('[go2rtc] error:', e.message); } catch (_) {} });
+  _proc.on('exit',  (code) => {
+    try { console.log('[go2rtc] exit code=' + code); } catch (_) {}
+    _proc = null;
+  });
   console.log('[go2rtc] démarré:', bin);
   return true;
 }
 
 function stop() {
   if (_proc) {
+    // Détacher les listeners avant de kill pour éviter EIO
+    try { if (_proc.stdout) _proc.stdout.destroy(); } catch (_) {}
+    try { if (_proc.stderr) _proc.stderr.destroy(); } catch (_) {}
     try { _proc.kill('SIGTERM'); } catch (_) {}
     _proc = null;
   }
 }
 
-// Redémarre avec le nouveau config (régénère le YAML)
 function restart(newCfg) {
-  if (newCfg) {
-    // Fusionner et sauvegarder
-    config.save(newCfg);
-  }
+  if (newCfg) config.save(newCfg);
   return start(config.get());
 }
 
-// Attend que go2rtc soit prêt (HTTP /api/streams répond)
 function waitReady(port, maxMs) {
   port  = port  || 1984;
   maxMs = maxMs || 10000;
   return new Promise(resolve => {
-    const start = Date.now();
+    const startTime = Date.now();
     function probe() {
       const req = http.get(`http://localhost:${port}/api/streams`, res => {
         res.resume(); resolve(true);
       });
       req.on('error', () => {
-        if (Date.now() - start > maxMs) { resolve(false); return; }
+        if (Date.now() - startTime > maxMs) { resolve(false); return; }
         setTimeout(probe, 400);
       });
       req.setTimeout(600, () => req.destroy());
@@ -113,8 +110,6 @@ function waitReady(port, maxMs) {
   });
 }
 
-function status(port) {
-  return waitReady(port || 1984, 1500);
-}
+function status(port) { return waitReady(port || 1984, 1500); }
 
 module.exports = { findBin, start, stop, restart, writeYaml, waitReady, status };
