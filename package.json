@@ -1,9 +1,9 @@
 {
   "name": "camwall",
   "productName": "CamWall",
-  "version": "5.0.1",
-  "description": "Live camera wallpaper — MSE, Météo, Home Assistant, Jellyfin, Immich, Pihole, Klipper",
-  "main": "main.js",
+  "version": "6.0.0",
+  "description": "Live camera wallpaper for Linux — RTSP, Reolink, Tapo, ONVIF via go2rtc",
+  "main": "src/main/index.js",
   "author": { "name": "CamWall", "email": "camwall@localhost" },
   "license": "MIT",
   "scripts": {
