@@ -1,6 +1,9 @@
 /**
  * Widget Uptime Kuma — statut des services
- * API: GET /api/status-page/heartbeat/{slug}
+ *
+ * API:
+ *   GET /api/status-page/{slug}          → noms des monitors
+ *   GET /api/status-page/heartbeat/{slug} → états + ping
  */
 
 export function build(cc, cfg) {
@@ -12,62 +15,86 @@ export function build(cc, cfg) {
     return wrap;
   }
 
-  const slug = cc.kumaSlug || 'default';
-  const hdrs = cc.kumaToken ? { 'Authorization': `apikey ${cc.kumaToken}` } : {};
+  wrap.innerHTML = `
+    <div class="kuma-header">
+      <span class="kuma-icon">🟢</span>
+      <span class="kuma-title">UPTIME KUMA</span>
+      <span class="kuma-ts"></span>
+    </div>
+    <div class="kuma-list"></div>`;
 
-  const hdr = document.createElement('div');
-  hdr.className = 'kuma-header';
-  hdr.innerHTML = '<span class="kuma-icon">🟢</span><span class="kuma-title">UPTIME KUMA</span>';
-  wrap.appendChild(hdr);
-
-  const list = document.createElement('div');
-  list.className = 'kuma-list';
-  wrap.appendChild(list);
-
-  setTimeout(() => refresh(wrap, cc, slug, hdrs, list), 100);
+  setTimeout(() => refresh(wrap, cc), 100);
   return wrap;
 }
 
-async function refresh(wrap, cc, slug, hdrs, list) {
-  if (!wrap.isConnected) { setTimeout(() => refresh(wrap, cc, slug, hdrs, list), 200); return; }
+async function refresh(wrap, cc) {
+  if (!wrap.isConnected) { setTimeout(() => refresh(wrap, cc), 200); return; }
+
+  const base = cc.kumaUrl.replace(/\/$/, '');
+  const slug = cc.kumaSlug || 'default';
+  const hdrs = cc.kumaToken ? { 'Authorization': `apikey ${cc.kumaToken}` } : {};
+  const list = wrap.querySelector('.kuma-list');
+  const ts   = wrap.querySelector('.kuma-ts');
+
   try {
-    const base = cc.kumaUrl.replace(/\/$/, '');
-    const r = await fetch(`${base}/api/status-page/heartbeat/${slug}`, { headers: hdrs, signal: AbortSignal.timeout(8000) });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const { heartbeatList, uptimeList } = await r.json();
+    // Récupérer noms + heartbeats en parallèle
+    const [pageRes, hbRes] = await Promise.all([
+      fetch(`${base}/api/status-page/${slug}`,           { headers: hdrs, signal: AbortSignal.timeout(8000) }),
+      fetch(`${base}/api/status-page/heartbeat/${slug}`, { headers: hdrs, signal: AbortSignal.timeout(8000) }),
+    ]);
+
+    if (!pageRes.ok || !hbRes.ok) throw new Error('HTTP error');
+
+    const pageData = await pageRes.json();
+    const hbData   = await hbRes.json();
+
+    // Construire un dictionnaire id → nom depuis la page de status
+    const nameMap = {};
+    for (const group of (pageData.publicGroupList || [])) {
+      for (const monitor of (group.monitorList || [])) {
+        nameMap[String(monitor.id)] = monitor.name || `Monitor ${monitor.id}`;
+      }
+    }
+
+    const { heartbeatList = {}, uptimeList = {} } = hbData;
 
     list.innerHTML = '';
-    const ids = Object.keys(heartbeatList || {});
     let hasDown = false;
+    const downNames = [];
 
-    ids.forEach(id => {
-      const beats  = heartbeatList[id] || [];
-      const last   = beats[beats.length - 1];
-      const uptime = uptimeList?.[`${id}_24`] ?? 1;
+    Object.entries(heartbeatList).forEach(([id, beats]) => {
+      const last   = Array.isArray(beats) ? beats[beats.length - 1] : null;
       const isUp   = last?.status === 1;
-      if (!isUp) hasDown = true;
+      const ping   = last?.ping || 0;
+      const uptime = uptimeList[`${id}_24`] ?? (isUp ? 1 : 0);
+      const name   = nameMap[id] || `Monitor ${id}`;
+
+      if (!isUp) { hasDown = true; downNames.push(name); }
 
       const item = document.createElement('div');
       item.className = 'kuma-item';
       item.innerHTML = `
         <div class="kuma-dot ${isUp ? 'up' : 'down'}"></div>
-        <div class="kuma-name">${id}</div>
-        <div class="kuma-ping">${last?.ping || 0}ms</div>
+        <div class="kuma-name">${name}</div>
+        <div class="kuma-ping">${ping}ms</div>
         <div class="kuma-uptime">${Math.round(uptime * 100)}%</div>
         <div class="kuma-badge ${isUp ? 'up' : 'down'}">${isUp ? 'UP' : 'DOWN'}</div>`;
       list.appendChild(item);
     });
 
-    // Alerte si service down
-    if (hasDown) {
-      const downList = ids.filter(id => {
-        const beats = heartbeatList[id] || [];
-        return beats.length && beats[beats.length - 1]?.status !== 1;
-      });
-      window.CamWall.notifyDesktop({ title: '🔴 Kuma', body: `Service(s) hors ligne: ${downList.join(', ')}` });
+    if (ts) ts.textContent = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+    // Alerte si service down (une seule fois)
+    if (hasDown && !wrap._lastDownAlert) {
+      wrap._lastDownAlert = true;
+      window.CamWall.notifyDesktop({ title: '🔴 Kuma', body: `Hors ligne: ${downNames.join(', ')}` });
+    } else if (!hasDown) {
+      wrap._lastDownAlert = false;
     }
+
   } catch (e) {
-    list.innerHTML = '<div style="font-size:10px;color:var(--dim);padding:10px">Kuma indisponible</div>';
+    if (list) list.innerHTML = '<div style="font-size:10px;color:var(--dim);padding:10px">Kuma indisponible</div>';
   }
-  setTimeout(() => { if (wrap.isConnected) refresh(wrap, cc, slug, hdrs, list); }, 30000);
+
+  setTimeout(() => { if (wrap.isConnected) refresh(wrap, cc); }, 30000);
 }
