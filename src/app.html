@@ -691,10 +691,13 @@ function startCamMSE(video,cam,parentDiv,wrap){
       }
     };
 
-    ws.onclose=ws.onerror=()=>{
+    ws.onopen=()=>{ L.info('[CAM] WS connecté:', cam.id); };
+    ws.onclose=ws.onerror=(ev)=>{
       if(closed||camPaused[cam.id]||globalPaused)return;
+      L.warn('[CAM] WS fermé pour', cam.id, '— tentative MJPEG fallback');
       setDot(parentDiv,'err');
-      wrap.querySelector('.cam-err').classList.add('show');
+      const errEl=wrap.querySelector('.cam-err');
+      if(errEl)errEl.classList.add('show');
       if(cfg.reconnect!==false){
         const d=nextDelay(cam.id);
         wrap.querySelector('.cam-err-msg').textContent=`Signal perdu — retry ${Math.round(d)}s`;
@@ -708,28 +711,33 @@ function startCamMSE(video,cam,parentDiv,wrap){
 }
 
 function fallbackMJPEG(video,cam,parentDiv,wrap){
-  // Fallback: remplacer le <video> par un <img> MJPEG
   const img=document.createElement('img');
   img.className='cam-img';
   img.alt=cam.label||cam.id;
-  img.style.cssText='width:100%;height:100%;object-fit:cover;';
-  video.parentNode.insertBefore(img,video);
-  video.remove();
+  img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;';
+  if(video.parentNode){video.parentNode.insertBefore(img,video);video.remove();}
+  else{wrap.insertBefore(img,wrap.firstChild);}
   loadCamImg(img,cam,parentDiv,wrap);
 }
 function loadCamImg(img,cam,parentDiv,wrap){
-  setDot(parentDiv,'conn');wrap.querySelector('.cam-err').classList.remove('show');
+  setDot(parentDiv,'conn');
+  const errEl=wrap.querySelector('.cam-err');
+  if(errEl)errEl.classList.remove('show');
   img.onload=()=>{setDot(parentDiv,'ok');resetRetry(cam.id);};
   img.onerror=()=>{
     if(camPaused[cam.id]||globalPaused)return;
-    setDot(parentDiv,'err');wrap.querySelector('.cam-err').classList.add('show');
+    setDot(parentDiv,'err');
+    if(errEl)errEl.classList.add('show');
     if(cfg.reconnect!==false){
       const d=nextDelay(cam.id);
-      wrap.querySelector('.cam-err-msg').textContent=`Signal perdu — retry ${Math.round(d)}s`;
+      const errMsg=wrap.querySelector('.cam-err-msg');
+      if(errMsg)errMsg.textContent='Signal perdu — retry '+Math.round(d)+'s';
       retryTimers[cam.id]=setTimeout(()=>loadCamImg(img,cam,parentDiv,wrap),d*1000);
     }
   };
-  img.src=`${go2rtcBase()}/api/stream.mjpeg?src=${encodeURIComponent(cam.id)}&_=${Date.now()}`;
+  // URL MJPEG via go2rtc (port configurable, timestamp anti-cache)
+  const port=cfg.go2rtcPort||1984;
+  img.src='http://localhost:'+port+'/api/stream.mjpeg?src='+encodeURIComponent(cam.id)+'&_='+Date.now();
 }
 
 function setDot(cell,state){const d=cell.querySelector('.dot');if(d)d.className=`dot ${state}`;}
