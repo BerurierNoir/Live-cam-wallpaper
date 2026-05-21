@@ -1,8 +1,7 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════
-#  CamWall — Installateur v3
+#  CamWall — Installateur v4
 #  Compatible KDE Plasma 6 / Wayland / Bazzite
-#  Usage: bash install.sh
 # ═══════════════════════════════════════════════════════════
 set -e
 
@@ -20,81 +19,80 @@ echo "  ██╔════╝██╔══██╗████╗ ██�
 echo "  ██║     ███████║██╔████╔██║██║ █╗ ██║███████║██║     ██║"
 echo "  ╚██████╗██║  ██║██║ ╚═╝ ██║╚███╔███╔╝██║  ██║███████╗███████╗"
 echo ""
-echo "  Installation v6 — KDE Plasma / Bazzite / Wayland"
+echo "  Installation v4 — KDE Plasma / Bazzite / Wayland"
 echo ""
 
-# ── 1. Dépendances npm ────────────────────────────────────
+# ── 1. Dépendances npm ───────────────────────────────────
 if [ ! -f "$ELECTRON_BIN" ]; then
-    echo "→ Installation des dépendances npm..."
+    echo "→ Installation npm..."
     cd "$SCRIPT_DIR" && npm install --silent
     echo "✓ npm install OK"
 else
     echo "✓ Electron déjà installé"
 fi
 
-# ── 2. Wrapper shell ──────────────────────────────────────
+# ── 2. Wrapper shell ─────────────────────────────────────
+# CLEF: le wrapper tue l'ancienne instance avant de lancer la nouvelle
+# C'est exactement ce que fait "pkill electron && npm start"
 mkdir -p "$HOME/.local/bin"
 cat > "$WRAPPER" << WRAPEOF
 #!/bin/bash
-# CamWall launcher
+# CamWall launcher — tue l'ancienne instance, repart proprement
 export ELECTRON_OZONE_PLATFORM_HINT=auto
-cd "$SCRIPT_DIR"
+
+# Tuer toute instance existante (tray inclus)
+pkill -f "electron.*$(basename $SCRIPT_DIR)" 2>/dev/null || true
+pkill -f "go2rtc" 2>/dev/null || true
+sleep 0.8
+
+# Lancer CamWall
 exec "$ELECTRON_BIN" "$SCRIPT_DIR" "\$@"
 WRAPEOF
 chmod +x "$WRAPPER"
 echo "✓ Lanceur: $WRAPPER"
+echo "  (tue l'ancienne instance, relance proprement)"
 
 # ── 3. .desktop KDE ──────────────────────────────────────
-# Important: Exec pointe directement vers le binaire electron
-# (KDE Plasma 6 gère mieux les binaires directs que les scripts shell)
 mkdir -p "$HOME/.local/share/applications"
 cat > "$DESKTOP_FILE" << DESKTOPEOF
 [Desktop Entry]
 Type=Application
 Name=CamWall
 GenericName=Live Camera Wallpaper
-Comment=Transforme un écran en mur de caméras live
-Exec=env ELECTRON_OZONE_PLATFORM_HINT=auto "$ELECTRON_BIN" "$SCRIPT_DIR"
+Comment=Wallpaper live avec caméras et widgets
+Exec=$WRAPPER
 Icon=$ICON
 Categories=Utility;Video;Monitor;
-StartupNotify=true
+StartupNotify=false
 StartupWMClass=camwall
 Terminal=false
-Keywords=camera;surveillance;rtsp;reolink;wallpaper;
-X-KDE-SubstituteUID=false
+Keywords=camera;surveillance;rtsp;wallpaper;
 DESKTOPEOF
 
-# Indispensable sur KDE Plasma 6
 chmod +x "$DESKTOP_FILE"
 gio set "$DESKTOP_FILE" metadata::trusted true 2>/dev/null || true
 update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
 kbuildsycoca6 --noincremental 2>/dev/null || kbuildsycoca5 --noincremental 2>/dev/null || true
-echo "✓ Entrée KDE créée (visible dans le menu des applications)"
+echo "✓ Entrée KDE créée"
 
-# ── 4. Autostart au login ─────────────────────────────────
+# ── 4. Autostart ─────────────────────────────────────────
 mkdir -p "$HOME/.config/autostart"
 cp "$DESKTOP_FILE" "$AUTOSTART_FILE"
 chmod +x "$AUTOSTART_FILE"
 gio set "$AUTOSTART_FILE" metadata::trusted true 2>/dev/null || true
 echo "✓ Démarrage automatique activé"
 
-# ── 5. Résumé ─────────────────────────────────────────────
+# ── 5. Résumé ────────────────────────────────────────────
 echo ""
 echo "  ✅ Installation terminée !"
 echo ""
-echo "  → Cherche 'CamWall' dans le menu des applications KDE"
-echo "  → Ou lance avec: camwall"
-echo "  → Démarre automatiquement à chaque connexion"
+echo "  → Cherche 'CamWall' dans le menu KDE"
+echo "  → Chaque ouverture depuis l'icône redémarre proprement"
 echo ""
 read -p "  Lancer CamWall maintenant ? [o/N] " -n 1 -r REPLY
 echo ""
 if [[ $REPLY =~ ^[OoYy]$ ]]; then
-    nohup "$WRAPPER" >/tmp/camwall-launch.log 2>&1 &
+    "$WRAPPER" &
     sleep 2
-    if pgrep -f "electron.*$SCRIPT_DIR" > /dev/null; then
-        echo "  ✓ CamWall lancé !"
-    else
-        echo "  ✗ Erreur — voir /tmp/camwall-launch.log"
-        cat /tmp/camwall-launch.log | tail -5
-    fi
+    pgrep -f "electron.*$(basename $SCRIPT_DIR)" > /dev/null && echo "  ✓ CamWall lancé !" || echo "  ✗ Erreur de lancement"
 fi
