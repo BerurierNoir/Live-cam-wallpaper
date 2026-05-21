@@ -351,6 +351,39 @@ textarea.pi-in { resize:vertical; }
 
 /* ── NOTIFICATIONS ───────────────────────────────────── */
 #update-banner { display:none; position:fixed; top:52px; right:12px; background:rgba(7,10,20,.95); border:1px solid var(--indigo); border-radius:6px; padding:6px 14px; font-size:11px; color:var(--indigo); cursor:pointer; z-index:300; }
+
+/* ── DRAG & DROP ─────────────────────────────────────── */
+.cell[draggable="true"] { cursor: grab; }
+.cell[draggable="true"]:active { cursor: grabbing; }
+
+/* Case en cours de drag: semi-transparente */
+.cell-dragging {
+  opacity: .35;
+  outline: 2px dashed var(--indigo);
+  outline-offset: -2px;
+}
+
+/* Case cible: highlight de drop */
+.cell-dragover {
+  outline: 2px solid var(--indigo) !important;
+  outline-offset: -2px;
+  background: rgba(99,102,241,.12) !important;
+}
+.cell-dragover::after {
+  content: '↕ Déposer ici';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--indigo);
+  letter-spacing: 1px;
+  background: rgba(99,102,241,.08);
+  z-index: 50;
+  pointer-events: none;
+}
 </style>
 </head>
 <body>
