@@ -96,12 +96,14 @@ function decodeUrl(url) {
   try { return decodeURIComponent(url); } catch (_) { return url; }
 }
 
-function buildGo2rtcStream(cam) {
+function buildGo2rtcStream(cam, cfg) {
   if (!cam.mainUrl) return null;
-  // MSE (Media Source Extensions) = meilleure option pour Electron/Chromium
-  // go2rtc sert H264 en MSE SANS FFmpeg → moins de CPU, meilleure qualité
-  // Aucune source FFmpeg MJPEG nécessaire ici
-  return [decodeUrl(cam.mainUrl)];
+  const url = decodeUrl(cam.mainUrl);
+  // go2rtc expose la même source en MSE ET MJPEG:
+  // - MSE WebSocket ws://localhost:1984/api/ws?src=ID → H264 natif, faible CPU
+  // - MJPEG http://localhost:1984/api/stream.mjpeg?src=ID → fallback si MSE échoue
+  const fps = (cfg && cfg.go2rtcFps) || 15;
+  return [url, 'ffmpeg:' + cam.id + '#video=mjpeg#fps=' + fps];
 }
 
 function writeGo2rtcConfig(cfg) {
@@ -542,7 +544,14 @@ function registerIPC() {
   ipcMain.handle('go2rtc:check',    ()     => ({ found: !!findGo2rtcBin(), path: findGo2rtcBin(), arch: process.arch }));
   ipcMain.handle('go2rtc:start',    (_, c) => startGo2rtc(c || config));
   ipcMain.handle('go2rtc:stop',     ()     => { stopGo2rtc(); return true; });
-  ipcMain.handle('go2rtc:restart',  (_, c) => startGo2rtc({ ...config, ...(c || {}) }));
+  ipcMain.handle('go2rtc:restart', async (_, c) => {
+    // Fusionner le config reçu (peut contenir les nouvelles caméras)
+    if (c) config = { ...config, ...c };
+    saveConfig(config);
+    // Toujours réécrire le YAML avec le config complet à jour
+    writeGo2rtcConfig(config);
+    return startGo2rtc(config);
+  });
   ipcMain.handle('go2rtc:download', ev     => downloadGo2rtc(ev));
   ipcMain.handle('go2rtc:status',   ()     => waitForGo2rtc(config.go2rtcPort || GO2RTC_PORT, 2000));
 
