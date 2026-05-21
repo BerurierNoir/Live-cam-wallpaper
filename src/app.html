@@ -1133,10 +1133,7 @@ function updateCellCfgUI(type){
         <div class="cc-row"><span class="cc-lbl">URL Home Assistant</span><input class="pi-in" id="cc-ha-url" type="text" value="${cur.haUrl||''}" placeholder="http://192.168.1.x:8123" style="width:200px"></div>
         <div class="cc-row"><span class="cc-lbl">Token long-lived</span><input class="pi-in" id="cc-ha-token" type="password" value="${cur.haToken||''}" placeholder="HA → Profil → Token" style="width:200px"></div>
         <div class="cc-row"><span class="cc-lbl">Entités (une par ligne)</span></div>
-        <textarea class="pi-in" id="cc-ha-entities" style="width:100%;height:60px;resize:none;font-size:10px" placeholder="sensor.temperature_salon
-binary_sensor.garage_contact
-light.led_strip">${(cur.haEntities||[]).join('
-')}</textarea>`;
+        <textarea class="pi-in" id="cc-ha-entities" style="width:100%;height:60px;resize:none;font-size:10px" placeholder="sensor.temperature&#10;binary_sensor.garage">${(cur.haEntities||[]).join('\n')}</textarea>`;
       break;
     case 'jellyfin':
       ex.innerHTML=`
@@ -1847,7 +1844,7 @@ function launchSnake(){
     if(sc)sc.textContent='SCORE: '+score;
     if(over){ctx.fillStyle='rgba(0,0,0,.8)';ctx.fillRect(0,0,cv.width,cv.height);ctx.fillStyle='#00ff41';ctx.font='bold 22px monospace';ctx.textAlign='center';ctx.fillText('GAME OVER',cv.width/2,cv.height/2-8);ctx.font='13px monospace';ctx.fillText('Score: '+score,cv.width/2,cv.height/2+18);ctx.fillText('Cliquer pour rejouer',cv.width/2,cv.height/2+42);}
   };
-  const step=()=>{const h={(x:(sn[0].x+dir.x+N)%N),(y:(sn[0].y+dir.y+N)%N)};if(sn.some(s=>s.x===h.x&&s.y===h.y)){over=true;clearInterval(loop);draw();return;}sn.unshift(h);if(h.x===food.x&&h.y===food.y){score++;food=rf();}else sn.pop();draw();};
+  const step=()=>{const h={x:(sn[0].x+dir.x+N)%N,y:(sn[0].y+dir.y+N)%N};if(sn.some(s=>s.x===h.x&&s.y===h.y)){over=true;clearInterval(loop);draw();return;}sn.unshift(h);if(h.x===food.x&&h.y===food.y){score++;food=rf();}else sn.pop();draw();};
   const start=()=>{sn=[{x:10,y:10}];dir={x:1,y:0};food=rf();score=0;over=false;clearInterval(loop);loop=setInterval(step,120);draw();};
   start();
   cv.onclick=()=>{if(over)start();};
