@@ -1204,8 +1204,7 @@ document.getElementById('cc-save').addEventListener('click',()=>{
     bszUrl:_g('cc-bsz-url'),bszEmail:_g('cc-bsz-email'),bszPass:_g('cc-bsz-pass'),
     wxLat:_g('cc-wx-lat'),wxLon:_g('cc-wx-lon'),
     haUrl:_g('cc-ha-url'),haToken:_g('cc-ha-token'),
-    haEntities:(_el('cc-ha-entities')?.value||'').split('
-').map(s=>s.trim()).filter(Boolean),
+    haEntities:(_el('cc-ha-entities')?.value||'').split(\n').map(s=>s.trim()).filter(Boolean),
     jfUrl:_g('cc-jf-url'),jfKey:_g('cc-jf-key'),
     imUrl:_g('cc-im-url'),imKey:_g('cc-im-key'),
     imMode:_g('cc-im-mode')||'random',imAlbum:_g('cc-im-album'),
