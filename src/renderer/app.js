@@ -44,6 +44,7 @@ const TYPES = {
 document.addEventListener('DOMContentLoaded', async () => {
   cfg = await API.getConfig();
   applyTheme(cfg.theme);
+  applyNightMode(cfg.nightMode, cfg.nightBrightness);
   renderGrid();
   initHUD();
   initPanel();
@@ -140,6 +141,16 @@ function initHUD() {
   document.getElementById('btn-refresh')?.addEventListener('click', () => {
     stopAllCams();
     setTimeout(renderGrid, 100);
+  });
+
+  // Bouton mode nuit — toggle manuel
+  document.getElementById('btn-night')?.addEventListener('click', () => {
+    const isNight = document.body.classList.toggle('night-mode');
+    // Sauvegarder la préférence
+    cfg.nightModeForced = isNight ? 'on' : 'off';
+    API.saveConfig(cfg);
+    const btn = document.getElementById('btn-night');
+    if (btn) btn.style.opacity = isNight ? '1' : '0.5';
   });
 
   // Version
@@ -279,7 +290,18 @@ function renderProxmoxTab() {
 function renderOptionsTab() {
   return `
     <div class="ps"><div class="ps-t">Affichage</div>
-      <div class="cc-row"><span class="cc-lbl">Thème</span>
+      <div class="cc-row"><span class="cc-lbl">Mode nuit</span>
+        <select class="pi-sel" id="opt-night">
+          <option value="auto" ${cfg.nightMode === 'auto' || !cfg.nightMode ? 'selected' : ''}>🌙 Auto (22h–7h)</option>
+          <option value="off"  ${cfg.nightMode === 'off'  ? 'selected' : ''}>☀️ Jamais</option>
+          <option value="on"   ${cfg.nightMode === 'on'   ? 'selected' : ''}>🌑 Toujours</option>
+        </select>
+      </div>
+      <div class="cc-row"><span class="cc-lbl">Luminosité nuit</span>
+        <input class="pi-sm" id="opt-brightness" type="range" min="20" max="90" value="${cfg.nightBrightness || 65}" style="width:100px">
+        <span id="opt-brightness-val" style="font-size:10px;color:var(--dim);min-width:28px">${cfg.nightBrightness || 65}%</span>
+      </div>
+    <div class="cc-row"><span class="cc-lbl">Thème</span>
         <select class="pi-sel" id="opt-theme">
           <option value="dark"   ${cfg.theme === 'dark'   ? 'selected' : ''}>🌌 Espace (défaut)</option>
           <option value="matrix" ${cfg.theme === 'matrix' ? 'selected' : ''}>🟩 Matrix</option>
@@ -521,6 +543,14 @@ function bindPanelEvents() {
     renderGrid();
   });
 
+  // Mode nuit — slider live
+  const brightSlider = document.getElementById('opt-brightness');
+  const brightVal    = document.getElementById('opt-brightness-val');
+  if (brightSlider && brightVal) {
+    brightSlider.addEventListener('input', () => {
+      brightVal.textContent = brightSlider.value + '%';
+    });
+  }
   // Proxmox
   document.getElementById('btn-save-proxmox')?.addEventListener('click', async () => {
     cfg.proxmox = {
@@ -543,6 +573,12 @@ function bindPanelEvents() {
   })();
   API.getAutostart().then(on => { const el = document.getElementById('opt-autostart'); if (el) el.checked = on; });
   document.getElementById('btn-save-opts')?.addEventListener('click', async () => {
+    const nightMode   = document.getElementById('opt-night')?.value || 'auto';
+    const nightBright = parseInt(document.getElementById('opt-brightness')?.value || '65');
+    cfg.nightMode       = nightMode;
+    cfg.nightBrightness = nightBright;
+    // Appliquer immédiatement
+    applyNightMode(nightMode, nightBright);
     const theme = document.getElementById('opt-theme')?.value || 'dark';
     const fps   = parseInt(document.getElementById('opt-fps')?.value) || 15;
     const dispIdx = parseInt(document.getElementById('opt-display')?.value ?? cfg.selectedDisplay);
@@ -638,9 +674,9 @@ function initListeners() {
   API.onPauseAll(() => { stopAllCams(); });
   API.onResumeAll(() => { renderGrid(); });
   API.onOpenSettings(() => { openPanel('grid'); });
-  API.onNightMode(on => {
-    document.body.classList.toggle('night-mode', on);
-    document.getElementById('night-banner')?.classList.toggle('show', on);
+  API.onNightMode(() => {
+    // Re-évaluer selon le mode choisi
+    applyNightMode(cfg.nightMode, cfg.nightBrightness);
   });
   API.onWebhook(data => {
     if (data.action === 'flash') {
@@ -668,4 +704,23 @@ function initListeners() {
 // ── THÈMES ────────────────────────────────────────────────────
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme || 'dark');
+}
+
+function applyNightMode(mode, brightness) {
+  brightness = brightness || cfg.nightBrightness || 65;
+  mode = mode || cfg.nightMode || 'auto';
+  // Mettre à jour le CSS dynamiquement
+  let styleEl = document.getElementById('night-style');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'night-style';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = `.night-mode{filter:brightness(${brightness}%) saturate(80%);}`;
+
+  const h = new Date().getHours();
+  const shouldBeNight = mode === 'on' || (mode === 'auto' && (h >= 22 || h < 7));
+  document.body.classList.toggle('night-mode', shouldBeNight);
+  const btn = document.getElementById('btn-night');
+  if (btn) btn.style.opacity = shouldBeNight ? '1' : '0.5';
 }
