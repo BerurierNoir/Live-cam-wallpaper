@@ -123,7 +123,19 @@ function createCell(cc, idx) {
     _dragSrc = idx;
     cell.classList.add('cell-dragging');
     e.dataTransfer.effectAllowed = 'move';
-    // Fantôme transparent pendant le drag
+    // Bloquer les événements sur TOUS les widgets (iframe, video, canvas...)
+    // pour que le drag traverse jusqu'aux cases
+    document.querySelectorAll('.cell > *').forEach(el => {
+      el.dataset._pe = el.style.pointerEvents || '';
+      el.style.pointerEvents = 'none';
+    });
+    // Ajouter un overlay de capture sur chaque case
+    document.querySelectorAll('.cell').forEach(c => {
+      const ov = document.createElement('div');
+      ov.className = 'drag-capture-overlay';
+      ov.style.cssText = 'position:absolute;inset:0;z-index:99;';
+      c.appendChild(ov);
+    });
     const ghost = document.createElement('div');
     ghost.style.cssText = 'width:1px;height:1px;opacity:0;position:fixed;top:-1px';
     document.body.appendChild(ghost);
@@ -134,6 +146,12 @@ function createCell(cc, idx) {
   cell.addEventListener('dragend', () => {
     cell.classList.remove('cell-dragging');
     document.querySelectorAll('.cell-dragover').forEach(c => c.classList.remove('cell-dragover'));
+    // Restaurer pointer-events
+    document.querySelectorAll('.cell > *:not(.drag-capture-overlay)').forEach(el => {
+      el.style.pointerEvents = el.dataset._pe || '';
+      delete el.dataset._pe;
+    });
+    document.querySelectorAll('.drag-capture-overlay').forEach(el => el.remove());
     _dragSrc = -1;
   });
 
@@ -146,7 +164,6 @@ function createCell(cc, idx) {
   });
 
   cell.addEventListener('dragleave', e => {
-    // Ne retirer que si on quitte vraiment la case (pas un enfant)
     if (!cell.contains(e.relatedTarget)) cell.classList.remove('cell-dragover');
   });
 
@@ -154,21 +171,11 @@ function createCell(cc, idx) {
     e.preventDefault();
     cell.classList.remove('cell-dragover');
     if (_dragSrc === -1 || _dragSrc === idx) return;
-
-    // Échanger les deux cases dans la config
     const cells = cfg.grid.cells;
-    const tmp = cells[_dragSrc];
-    cells[_dragSrc] = cells[idx];
-    cells[idx] = tmp;
-    // Mettre à jour les IDs
-    cells[_dragSrc].id = 'cell-' + _dragSrc;
-    cells[idx].id      = 'cell-' + idx;
-
-    // Sauvegarder + re-rendre
-    API.saveConfig(cfg).then(() => {
-      stopAllCams();
-      renderGrid();
-    });
+    const tmp = { ...cells[_dragSrc] };
+    cells[_dragSrc] = { ...cells[idx],     id: 'cell-' + _dragSrc };
+    cells[idx]      = { ...tmp,            id: 'cell-' + idx };
+    API.saveConfig(cfg).then(() => { stopAllCams(); renderGrid(); });
     _dragSrc = -1;
   });
 
