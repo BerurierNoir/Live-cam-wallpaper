@@ -343,7 +343,7 @@ textarea.pi-in { resize:vertical; }
 .cam-item-actions{ display:flex; gap:6px; margin-top:6px; }
 
 /* ── MODE NUIT ───────────────────────────────────────── */
-.night-mode { filter:brightness(.4) saturate(.7); }
+.night-mode { filter:brightness(.65) saturate(.8); } /* mode nuit */
 .night-mode #hud { filter:brightness(1) saturate(1) !important; }
 .night-mode #panel { filter:brightness(1) saturate(1) !important; }
 #night-banner { display:none; position:fixed; top:52px; left:50%; transform:translateX(-50%); background:rgba(7,10,20,.9); border:1px solid rgba(245,158,11,.3); border-radius:6px; padding:5px 14px; font-size:10px; color:var(--amber); letter-spacing:1px; z-index:300; }
@@ -361,6 +361,7 @@ textarea.pi-in { resize:vertical; }
   <div class="hud-version" id="hud-version"></div>
   <div class="hud-spacer"></div>
   <button class="btn-hud" id="btn-refresh" title="Rafraîchir">↺</button>
+  <button class="btn-hud" id="btn-night" title="Mode nuit ON/OFF">🌙</button>
   <button class="btn-hud" id="btn-settings" title="Paramètres">⚙ Paramètres</button>
 </div>
 
