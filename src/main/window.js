@@ -1,13 +1,12 @@
 'use strict';
 /**
- * CamWall — Window management (Wayland compatible)
+ * CamWall — Window management
  *
- * Wayland + KDE Plasma 6: fullscreen:true dans le constructeur
- * force toujours la fenêtre sur l'écran principal, même avec x/y corrects.
- *
- * Solution: créer la fenêtre en mode normal (pas fullscreen),
- * positionner avec x/y, puis maximize() pour couvrir tout l'écran.
- * KDE respecte alors le display cible.
+ * Stratégie Wayland/KDE Plasma 6:
+ * - PAS de fullscreen:true → KDE l'ignore et met sur l'écran principal
+ * - Fenêtre frameless aux DIMENSIONS EXACTES du display cible
+ * - Positionné via x/y dans le constructeur
+ * - Résultat identique au fullscreen visuellement, sans les bugs de placement
  */
 const path = require('path');
 const { BrowserWindow, screen } = require('electron');
@@ -23,28 +22,27 @@ function create() {
   const display  = displays[idx] || displays[0];
   const { x, y, width, height } = display.bounds;
 
-  console.log(`[window] Écran ${idx}: ${width}x${height} @ ${x},${y}`);
+  console.log(`[window] display ${idx}: ${width}x${height} @ ${x},${y}`);
 
-  // Détruire l'ancienne fenêtre
+  // Fermer proprement l'ancienne fenêtre
   if (_win && !_win.isDestroyed()) {
     try { _lastUrl = _win.webContents.getURL() || null; } catch (_) {}
     _win.destroy();
     _win = null;
   }
 
-  // IMPORTANT: Ne PAS utiliser fullscreen:true sur Wayland/KDE
-  // KDE ignore x/y pour les fenêtres fullscreen et les met sur l'écran principal
-  // On crée une fenêtre normale avec les dimensions exactes du display cible
   _win = new BrowserWindow({
+    // Position sur le display cible — Wayland respecte x/y pour les fenêtres normales
     x, y,
     width,
     height,
-    frame:           false,
+    frame:           false,   // Sans cadre → look fullscreen
     transparent:     false,
     skipTaskbar:     true,
     resizable:       false,
     movable:         false,
-    fullscreen:      false,   // PAS fullscreen dans le constructeur
+    fullscreen:      false,   // PAS fullscreen → KDE respecte x/y
+    fullscreenable:  false,
     backgroundColor: '#070a14',
     webPreferences: {
       preload:              path.join(__dirname, '..', '..', 'preload.js'),
@@ -56,23 +54,19 @@ function create() {
     },
   });
 
-  // Une fois affichée: maximiser pour couvrir tout l'écran du bon display
+  // Forcer la position après show (Wayland peut décaler légèrement)
   _win.once('ready-to-show', () => {
+    _win.setBounds({ x, y, width, height });
     _win.show();
-    // Forcer la position et taille (Wayland peut ignorer le constructeur)
-    _win.setBounds({ x, y, width, height }, false);
-    // Petite temporisation puis setFullScreen pour le mode wallpaper final
-    setTimeout(() => {
-      if (_win && !_win.isDestroyed()) {
-        _win.setBounds({ x, y, width, height }, false);
-        _win.setFullScreen(true);
-      }
-    }, 300);
+    _win.focus();
   });
 
   _win.webContents.on('before-input-event', (_, input) => {
     if (input.key === 'F12' && input.type === 'keyDown')
       _win.webContents.toggleDevTools();
+    // Échap ferme dans le tray
+    if (input.key === 'Escape' && input.type === 'keyDown')
+      _win.hide();
   });
 
   _win.on('close', e => {
@@ -100,27 +94,21 @@ function changeDisplay(idx) {
   const displays = screen.getAllDisplays();
   if (idx < 0 || idx >= displays.length) return false;
 
-  // Sauvegarder l'URL courante avant destruction
   let urlToReload = _lastUrl;
   if (_win && !_win.isDestroyed()) {
     try { urlToReload = _win.webContents.getURL() || urlToReload; } catch (_) {}
   }
 
   config.save({ selectedDisplay: idx });
+  create();
 
-  create(); // recrée sur le bon display
+  const target = urlToReload && !urlToReload.includes('loading.html') && urlToReload !== 'about:blank'
+    ? urlToReload
+    : `file://${path.join(__dirname, '..', 'renderer', 'app.html')}`;
 
-  // Recharger la même page
-  if (urlToReload && urlToReload !== 'about:blank' && !urlToReload.includes('loading.html')) {
-    setTimeout(() => {
-      if (_win && !_win.isDestroyed()) _win.loadURL(urlToReload);
-    }, 100);
-  } else {
-    setTimeout(() => {
-      if (_win && !_win.isDestroyed())
-        _win.loadFile(path.join(__dirname, '..', 'renderer', 'app.html'));
-    }, 100);
-  }
+  setTimeout(() => {
+    if (_win && !_win.isDestroyed()) _win.loadURL(target);
+  }, 150);
 
   return true;
 }
@@ -132,10 +120,18 @@ function getLastUrl()     { return _lastUrl; }
 
 function show() {
   if (!isReady()) return;
+  _win.setBounds(getTargetBounds()); // re-positionner si drifté
   _win.show();
   _win.focus();
   _win.setAlwaysOnTop(true);
   setTimeout(() => { if (isReady()) _win.setAlwaysOnTop(false); }, 200);
+}
+
+function getTargetBounds() {
+  const cfg      = config.get();
+  const displays = screen.getAllDisplays();
+  const display  = displays[cfg.selectedDisplay || 0] || displays[0];
+  return display.bounds;
 }
 
 function hide()         { if (isReady()) _win.hide(); }
