@@ -1,0 +1,43 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<style>*{margin:0;padding:0;box-sizing:border-box;}html,body{width:100vw;height:100vh;background:#070a14;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;color:#e2e8f0;}
+.box{width:480px;background:#0d1117;border:1px solid rgba(99,102,241,.2);border-radius:12px;padding:32px;}
+h1{font-size:24px;font-weight:300;letter-spacing:4px;color:#6366f1;margin-bottom:8px;}
+p{font-size:13px;color:#64748b;margin-bottom:24px;line-height:1.6;}
+.row{margin-bottom:14px;}
+label{display:block;font-size:11px;color:#64748b;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;}
+input{width:100%;padding:8px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(99,102,241,.2);border-radius:6px;color:#e2e8f0;font-size:13px;outline:none;}
+input:focus{border-color:#6366f1;}
+.hint{font-size:10px;color:#475569;margin-top:4px;}
+.btn{width:100%;padding:12px;background:#6366f1;border:none;border-radius:6px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-top:16px;}
+.btn:hover{background:#4f46e5;}
+</style></head><body>
+<div class="box">
+  <h1>CAMWALL</h1>
+  <p>Configurez votre première caméra pour démarrer.<br>Vous pourrez en ajouter d'autres depuis les paramètres.</p>
+  <div class="row">
+    <label>Nom de la caméra</label>
+    <input id="cam-label" placeholder="Ex: Reolink Extérieur" value="Reolink">
+    <div class="hint">Affiché dans les paramètres</div>
+  </div>
+  <div class="row">
+    <label>URL RTSP</label>
+    <input id="cam-url" placeholder="rtsp://user:pass@192.168.1.x:554/h264Preview_01_sub">
+    <div class="hint">URL de votre caméra IP (Reolink, Tapo, Hikvision, etc.)</div>
+  </div>
+  <button class="btn" id="btn-start">Démarrer CamWall →</button>
+</div>
+<script>
+document.getElementById('btn-start').addEventListener('click', async () => {
+  const label  = document.getElementById('cam-label').value.trim() || 'Cam 1';
+  const url    = document.getElementById('cam-url').value.trim();
+  if (!url) { alert('URL RTSP requise'); return; }
+  const cfg = await window.CamWall.getConfig();
+  cfg.firstRun = false;
+  cfg.cameras  = [{ id: 'cam1', label, mainUrl: url, subUrl: '' }];
+  cfg.grid.cells[0] = { id: 'cell-0', type: 'camera', cameraId: 'cam1', label: '' };
+  await window.CamWall.saveConfig(cfg);
+  await window.CamWall.go2rtcRestart(cfg);
+  await window.CamWall.goToApp();
+});
+</script>
+</body></html>
