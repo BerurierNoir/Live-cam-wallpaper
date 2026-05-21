@@ -189,8 +189,18 @@ app.whenReady().then(async () => {
         res.on('end', () => {
           try {
             const r = JSON.parse(d);
-            const mw = win.getWindow();
-            if (mw && !mw.isDestroyed()) mw.webContents.send('update:available', { version: r.tag_name, url: r.html_url });
+            // Comparer versions — ne notifier QUE si vraiment plus récent
+            const latest  = (r.tag_name || '').replace(/^v/, '').split('.').map(Number);
+            const current = app.getVersion().replace(/^v/, '').split('.').map(Number);
+            let isNewer = false;
+            for (let i = 0; i < 3; i++) {
+              if ((latest[i]||0) > (current[i]||0)) { isNewer = true; break; }
+              if ((latest[i]||0) < (current[i]||0)) break;
+            }
+            if (isNewer) {
+              const mw = win.getWindow();
+              if (mw && !mw.isDestroyed()) mw.webContents.send('update:available', { version: r.tag_name, url: r.html_url });
+            }
           } catch (_) {}
         });
       });
