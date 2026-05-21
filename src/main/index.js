@@ -31,7 +31,14 @@ app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling');
 // ── SINGLE INSTANCE ────────────────────────────────────────
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) { app.quit(); process.exit(0); }
-app.on('second-instance', () => win.show());
+app.on('second-instance', () => {
+  // Recréer la fenêtre sur le bon display au lieu de juste show()
+  const w = win.create();
+  const cfg = config.get();
+  const appHtml = path.join(__dirname, '..', 'renderer', 'app.html');
+  w.loadFile(appHtml);
+  win.setLastUrl('file://' + appHtml);
+});
 
 // ── CERTIFICATS SELF-SIGNED (Proxmox, services locaux HTTPS) ──
 app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
