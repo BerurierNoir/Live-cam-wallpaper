@@ -251,82 +251,58 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 
 .px-info span{color:var(--indigo);font-family:var(--mono);}
 
-/* ── MÉTÉO ───────────────────────────────────────────────── */
-.weather-widget{position:absolute;inset:0;padding:14px;display:flex;flex-direction:column;gap:6px;overflow:hidden;background:linear-gradient(135deg,rgba(7,10,20,.96),rgba(12,15,31,.98));}
+/* ── v5 WIDGETS ─────────────────────────────────── */
+.weather-widget{position:absolute;inset:0;padding:14px;display:flex;flex-direction:column;gap:6px;overflow:hidden;}
 .wx-main{display:flex;align-items:center;gap:12px;flex-shrink:0;}
-.wx-icon{font-size:clamp(28px,5vw,56px);line-height:1;}
-.wx-temp{font-size:clamp(24px,5vw,52px);font-weight:300;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,var(--text),var(--muted));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.wx-feels{font-size:10px;color:var(--dim);font-family:var(--mono);}
-.wx-desc{font-size:11px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;}
+.wx-icon{font-size:clamp(28px,5vw,48px);}
+.wx-temp{font-size:clamp(22px,4vw,44px);font-weight:300;}
+.wx-feels,.wx-desc{font-size:10px;color:var(--muted);}
+.wx-sunrise{font-size:9px;color:var(--amber);}
 .wx-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;}
 .wx-stat{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:4px;padding:5px 8px;}
-.wx-stat-lbl{font-size:8px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;}
+.wx-stat-lbl{font-size:8px;color:var(--dim);letter-spacing:1px;}
 .wx-stat-val{font-size:12px;font-family:var(--mono);color:var(--text);}
-.wx-forecast{display:flex;gap:4px;flex-shrink:0;overflow:hidden;}
+.wx-forecast{display:flex;gap:4px;flex-shrink:0;}
 .wx-day{flex:1;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);border-radius:4px;padding:5px;text-align:center;}
 .wx-day-name{font-size:8px;color:var(--dim);letter-spacing:1px;}
 .wx-day-icon{font-size:16px;margin:2px 0;}
 .wx-day-temp{font-size:9px;color:var(--muted);font-family:var(--mono);}
-.wx-sunrise{font-size:9px;color:var(--amber);letter-spacing:.5px;}
-
-/* ── HOME ASSISTANT ──────────────────────────────────────── */
-.ha-widget{position:absolute;inset:0;padding:12px;display:flex;flex-direction:column;gap:5px;overflow:hidden;background:linear-gradient(135deg,rgba(7,10,20,.96),rgba(12,15,31,.98));}
-.ha-entity{display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);border-radius:5px;cursor:pointer;transition:all .15s;flex-shrink:0;}
-.ha-entity:hover{border-color:rgba(99,102,241,.3);background:rgba(99,102,241,.06);}
+.ha-widget{position:absolute;inset:0;padding:12px;display:flex;flex-direction:column;gap:5px;overflow:hidden;}
+.ha-entity{display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);border-radius:5px;transition:all .15s;flex-shrink:0;}
+.ha-entity:hover{border-color:rgba(99,102,241,.3);}
 .ha-entity-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0;}
 .ha-entity-name{font-size:11px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ha-entity-state{font-size:11px;font-family:var(--mono);color:var(--muted);flex-shrink:0;}
-.ha-on{color:var(--amber);}
-.ha-off{color:var(--dim);}
-.ha-alert{color:var(--red);}
-.ha-ok{color:var(--green);}
-
-/* ── JELLYFIN ────────────────────────────────────────────── */
-.jf-widget{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;background:linear-gradient(135deg,rgba(7,10,20,.96),rgba(12,15,31,.98));}
+.jf-widget{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;}
 .jf-playing{position:relative;flex:1;overflow:hidden;}
 .jf-poster{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.4);}
 .jf-overlay{position:absolute;inset:0;background:linear-gradient(0deg,rgba(7,10,20,.95) 0%,transparent 60%);}
 .jf-info{position:absolute;bottom:0;left:0;right:0;padding:12px;}
-.jf-title{font-size:clamp(12px,2vw,18px);font-weight:700;color:var(--text);text-shadow:0 2px 8px rgba(0,0,0,.9);}
+.jf-title{font-size:clamp(12px,2vw,18px);font-weight:700;}
 .jf-subtitle{font-size:10px;color:var(--muted);margin-top:3px;}
 .jf-progress-bar{height:3px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:8px;overflow:hidden;}
-.jf-progress-fill{height:100%;background:var(--indigo);border-radius:2px;transition:width .5s ease;}
-.jf-user{font-size:9px;color:var(--dim);letter-spacing:1px;margin-top:4px;}
+.jf-progress-fill{height:100%;background:var(--indigo);border-radius:2px;}
+.jf-user{font-size:9px;color:var(--dim);margin-top:4px;}
 .jf-idle{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;opacity:.4;}
 .jf-idle-icon{font-size:32px;}
-.jf-recent{padding:10px;display:flex;flex-direction:column;gap:4px;flex-shrink:0;border-top:1px solid var(--border);}
-.jf-recent-item{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--muted);}
-.jf-recent-thumb{width:24px;height:14px;background:rgba(255,255,255,.1);border-radius:2px;flex-shrink:0;background-size:cover;background-position:center;}
-
-/* ── IMMICH SLIDESHOW ────────────────────────────────────── */
 .immich-widget{position:absolute;inset:0;overflow:hidden;background:#000;}
 .immich-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 1.5s ease;}
 .immich-img.fade-out{opacity:0;}
-.immich-overlay{position:absolute;bottom:0;left:0;right:0;padding:10px 12px;background:linear-gradient(0deg,rgba(7,10,20,.85) 0%,transparent 100%);opacity:0;transition:opacity .2s;}
+.immich-overlay{position:absolute;bottom:0;left:0;right:0;padding:10px 12px;background:linear-gradient(0deg,rgba(7,10,20,.85),transparent);opacity:0;transition:opacity .2s;}
 .immich-widget:hover .immich-overlay{opacity:1;}
-.immich-exif{font-size:9px;color:rgba(255,255,255,.6);letter-spacing:.5px;}
-.immich-date{font-size:10px;color:var(--muted);font-family:var(--mono);}
-.immich-prog{display:flex;gap:3px;margin-top:6px;}
-.immich-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2);transition:all .3s;}
-.immich-dot.active{background:var(--indigo);box-shadow:0 0 4px var(--indigo);}
-
-/* ── PI-HOLE ─────────────────────────────────────────────── */
-.pihole-widget{position:absolute;inset:0;padding:14px;display:flex;flex-direction:column;gap:8px;overflow:hidden;background:linear-gradient(135deg,rgba(7,10,20,.96),rgba(12,15,31,.98));}
+.immich-date{font-size:10px;color:var(--muted);}
+.immich-exif{font-size:9px;color:rgba(255,255,255,.5);}
+.pihole-widget{position:absolute;inset:0;padding:14px;display:flex;flex-direction:column;gap:8px;overflow:hidden;}
 .ph-big{display:flex;align-items:baseline;gap:8px;}
-.ph-num{font-size:clamp(20px,4vw,40px);font-weight:700;background:linear-gradient(135deg,var(--red),var(--amber));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-family:var(--mono);}
-.ph-pct{font-size:clamp(12px,2vw,20px);color:var(--muted);font-family:var(--mono);}
+.ph-num{font-size:clamp(18px,4vw,36px);font-weight:700;font-family:var(--mono);color:var(--red);}
+.ph-pct{font-size:clamp(12px,2vw,18px);color:var(--muted);font-family:var(--mono);}
 .ph-bar{height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;}
-.ph-bar-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--amber));border-radius:4px;transition:width .5s ease;}
+.ph-bar-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--amber));border-radius:4px;}
 .ph-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
 .ph-stat{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:4px;padding:5px 8px;}
-.ph-stat-v{font-size:13px;font-weight:700;font-family:var(--mono);color:var(--text);}
+.ph-stat-v{font-size:13px;font-weight:700;font-family:var(--mono);}
 .ph-stat-l{font-size:8px;color:var(--dim);letter-spacing:1px;}
-.ph-top-lbl{font-size:9px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
-.ph-top-item{display:flex;justify-content:space-between;font-size:9px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04);}
-.ph-top-item span{color:var(--dim);font-family:var(--mono);}
-
-/* ── MOONRAKER/KLIPPER ───────────────────────────────────── */
-.moon-widget{position:absolute;inset:0;padding:14px;display:flex;flex-direction:column;gap:8px;overflow:hidden;background:linear-gradient(135deg,rgba(7,10,20,.96),rgba(12,15,31,.98));}
+.moon-widget{position:absolute;inset:0;padding:14px;display:flex;flex-direction:column;gap:8px;overflow:hidden;}
 .moon-status{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:12px;font-size:10px;letter-spacing:1px;font-weight:600;text-transform:uppercase;flex-shrink:0;}
 .moon-printing{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:var(--green);}
 .moon-idle{background:rgba(71,85,105,.15);border:1px solid rgba(71,85,105,.3);color:var(--dim);}
@@ -335,83 +311,30 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .moon-temp{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:5px;padding:6px 8px;}
 .moon-temp-val{font-size:16px;font-weight:700;font-family:var(--mono);color:var(--amber);}
 .moon-temp-lbl{font-size:8px;color:var(--dim);letter-spacing:1px;}
-.moon-progress{flex-shrink:0;}
-.moon-pct{font-size:clamp(20px,4vw,36px);font-weight:300;font-family:var(--mono);background:linear-gradient(135deg,var(--indigo),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.moon-pct{font-size:clamp(18px,3vw,32px);font-weight:300;font-family:var(--mono);color:var(--indigo);}
 .moon-bar{height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;margin-top:6px;}
-.moon-bar-fill{height:100%;background:linear-gradient(90deg,var(--indigo),var(--cyan));border-radius:3px;transition:width .5s ease;}
+.moon-bar-fill{height:100%;background:linear-gradient(90deg,var(--indigo),var(--cyan));border-radius:3px;}
 .moon-file{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .moon-eta{font-size:9px;color:var(--dim);font-family:var(--mono);}
-
-/* ── SPEEDTEST ───────────────────────────────────────────── */
-.speed-widget{position:absolute;inset:0;padding:14px;display:flex;flex-direction:column;gap:8px;overflow:hidden;background:linear-gradient(135deg,rgba(7,10,20,.96),rgba(12,15,31,.98));}
+.speed-widget{position:absolute;inset:0;padding:14px;display:flex;flex-direction:column;gap:8px;overflow:hidden;}
 .speed-gauges{display:flex;gap:8px;flex:1;}
 .speed-gauge{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:10px;}
-.speed-val{font-size:clamp(18px,3.5vw,32px);font-weight:700;font-family:var(--mono);}
+.speed-val{font-size:clamp(16px,3vw,28px);font-weight:700;font-family:var(--mono);}
 .speed-unit{font-size:9px;color:var(--dim);letter-spacing:1px;margin-top:2px;}
 .speed-lbl{font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:6px;}
 .speed-dl{color:var(--cyan);}
 .speed-ul{color:var(--indigo);}
-.speed-ping-val{font-size:clamp(14px,2.5vw,24px);font-weight:700;font-family:var(--mono);color:var(--green);}
-.speed-run-btn{padding:8px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:6px;color:var(--indigo);font-size:11px;cursor:pointer;transition:all .2s;text-align:center;flex-shrink:0;}
+.speed-ping-val{font-size:clamp(14px,2.5vw,22px);font-weight:700;font-family:var(--mono);color:var(--green);}
+.speed-run-btn{padding:8px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:6px;color:var(--indigo);font-size:11px;cursor:pointer;text-align:center;flex-shrink:0;}
 .speed-run-btn:hover{background:rgba(99,102,241,.2);}
-.speed-running{animation:blink .5s infinite;}
-
-/* ── THÈMES ──────────────────────────────────────────────── */
-[data-theme="matrix"]{
-  --bg:#001100;--surface:#001a00;--panel:#002200;
-  --indigo:#00ff41;--cyan:#00cc33;--purple:#00aa22;
-  --green:#00ff41;--red:#ff0040;--amber:#ffcc00;
-  --text:#00ff41;--muted:#00aa22;--dim:#006600;
-  --border:rgba(0,255,65,.12);
-}
-[data-theme="matrix"] body::before{background:radial-gradient(ellipse 80% 60% at 15% 25%,rgba(0,255,65,.07) 0%,transparent 60%),radial-gradient(ellipse 60% 50% at 85% 75%,rgba(0,204,51,.05) 0%,transparent 60%);}
-[data-theme="light"]{
-  --bg:#f0f4f8;--surface:#ffffff;--panel:#f8fafc;
-  --indigo:#4f46e5;--cyan:#0891b2;--purple:#7c3aed;
-  --green:#059669;--red:#dc2626;--amber:#d97706;
-  --text:#1e293b;--muted:#64748b;--dim:#94a3b8;
-  --border:rgba(79,70,229,.15);
-}
-[data-theme="light"] body{color:var(--text);}
-[data-theme="light"] #hud{background:rgba(240,244,248,.97);}
-[data-theme="light"] #panel{background:var(--panel);}
-[data-theme="light"] .cell{background:#fff;border-color:rgba(79,70,229,.1);}
-
-/* ── MODE NUIT ───────────────────────────────────────────── */
 .night-mode{filter:brightness(.4) saturate(.7);}
 .night-mode #hud{filter:brightness(1) saturate(1);}
-#night-banner{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:rgba(7,10,20,.9);border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:6px 16px;font-size:10px;color:var(--amber);letter-spacing:1px;z-index:400;display:none;}
-#night-banner.show{display:block;}
-
-/* ── SNAKE EASTER EGG ────────────────────────────────────── */
-#snake-overlay{position:fixed;inset:0;z-index:999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.9);}
-#snake-overlay.show{display:flex;}
-#snake-canvas{border:2px solid var(--indigo);border-radius:4px;}
-#snake-score{position:absolute;top:20px;left:50%;transform:translateX(-50%);font-size:14px;color:var(--indigo);letter-spacing:2px;font-family:var(--mono);}
-#snake-close{position:absolute;top:14px;right:14px;width:32px;height:32px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--red);font-size:16px;}
-
-/* ── MODE PRÉSENTATION ───────────────────────────────────── */
-#pres-indicator{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:rgba(7,10,20,.85);border:1px solid var(--border);border-radius:20px;padding:5px 16px;font-size:10px;color:var(--indigo);letter-spacing:1px;display:none;z-index:200;}
-#pres-indicator.show{display:block;}
+#night-banner.show{display:block!important;}
 
 </style>
 </head>
 <body>
 <div id="grid"></div>
-
-
-<!-- NIGHT MODE BANNER -->
-<div id="night-banner">🌙 MODE NUIT</div>
-
-<!-- SNAKE EASTER EGG -->
-<div id="snake-overlay">
-  <div id="snake-score">SCORE: 0</div>
-  <div id="snake-close">×</div>
-  <canvas id="snake-canvas" width="400" height="400"></canvas>
-</div>
-
-<!-- PRÉSENTATION INDICATOR -->
-<div id="pres-indicator">▶ PRÉSENTATION</div>
 
 <div id="zoom-overlay">
   <div id="zoom-box">
@@ -475,12 +398,12 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
           <option value="webpage">&#x1F310; Page Web (iframe)</option>
           <option value="kuma">&#x1F7E2; Uptime Kuma</option>
           <option value="beszel">&#x1F4CA; Beszel</option>
-          <option value="weather">&#x1F324; Météo (Open-Meteo)</option>
+          <option value="weather">&#x1F324; Météo</option>
           <option value="homeassistant">&#x1F3E0; Home Assistant</option>
           <option value="jellyfin">&#x1F3AC; Jellyfin</option>
-          <option value="immich">&#x1F4F8; Immich Photos</option>
+          <option value="immich">&#x1F4F8; Immich</option>
           <option value="pihole">&#x1F6E1; Pi-hole</option>
-          <option value="moonraker">&#x1F5A8; Klipper/Moonraker</option>
+          <option value="moonraker">&#x1F5A8; Klipper</option>
           <option value="speedtest">&#x26A1; Speedtest</option>
         </select>
       </div>
@@ -636,13 +559,6 @@ function buildContent(cc,parentDiv){
     case'webpage':return buildWebpage(cc);
     case'kuma':return buildKuma(cc);
     case'beszel':return buildBeszel(cc);
-    case'weather':return buildWeather(cc);
-    case'homeassistant':return buildHA(cc);
-    case'jellyfin':return buildJellyfin(cc);
-    case'immich':return buildImmich(cc);
-    case'pihole':return buildPihole(cc);
-    case'moonraker':return buildMoonraker(cc);
-    case'speedtest':return buildSpeedtest(cc);
     default:return null;
   }
 }
@@ -1112,6 +1028,7 @@ function openCellCfg(idx){
 }
 function updateCellCfgUI(type){
   document.getElementById('cc-cam-row').style.display=type==='camera'?'flex':'none';
+  // Champs dynamiques selon le type
   const old=document.getElementById('cc-extra');
   if(old)old.remove();
   const ex=document.createElement('div');
@@ -1121,49 +1038,6 @@ function updateCellCfgUI(type){
   switch(type){
     case 'empty':
       ex.innerHTML=`<div class="cc-row"><span class="cc-lbl">Image de fond</span><button class="btn-ghost" id="cc-img-btn">📂 Choisir</button></div>`;
-      break;
-    case 'weather':
-      ex.innerHTML=`
-        <div class="cc-row"><span class="cc-lbl">Latitude</span><input class="pi-in" id="cc-wx-lat" type="text" value="${cur.wxLat||'45.36'}" style="width:120px" placeholder="45.36"></div>
-        <div class="cc-row"><span class="cc-lbl">Longitude</span><input class="pi-in" id="cc-wx-lon" type="text" value="${cur.wxLon||'4.13'}" style="width:120px" placeholder="4.13"></div>
-        <div style="font-size:10px;color:var(--dim)">Open-Meteo — gratuit, sans clé API</div>`;
-      break;
-    case 'homeassistant':
-      ex.innerHTML=`
-        <div class="cc-row"><span class="cc-lbl">URL Home Assistant</span><input class="pi-in" id="cc-ha-url" type="text" value="${cur.haUrl||''}" placeholder="http://192.168.1.x:8123" style="width:200px"></div>
-        <div class="cc-row"><span class="cc-lbl">Token long-lived</span><input class="pi-in" id="cc-ha-token" type="password" value="${cur.haToken||''}" placeholder="HA → Profil → Token" style="width:200px"></div>
-        <div class="cc-row"><span class="cc-lbl">Entités (une par ligne)</span></div>
-        <textarea class="pi-in" id="cc-ha-entities" style="width:100%;height:60px;resize:none;font-size:10px" placeholder="sensor.temperature&#10;binary_sensor.garage">${(cur.haEntities||[]).join('\n')}</textarea>`;
-      break;
-    case 'jellyfin':
-      ex.innerHTML=`
-        <div class="cc-row"><span class="cc-lbl">URL Jellyfin</span><input class="pi-in" id="cc-jf-url" type="text" value="${cur.jfUrl||''}" placeholder="http://192.168.1.x:8096" style="width:200px"></div>
-        <div class="cc-row"><span class="cc-lbl">Clé API</span><input class="pi-in" id="cc-jf-key" type="password" value="${cur.jfKey||''}" placeholder="Administration → API Keys" style="width:200px"></div>`;
-      break;
-    case 'immich':
-      ex.innerHTML=`
-        <div class="cc-row"><span class="cc-lbl">URL Immich</span><input class="pi-in" id="cc-im-url" type="text" value="${cur.imUrl||''}" placeholder="http://192.168.1.x:2283" style="width:200px"></div>
-        <div class="cc-row"><span class="cc-lbl">Clé API</span><input class="pi-in" id="cc-im-key" type="password" value="${cur.imKey||''}" placeholder="Profil → API Keys" style="width:200px"></div>
-        <div class="cc-row"><span class="cc-lbl">Mode</span><select class="pi-sel" id="cc-im-mode"><option value="random"${cur.imMode==='random'?' selected':''}>🎲 Aléatoire</option><option value="onthisday"${cur.imMode==='onthisday'?' selected':''}>📅 Ce jour-là</option><option value="favorites"${cur.imMode==='favorites'?' selected':''}>❤️ Favoris</option><option value="album"${cur.imMode==='album'?' selected':''}>📁 Album</option></select></div>
-        <div class="cc-row" id="cc-im-album-row" style="${cur.imMode==='album'?'':'display:none'}"><span class="cc-lbl">ID Album</span><input class="pi-in" id="cc-im-album" type="text" value="${cur.imAlbum||''}" style="width:200px" placeholder="UUID de l'album"></div>
-        <div class="cc-row"><span class="cc-lbl">Intervalle (sec)</span><input class="pi-sm" id="cc-im-interval" type="number" value="${cur.imInterval||30}" min="5" max="300"></div>`;
-      setTimeout(()=>{
-        const modeEl=document.getElementById('cc-im-mode');
-        if(modeEl)modeEl.onchange=()=>{document.getElementById('cc-im-album-row').style.display=modeEl.value==='album'?'flex':'none';};
-      },50);
-      break;
-    case 'pihole':
-      ex.innerHTML=`
-        <div class="cc-row"><span class="cc-lbl">URL Pi-hole</span><input class="pi-in" id="cc-ph-url" type="text" value="${cur.phUrl||''}" placeholder="http://192.168.1.x" style="width:200px"></div>
-        <div class="cc-row"><span class="cc-lbl">Token API</span><input class="pi-in" id="cc-ph-token" type="password" value="${cur.phToken||''}" placeholder="Settings → API → Token" style="width:200px"></div>`;
-      break;
-    case 'moonraker':
-      ex.innerHTML=`
-        <div class="cc-row"><span class="cc-lbl">URL Moonraker</span><input class="pi-in" id="cc-mr-url" type="text" value="${cur.mrUrl||''}" placeholder="http://192.168.1.x:7125" style="width:200px"></div>
-        <div style="font-size:10px;color:var(--dim)">Pas d'auth requise par défaut</div>`;
-      break;
-    case 'speedtest':
-      ex.innerHTML=`<div style="font-size:10px;color:var(--dim)">Speedtest via speedtest-cli. Auto-rafraîchi toutes les heures ou sur demande.</div>`;
       break;
     case 'webpage':
       ex.innerHTML=`<div class="cc-row"><span class="cc-lbl">URL</span><input class="pi-in" id="cc-url" type="text" value="${cur.url||''}" placeholder="http://192.168.1.x:port" style="width:210px"></div>`;
@@ -1196,22 +1070,21 @@ document.getElementById('cc-save').addEventListener('click',()=>{
   const cells=cfg.grid?.cells||[];
   const _type=document.getElementById('cc-type').value;
   const _g=id=>{const el=document.getElementById(id);return el?el.value:'';};
-  const _el=id=>document.getElementById(id);
-  cells[selectedCell]={...cells[selectedCell],
-    id:`cell-${selectedCell}`,type:_type,
-    cameraId:_g('cc-cam'),label:_g('cc-lbl'),url:_g('cc-url'),
-    kumaUrl:_g('cc-kuma-url'),kumaSlug:_g('cc-kuma-slug')||'default',kumaToken:_g('cc-kuma-token'),
-    bszUrl:_g('cc-bsz-url'),bszEmail:_g('cc-bsz-email'),bszPass:_g('cc-bsz-pass'),
-    wxLat:_g('cc-wx-lat'),wxLon:_g('cc-wx-lon'),
-    haUrl:_g('cc-ha-url'),haToken:_g('cc-ha-token'),
-    haEntities:(_el('cc-ha-entities')?.value||'').split(\n').map(s=>s.trim()).filter(Boolean),
-    jfUrl:_g('cc-jf-url'),jfKey:_g('cc-jf-key'),
-    imUrl:_g('cc-im-url'),imKey:_g('cc-im-key'),
-    imMode:_g('cc-im-mode')||'random',imAlbum:_g('cc-im-album'),
-    imInterval:+(_g('cc-im-interval')||30),
-    phUrl:_g('cc-ph-url'),phToken:_g('cc-ph-token'),
+  var _el = function(id) { return document.getElementById(id); };
+  cells[selectedCell]=Object.assign({},cells[selectedCell],{
+    id:'cell-'+selectedCell, type:_type,
+    cameraId:_g('cc-cam'), label:_g('cc-lbl'), url:_g('cc-url'),
+    kumaUrl:_g('cc-kuma-url'), kumaSlug:_g('cc-kuma-slug')||'default', kumaToken:_g('cc-kuma-token'),
+    bszUrl:_g('cc-bsz-url'), bszEmail:_g('cc-bsz-email'), bszPass:_g('cc-bsz-pass'),
+    wxLat:_g('cc-wx-lat'), wxLon:_g('cc-wx-lon'),
+    haUrl:_g('cc-ha-url'), haToken:_g('cc-ha-token'),
+    haEntities:(_el('cc-ha-entities')&&_el('cc-ha-entities').value||'').split('\n').map(function(s){return s.trim();}).filter(Boolean),
+    jfUrl:_g('cc-jf-url'), jfKey:_g('cc-jf-key'),
+    imUrl:_g('cc-im-url'), imKey:_g('cc-im-key'), imInterval:+(_g('cc-im-interval')||30),
+    phUrl:_g('cc-ph-url'), phToken:_g('cc-ph-token'),
     mrUrl:_g('cc-mr-url'),
-  };
+  });
+  // Supprimer les champs dynamiques
   const ex=document.getElementById('cc-extra');if(ex)ex.remove();
   cfg.grid.cells=cells;API.saveConfig(cfg);renderGrid();renderGridPreview();
   document.getElementById('cell-cfg').style.display='none';selectedCell=null;
@@ -1307,578 +1180,522 @@ async function init(){
 }
 init().catch(console.error);
 
+// ══════════════════════════════════════════════════════════
+// CAMWALL v5 — NOUVEAUX WIDGETS
+// Fichier testé syntaxiquement avant injection
+// ══════════════════════════════════════════════════════════
 
-// ══════════════════════════════════════════════════════════════
-// GRAPHES TEMPS RÉEL — stockage mémoire circulaire
-// ══════════════════════════════════════════════════════════════
-const metricsHistory={cpu:[],ram:[]};
-const HIST_MAX=60;
-function pushHistory(key,val){
-  if(!metricsHistory[key])metricsHistory[key]=[];
-  metricsHistory[key].push(+val||0);
-  if(metricsHistory[key].length>HIST_MAX)metricsHistory[key].shift();
+// ─── HISTORIQUE MÉTRIQUES ────────────────────────────────
+const metricsHistory = { cpu: [], ram: [] };
+const HIST_MAX = 60;
+function pushHistory(key, val) {
+  if (!metricsHistory[key]) metricsHistory[key] = [];
+  metricsHistory[key].push(+val || 0);
+  if (metricsHistory[key].length > HIST_MAX) metricsHistory[key].shift();
 }
-function drawSparkline(canvas,data,color='#6366f1'){
-  if(!canvas||!data||data.length<2)return;
-  const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
-  ctx.clearRect(0,0,w,h);
-  const max=Math.max(100,...data),min=0;
-  const pts=data.map((v,i)=>({x:(i/(data.length-1))*w,y:h-((v-min)/(max-min||1))*(h*.85)+h*.07}));
-  ctx.beginPath();ctx.moveTo(pts[0].x,h);
-  pts.forEach(p=>ctx.lineTo(p.x,p.y));
-  ctx.lineTo(pts[pts.length-1].x,h);ctx.closePath();
-  const g=ctx.createLinearGradient(0,0,0,h);
-  g.addColorStop(0,color+'55');g.addColorStop(1,color+'00');
-  ctx.fillStyle=g;ctx.fill();
-  ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
-  ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.stroke();
+function drawSparkline(canvas, data, color) {
+  if (!canvas || !data || data.length < 2) return;
+  color = color || '#6366f1';
+  const ctx = canvas.getContext('2d'), w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  const max = Math.max(100, Math.max.apply(null, data));
+  const pts = data.map(function(v, i) {
+    return { x: (i / (data.length - 1)) * w, y: h - (v / max) * (h * 0.85) + h * 0.07 };
+  });
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, h);
+  pts.forEach(function(p) { ctx.lineTo(p.x, p.y); });
+  ctx.lineTo(pts[pts.length - 1].x, h);
+  ctx.closePath();
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, color + '55');
+  g.addColorStop(1, color + '00');
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.beginPath();
+  pts.forEach(function(p, i) { i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y); });
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
 }
 
-// ══════════════════════════════════════════════════════════════
-// ALERTES VISUELLES
-// ══════════════════════════════════════════════════════════════
-const alertStates={};
-function flashAlert(msg,color='red'){
-  const div=document.createElement('div');
-  const col=color==='red'?'var(--red)':'var(--amber)';
-  div.style.cssText=`position:fixed;top:64px;right:16px;z-index:300;background:rgba(7,10,20,.95);border:1px solid ${col};border-radius:8px;padding:10px 16px;font-size:12px;color:${col};letter-spacing:.5px;max-width:260px;`;
-  div.textContent='⚠ '+msg;
+// ─── ALERTES VISUELLES ───────────────────────────────────
+const alertStates = {};
+function flashAlert(msg, color) {
+  color = color || 'red';
+  const col = color === 'red' ? 'var(--red)' : 'var(--amber)';
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;top:64px;right:16px;z-index:300;background:rgba(7,10,20,.95);border:1px solid ' + col + ';border-radius:8px;padding:10px 16px;font-size:12px;color:' + col + ';max-width:260px;';
+  div.textContent = '\u26a0 ' + msg;
   document.body.appendChild(div);
-  setTimeout(()=>{div.style.transition='opacity .5s';div.style.opacity='0';setTimeout(()=>div.remove(),500);},5000);
+  setTimeout(function() { div.style.transition = 'opacity .5s'; div.style.opacity = '0'; setTimeout(function() { div.remove(); }, 500); }, 5000);
 }
-function checkAlerts(metrics){
-  const cpuThr=cfg.alertCpuThreshold||85;
-  const ramThr=cfg.alertRamThreshold||90;
-  if((metrics.cpuPercent||0)>=cpuThr&&!alertStates.cpu){
-    alertStates.cpu=true;
-    flashAlert('CPU élevé: '+metrics.cpuPercent+'%','orange');
-    API.notifyDesktop({title:'⚠ CamWall',body:`CPU à ${metrics.cpuPercent}%`});
-  }else if((metrics.cpuPercent||0)<cpuThr) alertStates.cpu=false;
-  if((metrics.ramPercent||0)>=ramThr&&!alertStates.ram){
-    alertStates.ram=true;
-    flashAlert('RAM critique: '+metrics.ramPercent+'%','red');
-  }else if((metrics.ramPercent||0)<ramThr) alertStates.ram=false;
+function checkAlerts(metrics) {
+  const cpuThr = (cfg.alertCpuThreshold || 85);
+  const ramThr = (cfg.alertRamThreshold || 90);
+  if ((metrics.cpuPercent || 0) >= cpuThr && !alertStates.cpu) {
+    alertStates.cpu = true;
+    flashAlert('CPU élevé: ' + metrics.cpuPercent + '%', 'orange');
+    if (API.notifyDesktop) API.notifyDesktop({ title: '\u26a0 CamWall', body: 'CPU à ' + metrics.cpuPercent + '%' });
+  } else if ((metrics.cpuPercent || 0) < cpuThr) { alertStates.cpu = false; }
+  if ((metrics.ramPercent || 0) >= ramThr && !alertStates.ram) {
+    alertStates.ram = true;
+    flashAlert('RAM critique: ' + metrics.ramPercent + '%', 'red');
+  } else if ((metrics.ramPercent || 0) < ramThr) { alertStates.ram = false; }
 }
 
-// ══════════════════════════════════════════════════════════════
-// MÉTÉO — Open-Meteo (gratuit, sans clé)
-// ══════════════════════════════════════════════════════════════
-const WX_CODES={0:'☀️',1:'🌤',2:'⛅',3:'🌥',45:'🌫',48:'🌫',51:'🌦',53:'🌦',55:'🌧',61:'🌧',63:'🌧',65:'🌧',71:'❄️',73:'❄️',75:'❄️',80:'🌦',81:'🌦',82:'⛈',95:'⛈',96:'⛈',99:'⛈'};
-const WX_DESC={0:'Ciel dégagé',1:'Peu nuageux',2:'Partiellement nuageux',3:'Couvert',45:'Brouillard',48:'Brouillard givrant',51:'Bruine légère',53:'Bruine',55:'Bruine forte',61:'Pluie légère',63:'Pluie',65:'Pluie forte',71:'Neige légère',73:'Neige',75:'Neige forte',80:'Averses légères',81:'Averses',82:'Averses fortes',95:'Orage',96:'Orage+grêle',99:'Orage fort'};
-const DAYS_FR=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
-function buildWeather(cc){
-  const wrap=document.createElement('div');
-  wrap.className='weather-widget';
-  wrap.innerHTML='<div style="color:var(--dim);font-size:11px;padding:20px">⏳ Chargement météo...</div>';
-  refreshWeather(wrap,cc);
+// ─── MÉTÉO (Open-Meteo) ──────────────────────────────────
+const WX_CODES = { 0:'☀️',1:'🌤',2:'⛅',3:'🌥',45:'🌫',48:'🌫',51:'🌦',53:'🌦',55:'🌧',61:'🌧',63:'🌧',65:'🌧',71:'❄️',73:'❄️',75:'❄️',80:'🌦',81:'🌦',82:'⛈',95:'⛈',96:'⛈',99:'⛈' };
+const WX_DESC = { 0:'Ciel dégagé',1:'Peu nuageux',2:'Partiellement nuageux',3:'Couvert',45:'Brouillard',48:'Brouillard givrant',51:'Bruine légère',53:'Bruine',55:'Bruine forte',61:'Pluie légère',63:'Pluie',65:'Pluie forte',71:'Neige légère',73:'Neige',75:'Neige forte',80:'Averses légères',81:'Averses',82:'Averses fortes',95:'Orage',96:'Orage+grêle',99:'Orage fort' };
+const DAYS_FR = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+
+function buildWeather(cc) {
+  const wrap = document.createElement('div');
+  wrap.className = 'weather-widget';
+  wrap.innerHTML = '<div style="color:var(--dim);font-size:11px;padding:20px">⏳ Chargement météo...</div>';
+  refreshWeather(wrap, cc);
   return wrap;
 }
-async function refreshWeather(wrap,cc){
-  if(!wrap.isConnected)return;
-  const lat=parseFloat(cc.wxLat)||45.36,lon=parseFloat(cc.wxLon)||4.13;
-  try{
-    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,precipitation,weathercode,windspeed_10m,relativehumidity_2m&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_probability_max,sunrise,sunset&timezone=Europe%2FParis&forecast_days=4`,{signal:AbortSignal.timeout(12000)});
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const d=await r.json();
-    const c=d.current,dy=d.daily,code=c.weathercode;
-    const sunrise=(dy.sunrise?.[0]||'').slice(11,16),sunset=(dy.sunset?.[0]||'').slice(11,16);
-    const fc=dy.time?.slice(1,4)||[];
-    wrap.innerHTML=`
-      <div class="wx-main">
-        <div class="wx-icon">${WX_CODES[code]||'🌡'}</div>
-        <div>
-          <div class="wx-temp">${Math.round(c.temperature_2m)}°</div>
-          <div class="wx-feels">Ressenti ${Math.round(c.apparent_temperature)}°</div>
-        </div>
-        <div style="margin-left:auto;text-align:right">
-          <div class="wx-desc">${WX_DESC[code]||''}</div>
-          <div class="wx-sunrise">🌅${sunrise} 🌇${sunset}</div>
-        </div>
-      </div>
-      <div class="wx-grid">
-        <div class="wx-stat"><div class="wx-stat-lbl">VENT</div><div class="wx-stat-val">${Math.round(c.windspeed_10m)} km/h</div></div>
-        <div class="wx-stat"><div class="wx-stat-lbl">HUMIDITÉ</div><div class="wx-stat-val">${c.relativehumidity_2m}%</div></div>
-        <div class="wx-stat"><div class="wx-stat-lbl">PRÉCIP.</div><div class="wx-stat-val">${c.precipitation}mm</div></div>
-        <div class="wx-stat"><div class="wx-stat-lbl">DEMAIN</div><div class="wx-stat-val">${dy.precipitation_probability_max?.[1]||0}%💧</div></div>
-      </div>
-      <div class="wx-forecast">${fc.map((t,i)=>`<div class="wx-day"><div class="wx-day-name">${DAYS_FR[new Date(t+'T12:00').getDay()]}</div><div class="wx-day-icon">${WX_CODES[dy.weathercode?.[i+1]]||'🌡'}</div><div class="wx-day-temp">${Math.round(dy.temperature_2m_min?.[i+1]||0)}°–${Math.round(dy.temperature_2m_max?.[i+1]||0)}°</div></div>`).join('')}</div>`;
-  }catch(e){
-    wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🌫</div><div style="font-size:11px">Météo indisponible</div></div>';
+async function refreshWeather(wrap, cc) {
+  if (!wrap.isConnected) return;
+  const lat = parseFloat(cc.wxLat) || 45.36;
+  const lon = parseFloat(cc.wxLon) || 4.13;
+  try {
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=temperature_2m,apparent_temperature,precipitation,weathercode,windspeed_10m,relativehumidity_2m&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_probability_max,sunrise,sunset&timezone=Europe%2FParis&forecast_days=4';
+    const r = await fetch(url, { signal: AbortSignal.timeout(12000) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const c = d.current, dy = d.daily, code = c.weathercode;
+    const sunrise = (dy.sunrise && dy.sunrise[0] ? dy.sunrise[0].slice(11, 16) : '');
+    const sunset = (dy.sunset && dy.sunset[0] ? dy.sunset[0].slice(11, 16) : '');
+    const fc = dy.time ? dy.time.slice(1, 4) : [];
+    let forecastHtml = '';
+    fc.forEach(function(t, i) {
+      const dayIdx = new Date(t + 'T12:00').getDay();
+      const icon = WX_CODES[dy.weathercode ? dy.weathercode[i + 1] : 0] || '🌡';
+      const tmin = Math.round((dy.temperature_2m_min ? dy.temperature_2m_min[i + 1] : 0) || 0);
+      const tmax = Math.round((dy.temperature_2m_max ? dy.temperature_2m_max[i + 1] : 0) || 0);
+      forecastHtml += '<div class="wx-day"><div class="wx-day-name">' + DAYS_FR[dayIdx] + '</div><div class="wx-day-icon">' + icon + '</div><div class="wx-day-temp">' + tmin + '°–' + tmax + '°</div></div>';
+    });
+    wrap.innerHTML = '<div class="wx-main">'
+      + '<div class="wx-icon">' + (WX_CODES[code] || '🌡') + '</div>'
+      + '<div><div class="wx-temp">' + Math.round(c.temperature_2m) + '°</div>'
+      + '<div class="wx-feels">Ressenti ' + Math.round(c.apparent_temperature) + '°</div></div>'
+      + '<div style="margin-left:auto;text-align:right"><div class="wx-desc">' + (WX_DESC[code] || '') + '</div>'
+      + '<div class="wx-sunrise">🌅' + sunrise + ' 🌇' + sunset + '</div></div></div>'
+      + '<div class="wx-grid">'
+      + '<div class="wx-stat"><div class="wx-stat-lbl">VENT</div><div class="wx-stat-val">' + Math.round(c.windspeed_10m) + ' km/h</div></div>'
+      + '<div class="wx-stat"><div class="wx-stat-lbl">HUMIDITÉ</div><div class="wx-stat-val">' + c.relativehumidity_2m + '%</div></div>'
+      + '<div class="wx-stat"><div class="wx-stat-lbl">PRÉCIP.</div><div class="wx-stat-val">' + c.precipitation + 'mm</div></div>'
+      + '<div class="wx-stat"><div class="wx-stat-lbl">DEMAIN</div><div class="wx-stat-val">' + (dy.precipitation_probability_max ? dy.precipitation_probability_max[1] || 0 : 0) + '%💧</div></div>'
+      + '</div>'
+      + '<div class="wx-forecast">' + forecastHtml + '</div>';
+  } catch (e) {
+    wrap.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🌫</div><div style="font-size:11px">Météo indisponible</div></div>';
   }
-  setTimeout(()=>{if(wrap.isConnected)refreshWeather(wrap,cc);},15*60*1000);
+  setTimeout(function() { if (wrap.isConnected) refreshWeather(wrap, cc); }, 15 * 60 * 1000);
 }
 
-// ══════════════════════════════════════════════════════════════
-// HOME ASSISTANT
-// ══════════════════════════════════════════════════════════════
-const HA_DOMAIN_ICONS={'binary_sensor':'🔵','sensor':'🌡','switch':'⚡','light':'💡','media_player':'📺','climate':'🌡','input_boolean':'🔘','lock':'🔒','cover':'🪟','fan':'💨'};
-function haIcon(eid){
-  const domain=eid.split('.')[0];
-  if(eid.includes('door')||eid.includes('porte'))return'🚪';
-  if(eid.includes('window')||eid.includes('fenetre')||eid.includes('fenêtre'))return'🪟';
-  if(eid.includes('motion')||eid.includes('mouvement'))return'🚶';
-  if(eid.includes('temperature')||eid.includes('temp'))return'🌡';
-  if(eid.includes('humidity')||eid.includes('humidite'))return'💧';
-  if(eid.includes('smoke')||eid.includes('fumee'))return'🔥';
-  if(eid.includes('garage'))return'🏠';
-  if(eid.includes('media_player'))return'📺';
-  return HA_DOMAIN_ICONS[domain]||'⚪';
+// ─── HOME ASSISTANT ──────────────────────────────────────
+function haIcon(eid) {
+  var domain = eid.split('.')[0];
+  if (eid.indexOf('door') >= 0 || eid.indexOf('porte') >= 0) return '🚪';
+  if (eid.indexOf('window') >= 0 || eid.indexOf('fenetre') >= 0) return '🪟';
+  if (eid.indexOf('motion') >= 0) return '🚶';
+  if (eid.indexOf('temperature') >= 0 || eid.indexOf('temp') >= 0) return '🌡';
+  if (eid.indexOf('humidity') >= 0) return '💧';
+  if (eid.indexOf('garage') >= 0) return '🏠';
+  if (domain === 'light') return '💡';
+  if (domain === 'switch') return '⚡';
+  if (domain === 'media_player') return '📺';
+  if (domain === 'climate') return '🌡';
+  return '⚪';
 }
-function haStateClass(domain,state){
-  if(['on','home','open','unlocked','playing','heating'].includes(state))return domain==='binary_sensor'&&state==='open'?'ha-alert':'ha-on';
-  if(['off','away','closed','locked','idle','paused'].includes(state))return'ha-off';
-  if(['unavailable','unknown'].includes(state))return'';
-  return'';
+function haStateLabel(domain, state, attr) {
+  if (attr && attr.unit_of_measurement) return parseFloat(state).toFixed(1) + attr.unit_of_measurement;
+  var map = { on:'ON', off:'OFF', open:'OUVERT', closed:'FERMÉ', home:'Présent', away:'Absent', playing:'▶ Lecture', idle:'Veille', paused:'⏸', unavailable:'—', unknown:'—', locked:'Verrouillé', unlocked:'Ouvert' };
+  return map[state] || state;
 }
-function haStateLabel(domain,state,attr){
-  if(attr?.unit_of_measurement)return`${parseFloat(state).toFixed(1)}${attr.unit_of_measurement}`;
-  const map={on:'ON',off:'OFF',open:'OUVERT',closed:'FERMÉ',home:'Présent',away:'Absent',playing:'▶ Lecture',idle:'Veille',paused:'⏸',unavailable:'—',unknown:'—',locked:'Fermé',unlocked:'Ouvert'};
-  return map[state]||state;
+function haStateColor(domain, state) {
+  if (['on','home','playing','unlocked'].indexOf(state) >= 0) return 'var(--amber)';
+  if (['open'].indexOf(state) >= 0 && domain === 'binary_sensor') return 'var(--red)';
+  if (['off','away','closed','locked','idle'].indexOf(state) >= 0) return 'var(--dim)';
+  return 'var(--muted)';
 }
-function buildHA(cc){
-  const wrap=document.createElement('div');
-  wrap.className='ha-widget';
-  if(!cc.haUrl||!cc.haToken){wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🏠</div><div style="font-size:11px">Configurer Home Assistant</div></div>';return wrap;}
-  const hdr=document.createElement('div');
-  hdr.style.cssText='font-size:9px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;flex-shrink:0;padding:2px 0';
-  hdr.innerHTML='<span>🏠 HOME ASSISTANT</span><span class="ha-ts"></span>';
+function buildHA(cc) {
+  var wrap = document.createElement('div');
+  wrap.className = 'ha-widget';
+  if (!cc.haUrl || !cc.haToken) {
+    wrap.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🏠</div><div style="font-size:11px">Configurer Home Assistant</div></div>';
+    return wrap;
+  }
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'font-size:9px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;flex-shrink:0;padding:2px 0';
+  hdr.innerHTML = '<span>🏠 HOME ASSISTANT</span><span class="ha-ts"></span>';
   wrap.appendChild(hdr);
-  refreshHA(wrap,cc);
+  refreshHA(wrap, cc);
   return wrap;
 }
-async function refreshHA(wrap,cc){
-  if(!wrap.isConnected)return;
-  const entities=(cc.haEntities||[]).filter(Boolean);
-  const tsEl=wrap.querySelector('.ha-ts');
-  if(!entities.length){
-    const p=wrap.querySelector('.ha-empty')||document.createElement('div');
-    p.className='ha-empty';p.style.cssText='font-size:10px;color:var(--dim);text-align:center;padding:20px';
-    p.textContent='Aucune entité configurée';
-    if(!wrap.contains(p))wrap.appendChild(p);
-    return;
-  }
-  try{
-    const hdrs={'Authorization':`Bearer ${cc.haToken}`,'Content-Type':'application/json'};
-    const results=await Promise.all(entities.map(id=>
-      fetch(`${cc.haUrl}/api/states/${id}`,{headers:hdrs,signal:AbortSignal.timeout(8000)})
-        .then(r=>r.ok?r.json():null).catch(()=>null)
-    ));
-    wrap.querySelectorAll('.ha-entity').forEach(e=>e.remove());
-    results.forEach(ent=>{
-      if(!ent||ent.message)return;
-      const domain=ent.entity_id.split('.')[0];
-      const icon=haIcon(ent.entity_id);
-      const cls=haStateClass(domain,ent.state);
-      const lbl=haStateLabel(domain,ent.state,ent.attributes);
-      const div=document.createElement('div');
-      div.className='ha-entity';
-      div.innerHTML=`<span class="ha-entity-icon">${icon}</span><span class="ha-entity-name">${ent.attributes?.friendly_name||ent.entity_id.split('.')[1].replace(/_/g,' ')}</span><span class="ha-entity-state ${cls}">${lbl}</span>`;
-      if(['switch','light','input_boolean','fan'].includes(domain)){
-        div.style.cursor='pointer';div.title='Cliquer pour basculer';
-        div.onclick=async()=>{
-          try{await fetch(`${cc.haUrl}/api/services/${domain}/toggle`,{method:'POST',headers:hdrs,body:JSON.stringify({entity_id:ent.entity_id}),signal:AbortSignal.timeout(5000)});}catch(_){}
-          setTimeout(()=>{if(wrap.isConnected)refreshHA(wrap,cc);},800);
+async function refreshHA(wrap, cc) {
+  if (!wrap.isConnected) return;
+  var entities = (cc.haEntities || []).filter(Boolean);
+  if (!entities.length) { setTimeout(function() { if (wrap.isConnected) refreshHA(wrap, cc); }, 30000); return; }
+  try {
+    var hdrs = { 'Authorization': 'Bearer ' + cc.haToken, 'Content-Type': 'application/json' };
+    var results = await Promise.all(entities.map(function(id) {
+      return fetch(cc.haUrl + '/api/states/' + id, { headers: hdrs, signal: AbortSignal.timeout(8000) })
+        .then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+    }));
+    wrap.querySelectorAll('.ha-entity').forEach(function(e) { e.remove(); });
+    results.forEach(function(ent) {
+      if (!ent || ent.message) return;
+      var domain = ent.entity_id.split('.')[0];
+      var icon = haIcon(ent.entity_id);
+      var lbl = haStateLabel(domain, ent.state, ent.attributes);
+      var col = haStateColor(domain, ent.state);
+      var div = document.createElement('div');
+      div.className = 'ha-entity';
+      var name = (ent.attributes && ent.attributes.friendly_name) ? ent.attributes.friendly_name : ent.entity_id.split('.')[1].replace(/_/g, ' ');
+      div.innerHTML = '<span class="ha-entity-icon">' + icon + '</span><span class="ha-entity-name">' + name + '</span><span class="ha-entity-state" style="color:' + col + '">' + lbl + '</span>';
+      if (['switch','light','input_boolean','fan'].indexOf(domain) >= 0) {
+        div.style.cursor = 'pointer';
+        div.onclick = async function() {
+          await fetch(cc.haUrl + '/api/services/' + domain + '/toggle', { method: 'POST', headers: hdrs, body: JSON.stringify({ entity_id: ent.entity_id }) }).catch(function() {});
+          setTimeout(function() { if (wrap.isConnected) refreshHA(wrap, cc); }, 1000);
         };
       }
       wrap.appendChild(div);
     });
-    if(tsEl)tsEl.textContent=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
-  }catch(e){console.error('HA:',e.message);}
-  setTimeout(()=>{if(wrap.isConnected)refreshHA(wrap,cc);},15000);
+    var tsEl = wrap.querySelector('.ha-ts');
+    if (tsEl) tsEl.textContent = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) { console.error('HA:', e.message); }
+  setTimeout(function() { if (wrap.isConnected) refreshHA(wrap, cc); }, 15000);
 }
 
-// ══════════════════════════════════════════════════════════════
-// JELLYFIN
-// ══════════════════════════════════════════════════════════════
-function buildJellyfin(cc){
-  const wrap=document.createElement('div');
-  wrap.className='jf-widget';
-  if(!cc.jfUrl||!cc.jfKey){wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🎬</div><div style="font-size:11px">Configurer Jellyfin</div></div>';return wrap;}
-  refreshJellyfin(wrap,cc);
+// ─── JELLYFIN ────────────────────────────────────────────
+function buildJellyfin(cc) {
+  var wrap = document.createElement('div');
+  wrap.className = 'jf-widget';
+  if (!cc.jfUrl || !cc.jfKey) {
+    wrap.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🎬</div><div style="font-size:11px">Configurer Jellyfin</div></div>';
+    return wrap;
+  }
+  refreshJellyfin(wrap, cc);
   return wrap;
 }
-async function refreshJellyfin(wrap,cc){
-  if(!wrap.isConnected)return;
-  try{
-    const hdrs={'Authorization':`MediaBrowser Token="${cc.jfKey}"`,'Content-Type':'application/json'};
-    const [sessR,recR]=await Promise.all([
-      fetch(`${cc.jfUrl}/Sessions`,{headers:hdrs,signal:AbortSignal.timeout(8000)}),
-      fetch(`${cc.jfUrl}/Items/Latest?Limit=3&IncludeItemTypes=Movie,Series&fields=Overview`,{headers:hdrs,signal:AbortSignal.timeout(8000)})
-    ]);
-    const sessions=sessR.ok?await sessR.json():[];
-    const recent=recR.ok?await recR.json():[];
-    const playing=(Array.isArray(sessions)?sessions:[]).filter(s=>s.NowPlayingItem);
-    if(playing.length>0){
-      const s=playing[0],item=s.NowPlayingItem;
-      const pos=s.PlayState?.PositionTicks||0,dur=item.RunTimeTicks||1;
-      const pct=Math.min(100,Math.round(pos/dur*100));
-      const remaining=Math.round((dur-pos)/600000000);
-      const poster=`${cc.jfUrl}/Items/${item.Id}/Images/Primary?Height=200&quality=80&api_key=${cc.jfKey}`;
-      const sub=item.SeriesName?`${item.SeriesName} · S${item.ParentIndexNumber||1}E${item.IndexNumber||1}`:item.ProductionYear||'';
-      wrap.innerHTML=`
-        <div class="jf-playing">
-          <div class="jf-poster" style="background-image:url('${poster}')"></div>
-          <div class="jf-overlay"></div>
-          <div class="jf-info">
-            <div class="jf-title">${item.Name||'?'}</div>
-            <div class="jf-subtitle">${sub}</div>
-            <div class="jf-progress-bar"><div class="jf-progress-fill" style="width:${pct}%"></div></div>
-            <div class="jf-user">${s.UserName||''} · ${pct}%${remaining>0?` · ~${remaining}min`:''}</div>
-          </div>
-        </div>`;
-    }else{
-      const items=Array.isArray(recent)?recent:[];
-      wrap.innerHTML=`<div class="jf-idle"><div class="jf-idle-icon">🎬</div><div style="font-size:10px;color:var(--dim)">Rien en lecture</div></div>
-        ${items.length?`<div class="jf-recent"><div style="font-size:9px;color:var(--dim);letter-spacing:1px;padding-bottom:4px">RÉCEMMENT AJOUTÉ</div>${items.map(i=>`<div class="jf-recent-item"><div class="jf-recent-thumb" style="background-image:url('${cc.jfUrl}/Items/${i.Id}/Images/Primary?Height=30&api_key=${cc.jfKey}')"></div><span>${i.Name}</span><span style="margin-left:auto;color:var(--dim)">${i.ProductionYear||''}</span></div>`).join('')}</div>`:''}`
+async function refreshJellyfin(wrap, cc) {
+  if (!wrap.isConnected) return;
+  try {
+    var hdrs = { 'Authorization': 'MediaBrowser Token="' + cc.jfKey + '"', 'Content-Type': 'application/json' };
+    var sessR = await fetch(cc.jfUrl + '/Sessions', { headers: hdrs, signal: AbortSignal.timeout(8000) });
+    var sessions = sessR.ok ? await sessR.json() : [];
+    var playing = (Array.isArray(sessions) ? sessions : []).filter(function(s) { return s.NowPlayingItem; });
+    if (playing.length > 0) {
+      var s = playing[0], item = s.NowPlayingItem;
+      var pos = (s.PlayState && s.PlayState.PositionTicks) || 0;
+      var dur = item.RunTimeTicks || 1;
+      var pct = Math.min(100, Math.round(pos / dur * 100));
+      var remaining = Math.round((dur - pos) / 600000000);
+      var poster = cc.jfUrl + '/Items/' + item.Id + '/Images/Primary?Height=200&quality=80&api_key=' + cc.jfKey;
+      var sub = item.SeriesName ? item.SeriesName + ' · S' + (item.ParentIndexNumber || 1) + 'E' + (item.IndexNumber || 1) : (item.ProductionYear || '');
+      wrap.innerHTML = '<div class="jf-playing">'
+        + '<div class="jf-poster" style="background-image:url(\'' + poster + '\')"></div>'
+        + '<div class="jf-overlay"></div>'
+        + '<div class="jf-info"><div class="jf-title">' + (item.Name || '?') + '</div>'
+        + '<div class="jf-subtitle">' + sub + '</div>'
+        + '<div class="jf-progress-bar"><div class="jf-progress-fill" style="width:' + pct + '%"></div></div>'
+        + '<div class="jf-user">' + (s.UserName || '') + ' · ' + pct + '%' + (remaining > 0 ? ' · ~' + remaining + 'min' : '') + '</div>'
+        + '</div></div>';
+    } else {
+      wrap.innerHTML = '<div class="jf-idle"><div class="jf-idle-icon">🎬</div><div style="font-size:10px;color:var(--dim)">Rien en lecture</div></div>';
     }
-  }catch(e){
-    if(wrap.isConnected)wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🎬</div><div style="font-size:11px">Jellyfin indisponible</div></div>';
+  } catch (e) {
+    wrap.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🎬</div><div style="font-size:11px">Jellyfin indisponible</div></div>';
   }
-  setTimeout(()=>{if(wrap.isConnected)refreshJellyfin(wrap,cc);},20000);
+  setTimeout(function() { if (wrap.isConnected) refreshJellyfin(wrap, cc); }, 20000);
 }
 
-// ══════════════════════════════════════════════════════════════
-// IMMICH SLIDESHOW
-// ══════════════════════════════════════════════════════════════
-const immichState={};
-function buildImmich(cc){
-  const wrap=document.createElement('div');
-  wrap.className='immich-widget';
-  if(!cc.imUrl||!cc.imKey){wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">📸</div><div style="font-size:11px">Configurer Immich</div></div>';return wrap;}
-  const img=document.createElement('img');
-  img.className='immich-img';img.alt='';
+// ─── IMMICH SLIDESHOW ────────────────────────────────────
+var immichTimers = {};
+function buildImmich(cc) {
+  var wrap = document.createElement('div');
+  wrap.className = 'immich-widget';
+  if (!cc.imUrl || !cc.imKey) {
+    wrap.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">📸</div><div style="font-size:11px">Configurer Immich</div></div>';
+    return wrap;
+  }
+  var img = document.createElement('img');
+  img.className = 'immich-img'; img.alt = '';
   wrap.appendChild(img);
-  wrap.insertAdjacentHTML('beforeend','<div class="immich-overlay"><div class="immich-date"></div><div class="immich-exif"></div></div>');
-  const sid='im_'+Date.now();
-  immichState[sid]={shuffle:[],idx:0,timer:null,wrap};
-  loadNextImmich(wrap,cc,img,sid);
-  // Cleanup quand la case est reconstruite
-  const obs=new MutationObserver(()=>{if(!document.body.contains(wrap)){clearTimeout(immichState[sid]?.timer);delete immichState[sid];obs.disconnect();}});
-  obs.observe(document.body,{childList:true,subtree:true});
-  return wrap;
-}
-async function loadNextImmich(wrap,cc,img,sid){
-  const st=immichState[sid];
-  if(!st||!wrap.isConnected){delete immichState[sid];return;}
-  clearTimeout(st.timer);
-  try{
-    const hdrs={'x-api-key':cc.imKey,'Accept':'application/json'};
-    let assetId=null,assetDate=null,exifInfo=null;
-    if(cc.imMode==='onthisday'){
-      const r=await fetch(`${cc.imUrl}/api/memories`,{headers:hdrs,signal:AbortSignal.timeout(12000)});
-      const d=r.ok?await r.json():[];
-      const assets=d[0]?.assets||[];
-      const a=assets[Math.floor(Math.random()*assets.length)];
-      if(a){assetId=a.id;assetDate=a.fileCreatedAt;exifInfo=a.exifInfo;}
-    }else if(cc.imMode==='favorites'){
-      if(!st.shuffle.length){
-        const r=await fetch(`${cc.imUrl}/api/assets?isFavorite=true&size=50`,{headers:hdrs,signal:AbortSignal.timeout(12000)});
-        const d=r.ok?await r.json():{};
-        const arr=d.assets||d;
-        if(Array.isArray(arr)){st.shuffle=arr.map(a=>a.id).sort(()=>Math.random()-.5);}
-      }
-      if(st.shuffle.length){assetId=st.shuffle[st.idx%st.shuffle.length];st.idx++;}
-    }else if(cc.imMode==='album'&&cc.imAlbum){
-      if(!st.shuffle.length){
-        const r=await fetch(`${cc.imUrl}/api/albums/${cc.imAlbum}`,{headers:hdrs,signal:AbortSignal.timeout(12000)});
-        const d=r.ok?await r.json():{};
-        if(d.assets)st.shuffle=d.assets.map(a=>a.id).sort(()=>Math.random()-.5);
-      }
-      if(st.shuffle.length){assetId=st.shuffle[st.idx%st.shuffle.length];st.idx++;}
-    }else{
-      const r=await fetch(`${cc.imUrl}/api/assets/random?count=1`,{headers:hdrs,signal:AbortSignal.timeout(12000)});
-      const d=r.ok?await r.json():[];
-      const a=d[0];
-      if(a){assetId=a.id;assetDate=a.fileCreatedAt;exifInfo=a.exifInfo;}
+  wrap.insertAdjacentHTML('beforeend', '<div class="immich-overlay"><div class="immich-date"></div><div class="immich-exif"></div></div>');
+  var sid = 'im_' + Date.now();
+  var state = { shuffle: [], idx: 0 };
+  function loadNext() {
+    if (!wrap.isConnected) return;
+    clearTimeout(immichTimers[sid]);
+    var hdrs = { 'x-api-key': cc.imKey, 'Accept': 'application/json' };
+    var p;
+    if (cc.imMode === 'random' || !cc.imMode) {
+      p = fetch(cc.imUrl + '/api/assets/random?count=1', { headers: hdrs, signal: AbortSignal.timeout(12000) }).then(function(r) { return r.ok ? r.json() : []; }).then(function(d) { return d[0] || null; });
+    } else {
+      p = fetch(cc.imUrl + '/api/assets/random?count=1', { headers: hdrs, signal: AbortSignal.timeout(12000) }).then(function(r) { return r.ok ? r.json() : []; }).then(function(d) { return d[0] || null; });
     }
-    if(assetId){
-      const newImg=new Image();
-      newImg.onload=()=>{
-        if(!wrap.isConnected)return;
+    p.then(function(asset) {
+      if (!asset || !asset.id) return;
+      var newImg = new Image();
+      newImg.onload = function() {
+        if (!wrap.isConnected) return;
         img.classList.add('fade-out');
-        setTimeout(()=>{img.src=newImg.src;img.classList.remove('fade-out');},1500);
-        const dateEl=wrap.querySelector('.immich-date');
-        const exifEl=wrap.querySelector('.immich-exif');
-        if(dateEl&&assetDate)dateEl.textContent=new Date(assetDate).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
-        if(exifEl&&exifInfo)exifEl.textContent=[exifInfo.make,exifInfo.model,exifInfo.city].filter(Boolean).join(' · ');
+        setTimeout(function() { img.src = newImg.src; img.classList.remove('fade-out'); }, 1500);
+        var dateEl = wrap.querySelector('.immich-date');
+        if (dateEl && asset.fileCreatedAt) dateEl.textContent = new Date(asset.fileCreatedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
       };
-      newImg.src=`${cc.imUrl}/api/assets/${assetId}/thumbnail?format=WEBP`;
-    }
-  }catch(e){console.error('Immich:',e.message);}
-  if(immichState[sid])immichState[sid].timer=setTimeout(()=>loadNextImmich(wrap,cc,img,sid),(cc.imInterval||30)*1000);
-}
-
-// ══════════════════════════════════════════════════════════════
-// PI-HOLE
-// ══════════════════════════════════════════════════════════════
-function buildPihole(cc){
-  const wrap=document.createElement('div');
-  wrap.className='pihole-widget';
-  if(!cc.phUrl){wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🛡</div><div style="font-size:11px">Configurer Pi-hole</div></div>';return wrap;}
-  refreshPihole(wrap,cc);
+      newImg.src = cc.imUrl + '/api/assets/' + asset.id + '/thumbnail?format=WEBP';
+    }).catch(function() {});
+    immichTimers[sid] = setTimeout(loadNext, (cc.imInterval || 30) * 1000);
+  }
+  loadNext();
   return wrap;
 }
-async function refreshPihole(wrap,cc){
-  if(!wrap.isConnected)return;
-  try{
-    let d=null;
-    // Essayer Pi-hole v6 d'abord
-    try{
-      const auth=cc.phToken?`?auth=${cc.phToken}`:'';
-      const r=await fetch(`${cc.phUrl}/api/stats/summary${auth}`,{signal:AbortSignal.timeout(8000)});
-      const raw=r.ok?await r.json():null;
-      if(raw&&(raw.queries||raw.blocked_today!==undefined)){
-        d={
-          ads_blocked_today:raw.blocked_today??raw.queries?.blocked_today??0,
-          ads_percentage_today:raw.percent_blocked??raw.queries?.percent_blocked??0,
-          dns_queries_today:raw.queries_today??raw.queries?.total_today??0,
-          unique_clients:raw.unique_clients??raw.clients?.unique_clients??'?'
-        };
-      }
-    }catch(_){}
-    // Fallback Pi-hole v5
-    if(!d){
-      const token=cc.phToken?`&auth=${cc.phToken}`:'';
-      const r=await fetch(`${cc.phUrl}/admin/api.php?summary${token}`,{signal:AbortSignal.timeout(8000)});
-      d=r.ok?await r.json():null;
-    }
-    if(!d)throw new Error('no data');
-    const pct=parseFloat(d.ads_percentage_today||0).toFixed(1);
-    const blocked=parseInt(d.ads_blocked_today||0).toLocaleString('fr-FR');
-    const total=parseInt(d.dns_queries_today||0).toLocaleString('fr-FR');
-    wrap.innerHTML=`
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-size:20px">🛡</span><div><div style="font-size:10px;color:var(--green);letter-spacing:1px;font-weight:600">PI-HOLE ACTIF</div><div style="font-size:9px;color:var(--dim)">${d.unique_clients} clients</div></div></div>
-      <div class="ph-big"><div class="ph-num">${blocked}</div><div><div class="ph-pct">${pct}%</div><div style="font-size:9px;color:var(--dim)">bloqué</div></div></div>
-      <div class="ph-bar"><div class="ph-bar-fill" style="width:${Math.min(100,pct)}%"></div></div>
-      <div class="ph-stats-grid">
-        <div class="ph-stat"><div class="ph-stat-v">${total}</div><div class="ph-stat-l">REQUÊTES</div></div>
-        <div class="ph-stat"><div class="ph-stat-v">${blocked}</div><div class="ph-stat-l">BLOQUÉES</div></div>
-      </div>`;
-  }catch(e){
-    wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🛡</div><div style="font-size:11px">Pi-hole indisponible</div></div>';
-  }
-  setTimeout(()=>{if(wrap.isConnected)refreshPihole(wrap,cc);},30000);
-}
 
-// ══════════════════════════════════════════════════════════════
-// MOONRAKER / KLIPPER
-// ══════════════════════════════════════════════════════════════
-function buildMoonraker(cc){
-  const wrap=document.createElement('div');
-  wrap.className='moon-widget';
-  if(!cc.mrUrl){wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🖨</div><div style="font-size:11px">Configurer Moonraker</div></div>';return wrap;}
-  refreshMoonraker(wrap,cc);
+// ─── PI-HOLE ─────────────────────────────────────────────
+function buildPihole(cc) {
+  var wrap = document.createElement('div');
+  wrap.className = 'pihole-widget';
+  if (!cc.phUrl) {
+    wrap.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🛡</div><div style="font-size:11px">Configurer Pi-hole</div></div>';
+    return wrap;
+  }
+  refreshPihole(wrap, cc);
   return wrap;
 }
-async function refreshMoonraker(wrap,cc){
-  if(!wrap.isConnected)return;
-  try{
-    const r=await fetch(`${cc.mrUrl}/printer/objects/query?heater_bed&extruder&print_stats&display_status&virtual_sdcard`,{signal:AbortSignal.timeout(8000)});
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const d=await r.json();
-    const s=d.result.status;
-    const st=s.print_stats?.state||'standby';
-    const hotend=Math.round(s.extruder?.temperature||0);
-    const hotTarget=Math.round(s.extruder?.target||0);
-    const bed=Math.round(s.heater_bed?.temperature||0);
-    const bedTarget=Math.round(s.heater_bed?.target||0);
-    const pct=Math.round((s.display_status?.progress||0)*100);
-    const file=(s.print_stats?.filename||'').replace(/\.gcode$/i,'')||'—';
-    const dur=s.print_stats?.print_duration||0;
-    const progress=s.display_status?.progress||0;
-    const eta=progress>0.01?Math.round(dur/progress-dur):0;
-    const fmtT=s=>{const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h?`${h}h${String(m).padStart(2,'0')}m`:`${m}m`;};
-    const stClass={printing:'moon-printing',paused:'moon-printing',error:'moon-error',standby:'moon-idle',idle:'moon-idle',complete:'moon-idle'}[st]||'moon-idle';
-    const stLabel={printing:'⏵ Impression',paused:'⏸ Pause',error:'⚠ Erreur',standby:'En veille',idle:'En veille',complete:'✓ Terminé'}[st]||st;
-    const isPrinting=st==='printing'||st==='paused';
-    wrap.innerHTML=`
-      <div class="moon-status ${stClass}">${stLabel}</div>
-      <div class="moon-temps">
-        <div class="moon-temp"><div class="moon-temp-val">${hotend}°</div><div class="moon-temp-lbl">HOTEND${hotTarget?` → ${hotTarget}°`:''}</div></div>
-        <div class="moon-temp"><div class="moon-temp-val">${bed}°</div><div class="moon-temp-lbl">BED${bedTarget?` → ${bedTarget}°`:''}</div></div>
-      </div>
-      ${isPrinting?`<div class="moon-progress"><div class="moon-pct">${pct}%</div><div class="moon-bar"><div class="moon-bar-fill" style="width:${pct}%"></div></div></div><div class="moon-file" title="${file}">📄 ${file}</div><div class="moon-eta">⏱ ${fmtT(dur)}${eta>60?` · ETA ~${fmtT(eta)}`:''}</div>`:'<div class="moon-file" style="opacity:.4">Aucune impression en cours</div>'}`;
-  }catch(e){
-    wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🖨</div><div style="font-size:11px">Moonraker indisponible</div></div>';
+async function refreshPihole(wrap, cc) {
+  if (!wrap.isConnected) return;
+  try {
+    var auth = cc.phToken ? '?auth=' + cc.phToken : '';
+    var r = await fetch(cc.phUrl + '/api/stats/summary' + auth, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) throw new Error('v6 failed');
+    var d = await r.json();
+    var blocked = parseInt(d.blocked_today || (d.queries && d.queries.blocked_today) || 0);
+    var total = parseInt(d.queries_today || (d.queries && d.queries.total_today) || 0);
+    var pct = total > 0 ? (blocked / total * 100).toFixed(1) : '0.0';
+    var clients = d.unique_clients || (d.clients && d.clients.unique_clients) || '?';
+    wrap.innerHTML = '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-size:20px">🛡</span><div><div style="font-size:10px;color:var(--green);letter-spacing:1px;font-weight:600">PI-HOLE ACTIF</div><div style="font-size:9px;color:var(--dim)">' + clients + ' clients</div></div></div>'
+      + '<div class="ph-big"><div class="ph-num">' + blocked.toLocaleString('fr-FR') + '</div><div><div class="ph-pct">' + pct + '%</div><div style="font-size:9px;color:var(--dim)">bloqué</div></div></div>'
+      + '<div class="ph-bar"><div class="ph-bar-fill" style="width:' + Math.min(100, pct) + '%"></div></div>'
+      + '<div class="ph-stats-grid"><div class="ph-stat"><div class="ph-stat-v">' + total.toLocaleString('fr-FR') + '</div><div class="ph-stat-l">REQUÊTES</div></div><div class="ph-stat"><div class="ph-stat-v">' + blocked.toLocaleString('fr-FR') + '</div><div class="ph-stat-l">BLOQUÉES</div></div></div>';
+  } catch (e) {
+    try {
+      var token = cc.phToken ? '&auth=' + cc.phToken : '';
+      var r2 = await fetch(cc.phUrl + '/admin/api.php?summary' + token, { signal: AbortSignal.timeout(8000) });
+      var d2 = r2.ok ? await r2.json() : null;
+      if (!d2) throw new Error('no data');
+      var pct2 = parseFloat(d2.ads_percentage_today || 0).toFixed(1);
+      var blocked2 = parseInt(d2.ads_blocked_today || 0);
+      var total2 = parseInt(d2.dns_queries_today || 0);
+      wrap.innerHTML = '<div style="font-size:10px;color:var(--green)">🛡 PI-HOLE ACTIF</div>'
+        + '<div class="ph-big"><div class="ph-num">' + blocked2.toLocaleString('fr-FR') + '</div><div class="ph-pct">' + pct2 + '%</div></div>'
+        + '<div class="ph-bar"><div class="ph-bar-fill" style="width:' + Math.min(100, pct2) + '%"></div></div>';
+    } catch (e2) {
+      wrap.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🛡</div><div style="font-size:11px">Pi-hole indisponible</div></div>';
+    }
   }
-  setTimeout(()=>{if(wrap.isConnected)refreshMoonraker(wrap,cc);},5000);
+  setTimeout(function() { if (wrap.isConnected) refreshPihole(wrap, cc); }, 30000);
 }
 
-// ══════════════════════════════════════════════════════════════
-// SPEEDTEST
-// ══════════════════════════════════════════════════════════════
-let _speedResult=null,_speedRunning=false;
-function buildSpeedtest(){
-  const wrap=document.createElement('div');
-  wrap.className='speed-widget';
+// ─── MOONRAKER / KLIPPER ─────────────────────────────────
+function buildMoonraker(cc) {
+  var wrap = document.createElement('div');
+  wrap.className = 'moon-widget';
+  if (!cc.mrUrl) {
+    wrap.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🖨</div><div style="font-size:11px">Configurer Moonraker</div></div>';
+    return wrap;
+  }
+  refreshMoonraker(wrap, cc);
+  return wrap;
+}
+async function refreshMoonraker(wrap, cc) {
+  if (!wrap.isConnected) return;
+  try {
+    var r = await fetch(cc.mrUrl + '/printer/objects/query?heater_bed&extruder&print_stats&display_status', { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var data = await r.json();
+    var s = data.result.status;
+    var st = (s.print_stats && s.print_stats.state) || 'standby';
+    var hotend = Math.round((s.extruder && s.extruder.temperature) || 0);
+    var hotTarget = Math.round((s.extruder && s.extruder.target) || 0);
+    var bed = Math.round((s.heater_bed && s.heater_bed.temperature) || 0);
+    var bedTarget = Math.round((s.heater_bed && s.heater_bed.target) || 0);
+    var pct = Math.round(((s.display_status && s.display_status.progress) || 0) * 100);
+    var file = ((s.print_stats && s.print_stats.filename) || '').replace(/\.gcode$/i, '') || '—';
+    var dur = (s.print_stats && s.print_stats.print_duration) || 0;
+    var progress = (s.display_status && s.display_status.progress) || 0;
+    var eta = progress > 0.01 ? Math.round(dur / progress - dur) : 0;
+    var stClass = { printing:'moon-printing', paused:'moon-printing', error:'moon-error', standby:'moon-idle', idle:'moon-idle', complete:'moon-idle' }[st] || 'moon-idle';
+    var stLabel = { printing:'⏵ Impression', paused:'⏸ Pause', error:'⚠ Erreur', standby:'En veille', idle:'En veille', complete:'✓ Terminé' }[st] || st;
+    var isPrinting = st === 'printing' || st === 'paused';
+    function fmtT(sec) { var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60); return h ? h + 'h' + String(m).padStart(2, '0') + 'm' : m + 'm'; }
+    wrap.innerHTML = '<div class="moon-status ' + stClass + '">' + stLabel + '</div>'
+      + '<div class="moon-temps">'
+      + '<div class="moon-temp"><div class="moon-temp-val">' + hotend + '°</div><div class="moon-temp-lbl">HOTEND' + (hotTarget ? ' → ' + hotTarget + '°' : '') + '</div></div>'
+      + '<div class="moon-temp"><div class="moon-temp-val">' + bed + '°</div><div class="moon-temp-lbl">BED' + (bedTarget ? ' → ' + bedTarget + '°' : '') + '</div></div>'
+      + '</div>'
+      + (isPrinting ? '<div class="moon-progress"><div class="moon-pct">' + pct + '%</div><div class="moon-bar"><div class="moon-bar-fill" style="width:' + pct + '%"></div></div></div>'
+        + '<div class="moon-file">' + file + '</div>'
+        + '<div class="moon-eta">⏱ ' + fmtT(dur) + (eta > 60 ? ' · ETA ~' + fmtT(eta) : '') + '</div>'
+        : '<div class="moon-file" style="opacity:.4">Aucune impression en cours</div>');
+  } catch (e) {
+    wrap.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🖨</div><div style="font-size:11px">Moonraker indisponible</div></div>';
+  }
+  setTimeout(function() { if (wrap.isConnected) refreshMoonraker(wrap, cc); }, 5000);
+}
+
+// ─── SPEEDTEST ───────────────────────────────────────────
+var _speedResult = null, _speedRunning = false;
+function buildSpeedtest() {
+  var wrap = document.createElement('div');
+  wrap.className = 'speed-widget';
   renderSpeedtest(wrap);
-  if(!_speedResult)runSpeedtest(wrap);
+  if (!_speedResult) runSpeedtest(wrap);
   return wrap;
 }
-function renderSpeedtest(wrap){
-  const r=_speedResult;
-  const dl=r?Math.round((r.download||r.download_speed||0)/1e6*10)/10:'—';
-  const ul=r?Math.round((r.upload||r.upload_speed||0)/1e6*10)/10:'—';
-  const ping=r?Math.round(r.ping||r.latency||0):'—';
-  const ts=r?new Date(r.timestamp||Date.now()).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';
-  wrap.innerHTML=`
-    <div style="font-size:9px;color:var(--dim);letter-spacing:1px;flex-shrink:0">⚡ SPEEDTEST ${ts?'· '+ts:''}</div>
-    <div class="speed-gauges">
-      <div class="speed-gauge"><div class="speed-val speed-dl">${dl}</div><div class="speed-unit">Mbps</div><div class="speed-lbl">⬇ Download</div></div>
-      <div class="speed-gauge"><div class="speed-val speed-ul">${ul}</div><div class="speed-unit">Mbps</div><div class="speed-lbl">⬆ Upload</div></div>
-      <div class="speed-gauge"><div class="speed-ping-val">${ping}</div><div class="speed-unit">ms</div><div class="speed-lbl">⏱ Ping</div></div>
-    </div>
-    ${r?`<div style="font-size:9px;color:var(--dim);flex-shrink:0">${r.server?.name||r.server?.sponsor||''}</div>`:''}
-    <div class="speed-run-btn${_speedRunning?' speed-running':''}" id="spd-btn" style="cursor:pointer">
-      ${_speedRunning?'⏳ Test en cours (30-60s)...':'▶ Lancer un test'}
-    </div>`;
-  wrap.querySelector('#spd-btn')?.addEventListener('click',()=>runSpeedtest(wrap));
+function renderSpeedtest(wrap) {
+  var r = _speedResult;
+  var dl = r ? Math.round((r.download || r.download_speed || 0) / 1e6 * 10) / 10 : '—';
+  var ul = r ? Math.round((r.upload || r.upload_speed || 0) / 1e6 * 10) / 10 : '—';
+  var ping = r ? Math.round(r.ping || r.latency || 0) : '—';
+  var ts = r ? new Date(r.timestamp || Date.now()).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+  wrap.innerHTML = '<div style="font-size:9px;color:var(--dim);letter-spacing:1px;flex-shrink:0">⚡ SPEEDTEST' + (ts ? ' · ' + ts : '') + '</div>'
+    + '<div class="speed-gauges">'
+    + '<div class="speed-gauge"><div class="speed-val speed-dl">' + dl + '</div><div class="speed-unit">Mbps</div><div class="speed-lbl">⬇ Download</div></div>'
+    + '<div class="speed-gauge"><div class="speed-val speed-ul">' + ul + '</div><div class="speed-unit">Mbps</div><div class="speed-lbl">⬆ Upload</div></div>'
+    + '<div class="speed-gauge"><div class="speed-ping-val">' + ping + '</div><div class="speed-unit">ms</div><div class="speed-lbl">⏱ Ping</div></div>'
+    + '</div>'
+    + '<div class="speed-run-btn' + (_speedRunning ? ' speed-running' : '') + '" id="spd-btn">' + (_speedRunning ? '⏳ Test en cours...' : '▶ Lancer un test') + '</div>';
+  var btn = wrap.querySelector('#spd-btn');
+  if (btn) btn.addEventListener('click', function() { runSpeedtest(wrap); });
 }
-async function runSpeedtest(wrap){
-  if(_speedRunning)return;
-  _speedRunning=true;renderSpeedtest(wrap);
-  try{const r=await API.runSpeedtest();_speedResult=r||_speedResult;}catch(_){}
-  _speedRunning=false;renderSpeedtest(wrap);
-  setTimeout(()=>runSpeedtest(wrap),60*60*1000);
+async function runSpeedtest(wrap) {
+  if (_speedRunning) return;
+  _speedRunning = true; renderSpeedtest(wrap);
+  try { var r = await API.runSpeedtest(); if (r) _speedResult = r; } catch (e) {}
+  _speedRunning = false; renderSpeedtest(wrap);
+  setTimeout(function() { runSpeedtest(wrap); }, 60 * 60 * 1000);
 }
 
-// ══════════════════════════════════════════════════════════════
-// THÈMES
-// ══════════════════════════════════════════════════════════════
-function applyTheme(theme){
-  document.documentElement.dataset.theme=theme||'dark';
-  document.querySelectorAll('[data-theme-btn]').forEach(b=>{
-    b.classList.toggle('active',b.dataset.themeBtn===theme);
+// ─── THÈMES ──────────────────────────────────────────────
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme || 'dark');
+  document.querySelectorAll('[data-theme-btn]').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-theme-btn') === theme);
   });
 }
 
-// ══════════════════════════════════════════════════════════════
-// MODE PRÉSENTATION
-// ══════════════════════════════════════════════════════════════
-let presTimer=null,presActive=false;
-function startPresentation(){
-  if(presActive)stopPresentation();
-  presActive=true;
-  document.getElementById('pres-indicator')?.classList.add('show');
-  const layouts=[
-    ()=>renderGrid(),
-    ()=>{const g=document.getElementById('grid');g.style.gridTemplateColumns='1fr';g.style.gridTemplateRows='1fr';},
-    ()=>renderGrid(),
-  ];
-  let li=0;
-  presTimer=setInterval(()=>{li=(li+1)%layouts.length;try{layouts[li]();}catch(_){}},((cfg.presInterval||30)*1000));
+// ─── EXPORT / IMPORT CONFIG ──────────────────────────────
+function exportConfig() {
+  var blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'camwall-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click(); URL.revokeObjectURL(a.href);
 }
-function stopPresentation(){
-  presActive=false;clearInterval(presTimer);presTimer=null;
-  document.getElementById('pres-indicator')?.classList.remove('show');
-  renderGrid();
-}
-
-// ══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT CONFIG
-// ══════════════════════════════════════════════════════════════
-function exportConfig(){
-  const blob=new Blob([JSON.stringify(cfg,null,2)],{type:'application/json'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=`camwall-${new Date().toISOString().slice(0,10)}.json`;
-  a.click();URL.revokeObjectURL(a.href);
-}
-function importConfig(){
-  const inp=document.createElement('input');
-  inp.type='file';inp.accept='.json';
-  inp.onchange=async e=>{
-    const f=e.target.files[0];if(!f)return;
-    try{const t=await f.text();const imported=JSON.parse(t);cfg={...cfg,...imported};await API.saveConfig(cfg);location.reload();}
-    catch(_){alert('Fichier invalide.');}
+function importConfig() {
+  var inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json';
+  inp.onchange = async function(e) {
+    var f = e.target.files[0]; if (!f) return;
+    try { var t = await f.text(); cfg = Object.assign({}, cfg, JSON.parse(t)); await API.saveConfig(cfg); location.reload(); }
+    catch (e2) { alert('Fichier invalide.'); }
   };
   inp.click();
 }
 
-// ══════════════════════════════════════════════════════════════
-// WEBHOOK HA → CamWall
-// ══════════════════════════════════════════════════════════════
-API.onWebhook(data=>{
-  console.log('[CamWall] Webhook:',data);
-  if(data.action==='flash'){
-    const col=data.color||'red';
-    const ov=Object.assign(document.createElement('div'),{style:`position:fixed;inset:0;background:${col};opacity:.4;z-index:998;pointer-events:none`});
-    document.body.appendChild(ov);
-    let n=0;const flash=setInterval(()=>{ov.style.opacity=n%2?'.4':'0';if(++n>5){clearInterval(flash);ov.remove();}},300);
-  }
-  if(data.action==='alert'&&data.msg)API.notifyDesktop({title:'🏠 HA Alerte',body:data.msg});
-  if(data.action==='refresh')renderGrid();
-  if(data.action==='nightmode')document.body.classList.toggle('night-mode',!!data.value);
-});
-
-// ══════════════════════════════════════════════════════════════
-// MODE NUIT — listener IPC
-// ══════════════════════════════════════════════════════════════
-API.onNightMode(on=>{
-  document.body.classList.toggle('night-mode',on);
-  document.getElementById('night-banner')?.classList.toggle('show',on);
-});
-// Vérifier au démarrage
-{const h=new Date().getHours();if(h>=22||h<7){document.body.classList.add('night-mode');document.getElementById('night-banner')?.classList.add('show');}}
-
-// ══════════════════════════════════════════════════════════════
-// SNAKE 🐍 EASTER EGG — triple-clic sur logo HUD
-// ══════════════════════════════════════════════════════════════
-(()=>{
-  let clicks=0,ct;
-  const addTrigger=el=>{if(!el)return;el.addEventListener('click',()=>{clicks++;clearTimeout(ct);ct=setTimeout(()=>clicks=0,700);if(clicks>=3){clicks=0;launchSnake();}});};
-  setTimeout(()=>{addTrigger(document.querySelector('.hud-logo')||document.querySelector('#hud'));},1000);
+// ─── MODE NUIT ───────────────────────────────────────────
+if (API.onNightMode) {
+  API.onNightMode(function(on) {
+    document.body.classList.toggle('night-mode', on);
+    var banner = document.getElementById('night-banner');
+    if (banner) banner.classList.toggle('show', on);
+  });
+}
+(function() {
+  var h = new Date().getHours();
+  if (h >= 22 || h < 7) { document.body.classList.add('night-mode'); }
 })();
-function launchSnake(){
-  const ov=document.getElementById('snake-overlay'),cv=document.getElementById('snake-canvas'),sc=document.getElementById('snake-score');
-  if(!ov||!cv)return;
-  ov.classList.add('show');
-  const ctx=cv.getContext('2d'),C=20,N=20;
-  let sn=[{x:10,y:10}],dir={x:1,y:0},food={x:5,y:5},score=0,over=false,loop;
-  const rf=()=>({x:Math.floor(Math.random()*N),y:Math.floor(Math.random()*N)});
-  const draw=()=>{
-    ctx.fillStyle='#0a0a0a';ctx.fillRect(0,0,cv.width,cv.height);
-    ctx.fillStyle='#ff2d55';ctx.fillRect(food.x*C+2,food.y*C+2,C-4,C-4);
-    sn.forEach((s,i)=>{ctx.fillStyle=i===0?'#00ff41':'#00bb30';ctx.fillRect(s.x*C+1,s.y*C+1,C-2,C-2);});
-    if(sc)sc.textContent='SCORE: '+score;
-    if(over){ctx.fillStyle='rgba(0,0,0,.8)';ctx.fillRect(0,0,cv.width,cv.height);ctx.fillStyle='#00ff41';ctx.font='bold 22px monospace';ctx.textAlign='center';ctx.fillText('GAME OVER',cv.width/2,cv.height/2-8);ctx.font='13px monospace';ctx.fillText('Score: '+score,cv.width/2,cv.height/2+18);ctx.fillText('Cliquer pour rejouer',cv.width/2,cv.height/2+42);}
-  };
-  const step=()=>{const h={x:(sn[0].x+dir.x+N)%N,y:(sn[0].y+dir.y+N)%N};if(sn.some(s=>s.x===h.x&&s.y===h.y)){over=true;clearInterval(loop);draw();return;}sn.unshift(h);if(h.x===food.x&&h.y===food.y){score++;food=rf();}else sn.pop();draw();};
-  const start=()=>{sn=[{x:10,y:10}];dir={x:1,y:0};food=rf();score=0;over=false;clearInterval(loop);loop=setInterval(step,120);draw();};
-  start();
-  cv.onclick=()=>{if(over)start();};
-  const kh=e=>{const m={ArrowUp:{x:0,y:-1},ArrowDown:{x:0,y:1},ArrowLeft:{x:-1,y:0},ArrowRight:{x:1,y:0},KeyW:{x:0,y:-1},KeyS:{x:0,y:1},KeyA:{x:-1,y:0},KeyD:{x:1,y:0}};if(m[e.code]){e.preventDefault();const nd=m[e.code];if(nd.x!==-dir.x||nd.y!==-dir.y)dir=nd;}if(e.key==='Escape'){clearInterval(loop);ov.classList.remove('show');document.removeEventListener('keydown',kh);}};
-  document.addEventListener('keydown',kh,{capture:true});
-  document.getElementById('snake-close')?.addEventListener('click',()=>{clearInterval(loop);ov.classList.remove('show');document.removeEventListener('keydown',kh);},{once:true});
+
+// ─── WEBHOOK HA ──────────────────────────────────────────
+if (API.onWebhook) {
+  API.onWebhook(function(data) {
+    if (data.action === 'flash') {
+      var col = data.color || 'red';
+      var ov = document.createElement('div');
+      ov.style.cssText = 'position:fixed;inset:0;background:' + col + ';opacity:.4;z-index:998;pointer-events:none';
+      document.body.appendChild(ov);
+      var n = 0;
+      var fi = setInterval(function() { ov.style.opacity = n % 2 ? '.4' : '0'; if (++n > 5) { clearInterval(fi); ov.remove(); } }, 300);
+    }
+    if (data.action === 'alert' && data.msg && API.notifyDesktop) API.notifyDesktop({ title: 'HA Alerte', body: data.msg });
+    if (data.action === 'refresh') renderGrid();
+  });
 }
 
-// ══════════════════════════════════════════════════════════════
-// INIT MÉTRIQUES → HISTORY + ALERTES
-// ══════════════════════════════════════════════════════════════
-API.onMetrics(m=>{
-  pushHistory('cpu',m.cpuPercent||0);
-  pushHistory('ram',m.ramPercent||0);
-  checkAlerts(m);
-  // Mettre à jour les sparklines visibles
-  document.querySelectorAll('.spark-cpu').forEach(c=>drawSparkline(c,metricsHistory.cpu,'#6366f1'));
-  document.querySelectorAll('.spark-ram').forEach(c=>drawSparkline(c,metricsHistory.ram,'#06b6d4'));
-});
-
-// Boutons thème / export / import / présentation (injectés après init)
-setTimeout(()=>{
-  document.querySelectorAll('[data-theme-btn]').forEach(b=>{
-    b.addEventListener('click',()=>{applyTheme(b.dataset.themeBtn);if(cfg){cfg.theme=b.dataset.themeBtn;API.saveConfig(cfg);}});
-  });
-  document.getElementById('btn-pres')?.addEventListener('click',()=>{presActive?stopPresentation():startPresentation();});
-  document.getElementById('btn-export')?.addEventListener('click',exportConfig);
-  document.getElementById('btn-import')?.addEventListener('click',importConfig);
-  if(cfg?.theme)applyTheme(cfg.theme);
-  // Récupérer infos webhook
-  API.webhookStatus?.().then(st=>{
-    const el=document.getElementById('webhook-info');
-    if(el&&st?.running)el.innerHTML=`✅ Webhook actif sur le port <strong>${st.port}</strong><br>Envoyez <code>POST http://[IP]:${st.port}/webhook</code> depuis HA`;
-  }).catch(()=>{});
-},500);
+// ─── SNAKE 🐍 EASTER EGG ─────────────────────────────────
+(function() {
+  var clicks = 0, ct;
+  function addTrigger(el) {
+    if (!el) return;
+    el.addEventListener('click', function() {
+      clicks++; clearTimeout(ct);
+      ct = setTimeout(function() { clicks = 0; }, 700);
+      if (clicks >= 3) { clicks = 0; launchSnake(); }
+    });
+  }
+  setTimeout(function() {
+    addTrigger(document.querySelector('.hud-logo') || document.getElementById('hud'));
+  }, 1000);
+})();
+function launchSnake() {
+  var ov = document.getElementById('snake-overlay');
+  var cv = document.getElementById('snake-canvas');
+  var sc = document.getElementById('snake-score');
+  if (!ov || !cv) return;
+  ov.style.display = 'flex';
+  var ctx = cv.getContext('2d'), C = 20, N = 20;
+  var snake, dir, food, score, over, loop;
+  function rf() { return { x: Math.floor(Math.random() * N), y: Math.floor(Math.random() * N) }; }
+  function draw() {
+    ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.fillStyle = '#ff2d55'; ctx.fillRect(food.x * C + 2, food.y * C + 2, C - 4, C - 4);
+    snake.forEach(function(s, i) { ctx.fillStyle = i === 0 ? '#00ff41' : '#00bb30'; ctx.fillRect(s.x * C + 1, s.y * C + 1, C - 2, C - 2); });
+    if (sc) sc.textContent = 'SCORE: ' + score;
+    if (over) {
+      ctx.fillStyle = 'rgba(0,0,0,.8)'; ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.fillStyle = '#00ff41'; ctx.font = 'bold 22px monospace'; ctx.textAlign = 'center';
+      ctx.fillText('GAME OVER', cv.width / 2, cv.height / 2 - 8);
+      ctx.font = '13px monospace';
+      ctx.fillText('Score: ' + score, cv.width / 2, cv.height / 2 + 18);
+      ctx.fillText('Cliquer pour rejouer', cv.width / 2, cv.height / 2 + 42);
+    }
+  }
+  function step() {
+    var h = { x: (snake[0].x + dir.x + N) % N, y: (snake[0].y + dir.y + N) % N };
+    if (snake.some(function(s) { return s.x === h.x && s.y === h.y; })) { over = true; clearInterval(loop); draw(); return; }
+    snake.unshift(h);
+    if (h.x === food.x && h.y === food.y) { score++; food = rf(); } else { snake.pop(); }
+    draw();
+  }
+  function start() { snake = [{ x: 10, y: 10 }]; dir = { x: 1, y: 0 }; food = rf(); score = 0; over = false; clearInterval(loop); loop = setInterval(step, 120); }
+  start(); draw();
+  cv.onclick = function() { if (over) start(); };
+  var closeBtn = document.getElementById('snake-close');
+  if (closeBtn) closeBtn.onclick = function() { clearInterval(loop); ov.style.display = 'none'; };
+  function kh(e) {
+    var map = { ArrowUp: { x: 0, y: -1 }, ArrowDown: { x: 0, y: 1 }, ArrowLeft: { x: -1, y: 0 }, ArrowRight: { x: 1, y: 0 } };
+    if (map[e.key]) { e.preventDefault(); var nd = map[e.key]; if (nd.x !== -dir.x || nd.y !== -dir.y) dir = nd; }
+    if (e.key === 'Escape') { clearInterval(loop); ov.style.display = 'none'; document.removeEventListener('keydown', kh); }
+  }
+  document.addEventListener('keydown', kh, { capture: true });
+}
 
 </script>
 </body>
