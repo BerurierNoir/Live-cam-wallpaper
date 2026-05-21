@@ -38,7 +38,7 @@ mkdir -p "$HOME/.local/bin"
 cat > "$WRAPPER" << WRAPEOF
 #!/bin/bash
 # CamWall launcher — tue l'ancienne instance, repart proprement
-export ELECTRON_OZONE_PLATFORM_HINT=auto
+# X11 forcé dans le code Electron (ozone-platform=x11)
 
 # Tuer toute instance existante (tray inclus)
 pkill -f "electron.*$(basename $SCRIPT_DIR)" 2>/dev/null || true
