@@ -731,7 +731,7 @@ function loadCamImg(img,cam,parentDiv,wrap){
     if(cfg.reconnect!==false){
       const d=nextDelay(cam.id);
       const errMsg=wrap.querySelector('.cam-err-msg');
-      if(errMsg)errMsg.textContent='Signal perdu — retry '+Math.round(d)+'s';
+      if(errMsg)errMsg.textContent='Reconnexion dans '+Math.round(d)+'s...';
       retryTimers[cam.id]=setTimeout(()=>loadCamImg(img,cam,parentDiv,wrap),d*1000);
     }
   };
@@ -1071,31 +1071,31 @@ function updateCellCfgUI(type){
         <div class="cc-row"><span class="cc-lbl">Mot de passe</span><input class="pi-in" id="cc-bsz-pass" type="password" value="${cur.bszPass||''}" placeholder="••••••••" style="width:140px"></div>`;
       break;
     case'weather':
-      ex.innerHTML='<div class="cc-row"><span class="cc-lbl">Latitude</span><input class="pi-in" id="cc-wx-lat" type="text" value="'+(cur.wxLat||'45.36')+'" style="width:120px"></div>'
-        +'<div class="cc-row"><span class="cc-lbl">Longitude</span><input class="pi-in" id="cc-wx-lon" type="text" value="'+(cur.wxLon||'4.13')+'" style="width:120px"></div>'
+      ex.innerHTML='<div class="cc-row"><span class="cc-lbl">Latitude</span><input class="pi-in" id="cc-wx-lat" type="text" value="'+(cur.wxLat||'45.368')+'" style="width:120px"></div>'
+        +'<div class="cc-row"><span class="cc-lbl">Longitude</span><input class="pi-in" id="cc-wx-lon" type="text" value="'+(cur.wxLon||'4.118')+'" style="width:120px"></div>'
         +'<div style="font-size:10px;color:var(--dim)">Open-Meteo — gratuit, sans clé</div>';
       break;
     case'homeassistant':
-      ex.innerHTML='<div class="cc-row"><span class="cc-lbl">URL HA</span><input class="pi-in" id="cc-ha-url" type="text" value="'+(cur.haUrl||'')+'" placeholder="http://192.168.1.x:8123" style="width:200px"></div>'
-        +'<div class="cc-row"><span class="cc-lbl">Token</span><input class="pi-in" id="cc-ha-token" type="password" value="'+(cur.haToken||'')+'" placeholder="Profil → Token" style="width:200px"></div>'
+      ex.innerHTML='<div class="cc-row"><span class="cc-lbl">URL HA</span><input class="pi-in" id="cc-ha-url" type="text" value="'+(cur.haUrl||'')+'" placeholder="http://192.168.1.x:8123" style="width:260px"></div>'
+        +'<div class="cc-row"><span class="cc-lbl">Token</span><input class="pi-in" id="cc-ha-token" type="password" value="'+(cur.haToken||'')+'" placeholder="Profil → Token" style="width:260px"></div>'
         +'<div class="cc-row"><span class="cc-lbl">Entités (une/ligne)</span></div>'
         +'<textarea class="pi-in" id="cc-ha-entities" style="width:100%;height:60px;resize:none;font-size:10px" placeholder="sensor.temperature_salon">'+(cur.haEntities||[]).join('\n')+'</textarea>';
       break;
     case'jellyfin':
-      ex.innerHTML='<div class="cc-row"><span class="cc-lbl">URL Jellyfin</span><input class="pi-in" id="cc-jf-url" type="text" value="'+(cur.jfUrl||'')+'" placeholder="http://192.168.1.x:8096" style="width:200px"></div>'
-        +'<div class="cc-row"><span class="cc-lbl">Clé API</span><input class="pi-in" id="cc-jf-key" type="password" value="'+(cur.jfKey||'')+'" placeholder="Administration → API Keys" style="width:200px"></div>';
+      ex.innerHTML='<div class="cc-row"><span class="cc-lbl">URL Jellyfin</span><input class="pi-in" id="cc-jf-url" type="text" value="'+(cur.jfUrl||'')+'" placeholder="http://192.168.1.x:8096" style="width:260px"></div>'
+        +'<div class="cc-row"><span class="cc-lbl">Clé API</span><input class="pi-in" id="cc-jf-key" type="password" value="'+(cur.jfKey||'')+'" placeholder="Administration → API Keys" style="width:260px"></div>';
       break;
     case'immich':
-      ex.innerHTML='<div class="cc-row"><span class="cc-lbl">URL Immich</span><input class="pi-in" id="cc-im-url" type="text" value="'+(cur.imUrl||'')+'" placeholder="http://192.168.1.x:2283" style="width:200px"></div>'
-        +'<div class="cc-row"><span class="cc-lbl">Clé API</span><input class="pi-in" id="cc-im-key" type="password" value="'+(cur.imKey||'')+'" placeholder="Profil → API Keys" style="width:200px"></div>'
+      ex.innerHTML='<div class="cc-row"><span class="cc-lbl">URL Immich</span><input class="pi-in" id="cc-im-url" type="text" value="'+(cur.imUrl||'')+'" placeholder="http://192.168.1.x:2283" style="width:260px"></div>'
+        +'<div class="cc-row"><span class="cc-lbl">Clé API</span><input class="pi-in" id="cc-im-key" type="password" value="'+(cur.imKey||'')+'" placeholder="Profil → API Keys" style="width:260px"></div>'
         +'<div class="cc-row"><span class="cc-lbl">Intervalle (s)</span><input class="pi-sm" id="cc-im-interval" type="number" value="'+(cur.imInterval||30)+'" min="5" max="300"></div>';
       break;
     case'pihole':
-      ex.innerHTML='<div class="cc-row"><span class="cc-lbl">URL Pi-hole</span><input class="pi-in" id="cc-ph-url" type="text" value="'+(cur.phUrl||'')+'" placeholder="http://192.168.1.x" style="width:200px"></div>'
-        +'<div class="cc-row"><span class="cc-lbl">Token API</span><input class="pi-in" id="cc-ph-token" type="password" value="'+(cur.phToken||'')+'" style="width:200px"></div>';
+      ex.innerHTML='<div class="cc-row"><span class="cc-lbl">URL Pi-hole</span><input class="pi-in" id="cc-ph-url" type="text" value="'+(cur.phUrl||'')+'" placeholder="http://192.168.1.x" style="width:260px"></div>'
+        +'<div class="cc-row"><span class="cc-lbl">Token API</span><input class="pi-in" id="cc-ph-token" type="password" value="'+(cur.phToken||'')+'" style="width:260px"></div>';
       break;
     case'moonraker':
-      ex.innerHTML='<div class="cc-row"><span class="cc-lbl">URL Moonraker</span><input class="pi-in" id="cc-mr-url" type="text" value="'+(cur.mrUrl||'')+'" placeholder="http://192.168.1.x:7125" style="width:200px"></div>';
+      ex.innerHTML='<div class="cc-row"><span class="cc-lbl">URL Moonraker</span><input class="pi-in" id="cc-mr-url" type="text" value="'+(cur.mrUrl||'')+'" placeholder="http://192.168.1.x:7125" style="width:260px"></div>';
       break;
     case'speedtest':
       ex.innerHTML='<div style="font-size:10px;color:var(--dim)">Speedtest via speedtest-cli. Auto toutes les heures.</div>';
@@ -1298,11 +1298,15 @@ function buildWeather(cc) {
   const wrap = document.createElement('div');
   wrap.className = 'weather-widget';
   wrap.innerHTML = '<div style="color:var(--dim);font-size:11px;padding:20px">⏳ Chargement météo...</div>';
-  refreshWeather(wrap, cc);
+  setTimeout(function() { refreshWeather(wrap, cc); }, 50);
   return wrap;
 }
 async function refreshWeather(wrap, cc) {
-  if (!wrap.isConnected) return;
+  // isConnected peut être false si appelé trop tôt → on attend
+  if (!wrap.isConnected) {
+    setTimeout(function() { if(wrap.isConnected) refreshWeather(wrap,cc); }, 200);
+    return;
+  }
   const lat = parseFloat(cc.wxLat) || 45.36;
   const lon = parseFloat(cc.wxLon) || 4.13;
   try {
@@ -1378,11 +1382,14 @@ function buildHA(cc) {
   hdr.style.cssText = 'font-size:9px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;flex-shrink:0;padding:2px 0';
   hdr.innerHTML = '<span>🏠 HOME ASSISTANT</span><span class="ha-ts"></span>';
   wrap.appendChild(hdr);
-  refreshHA(wrap, cc);
+  setTimeout(function() { refreshHA(wrap, cc); }, 50);
   return wrap;
 }
 async function refreshHA(wrap, cc) {
-  if (!wrap.isConnected) return;
+  if (!wrap.isConnected) {
+    setTimeout(function() { if(wrap.isConnected) refreshHA(wrap,cc); }, 200);
+    return;
+  }
   var entities = (cc.haEntities || []).filter(Boolean);
   if (!entities.length) { setTimeout(function() { if (wrap.isConnected) refreshHA(wrap, cc); }, 30000); return; }
   try {
@@ -1425,11 +1432,14 @@ function buildJellyfin(cc) {
     wrap.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🎬</div><div style="font-size:11px">Configurer Jellyfin</div></div>';
     return wrap;
   }
-  refreshJellyfin(wrap, cc);
+  setTimeout(function() { refreshJellyfin(wrap, cc); }, 50);
   return wrap;
 }
 async function refreshJellyfin(wrap, cc) {
-  if (!wrap.isConnected) return;
+  if (!wrap.isConnected) {
+    setTimeout(function() { if(wrap.isConnected) refreshJellyfin(wrap,cc); }, 200);
+    return;
+  }
   try {
     var hdrs = { 'Authorization': 'MediaBrowser Token="' + cc.jfKey + '"', 'X-Emby-Token': cc.jfKey, 'Content-Type': 'application/json' };
     var sessR = await fetch(cc.jfUrl + '/Sessions', { headers: hdrs, signal: AbortSignal.timeout(8000) });
@@ -1500,7 +1510,7 @@ function buildImmich(cc) {
     }).catch(function() {});
     immichTimers[sid] = setTimeout(loadNext, (cc.imInterval || 30) * 1000);
   }
-  loadNext();
+  setTimeout(loadNext, 50);
   return wrap;
 }
 
@@ -1512,11 +1522,14 @@ function buildPihole(cc) {
     wrap.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🛡</div><div style="font-size:11px">Configurer Pi-hole</div></div>';
     return wrap;
   }
-  refreshPihole(wrap, cc);
+  setTimeout(function() { refreshPihole(wrap, cc); }, 50);
   return wrap;
 }
 async function refreshPihole(wrap, cc) {
-  if (!wrap.isConnected) return;
+  if (!wrap.isConnected) {
+    setTimeout(function() { if(wrap.isConnected) refreshPihole(wrap,cc); }, 200);
+    return;
+  }
   try {
     // Pi-hole v6: token dans header Authorization: Bearer
     // Pi-hole v5: token dans ?auth= (query param)
@@ -1559,11 +1572,14 @@ function buildMoonraker(cc) {
     wrap.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:.5"><div style="font-size:28px">🖨</div><div style="font-size:11px">Configurer Moonraker</div></div>';
     return wrap;
   }
-  refreshMoonraker(wrap, cc);
+  setTimeout(function() { refreshMoonraker(wrap, cc); }, 50);
   return wrap;
 }
 async function refreshMoonraker(wrap, cc) {
-  if (!wrap.isConnected) return;
+  if (!wrap.isConnected) {
+    setTimeout(function() { if(wrap.isConnected) refreshMoonraker(wrap,cc); }, 200);
+    return;
+  }
   try {
     var mrBase = cc.mrUrl.replace(/\/$/, ''); var r = await fetch(mrBase + '/printer/objects/query?heater_bed&extruder&print_stats&display_status', { signal: AbortSignal.timeout(8000) });
     if (!r.ok) throw new Error('HTTP ' + r.status);
