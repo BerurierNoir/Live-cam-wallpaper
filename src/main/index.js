@@ -126,6 +126,7 @@ app.whenReady().then(async () => {
 
   // Charger loading, démarrer go2rtc, charger app
   w.loadFile(path.join(__dirname, '..', 'renderer', 'loading.html'));
+  win.setLastUrl(null); // reset pendant loading
   go2rtc.start(cfg);
   const ready = await go2rtc.waitReady(cfg.go2rtcPort || 1984);
   if (ready) console.log('[go2rtc] prêt');
@@ -133,7 +134,9 @@ app.whenReady().then(async () => {
   if (cfg.firstRun || !cfg.cameras || !cfg.cameras.length) {
     w.loadFile(path.join(__dirname, '..', 'renderer', 'setup.html'));
   } else {
-    w.loadFile(path.join(__dirname, '..', 'renderer', 'app.html'));
+    const appHtml = path.join(__dirname, '..', 'renderer', 'app.html');
+  win.setLastUrl('file://' + appHtml);
+  w.loadFile(appHtml);
   }
 
   // Tray
