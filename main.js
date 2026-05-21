@@ -514,6 +514,13 @@ function startMetricsPolling() {
   }, 2000);
 }
 
+function stopMetricsPolling() {
+  if (typeof metricsInterval !== 'undefined' && metricsInterval) {
+    clearInterval(metricsInterval);
+    metricsInterval = null;
+  }
+}
+
 function registerIPC() {
   ipcMain.handle('cfg:get',   ()      => loadConfig());
   ipcMain.handle('cfg:save',  (_, c)  => { config = { ...config, ...c }; saveConfig(config); tray?.setContextMenu(buildTrayMenu()); return true; });
@@ -702,8 +709,8 @@ app.on('certificate-error', (event, webContents, url, error, certificate, callba
 
 app.on('before-quit', () => {
   app.isQuitting = true;
-  stopGo2rtc();
-  stopMetricsPolling();
+  try { stopGo2rtc(); } catch (_) {}
+  try { if (typeof stopMetricsPolling === 'function') stopMetricsPolling(); } catch (_) {}
   try { globalShortcut.unregisterAll(); } catch (_) {}
   try { if (webhookServer) webhookServer.close(); } catch (_) {}
 });
