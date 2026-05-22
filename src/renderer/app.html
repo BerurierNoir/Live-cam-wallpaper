@@ -372,6 +372,35 @@ textarea.pi-in { resize:vertical; }
   z-index: 50;
   pointer-events: none;
 }
+
+/* ── IMMICH v2 ───────────────────────────────────────── */
+.immich-widget  { position:absolute;inset:0;overflow:hidden;background:#000; }
+.immich-bg      { position:absolute;inset:0;background-size:cover;background-position:center;transition:opacity 1.2s ease; }
+.immich-bg-next { opacity:0; }
+.immich-bg-next.immich-visible { opacity:1; }
+.immich-overlay { position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.75) 0%,transparent 50%);
+  display:flex;align-items:flex-end; }
+.immich-meta    { padding:10px 12px; }
+.immich-date    { font-size:11px;color:rgba(255,255,255,.8);font-weight:600; }
+.immich-exif    { font-size:9px;color:rgba(255,255,255,.5);margin-top:2px; }
+
+/* ── JELLYFIN v2 ─────────────────────────────────────── */
+.jf-widget      { position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden; }
+.jf-badge       { display:inline-block;padding:2px 7px;border-radius:3px;font-size:9px;font-weight:700;
+  letter-spacing:1px;background:rgba(99,102,241,.25);color:var(--indigo);margin-bottom:5px; }
+.jf-idle-top    { display:flex;flex-direction:column;align-items:center;justify-content:center;
+  flex:0 0 auto;padding:16px;gap:6px;border-bottom:1px solid rgba(255,255,255,.06); }
+.jf-idle-icon   { font-size:28px; }
+.jf-idle-txt    { font-size:11px;color:var(--dim);letter-spacing:1px;text-transform:uppercase; }
+.jf-recent-title{ font-size:9px;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;
+  padding:10px 12px 6px; }
+.jf-recent-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 10px 10px;flex:1; }
+.jf-thumb       { display:flex;flex-direction:column;gap:3px;cursor:default; }
+.jf-thumb-img   { aspect-ratio:2/3;border-radius:4px;background-size:cover;background-position:center;
+  background-color:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06); }
+.jf-thumb-name  { font-size:8px;color:var(--muted);text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px; }
+
 </style>
 </head>
 <body>
